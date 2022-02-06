@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	info     = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	warn     = log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile)
-	errorout = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+	info     = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
+	warn     = log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime)
+	errorout = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime)
 )
 
 func Infof(format string, args ...interface{}) {

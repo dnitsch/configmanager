@@ -65,3 +65,13 @@ func TestStripPrefixNormal(t *testing.T) {
 		f.t.Errorf(testutils.TestPhrase, want, gotNegative)
 	}
 }
+
+func TestNormlizedMap(t *testing.T) {
+	a := map[string]string{"foo": "bar"}
+	got := envVarNormalize(a)
+	for k := range got {
+		if k != normalizeKey(k) {
+			t.Errorf(testutils.TestPhrase, k, got)
+		}
+	}
+}
