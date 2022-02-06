@@ -1,3 +1,9 @@
 .vscode 
 *.env
 
+# Go
+vendor
+bin
+
+# tests
+.coverage

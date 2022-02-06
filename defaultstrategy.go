@@ -1,8 +1,6 @@
 package genvars
 
-import (
-	klog "k8s.io/klog/v2"
-)
+import "github.com/dnitsch/genvars/pkg/log"
 
 type DefaultStrategy struct {
 }
@@ -15,6 +13,6 @@ func (implmt *DefaultStrategy) setToken(token string) {
 }
 
 func (implmt *DefaultStrategy) getTokenValue(v *genVars) (string, error) {
-	klog.Infof("%s", "Concrete implementation Default On Startup")
+	log.Infof("%s", "Concrete implementation Default On Startup")
 	return "", nil
 }

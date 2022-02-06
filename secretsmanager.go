@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	klog "k8s.io/klog/v2"
+	"github.com/dnitsch/genvars/pkg/log"
 )
 
 type SecretsMgr struct {
@@ -18,7 +18,7 @@ type SecretsMgr struct {
 func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		klog.Errorf("unable to load SDK config, %v", err)
+		log.Errorf("unable to load SDK config, %v", err)
 		return nil, err
 	}
 	initService := secretsmanager.NewFromConfig(cfg)
@@ -35,17 +35,17 @@ func (implmt *SecretsMgr) setToken(token string) {
 }
 
 func (implmt *SecretsMgr) getTokenValue(v *genVars) (string, error) {
-	klog.Infof("%s", "Concrete implementation SecretsManager")
-	klog.Infof("Getting Secret: %s", implmt.token)
+	log.Infof("%s", "Concrete implementation SecretsManager")
+	log.Infof("Getting Secret: %s", implmt.token)
 
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(stripPrefix(implmt.token, SecretMgrPrefix)),
+		SecretId:     aws.String(v.stripPrefix(implmt.token, SecretMgrPrefix)),
 		VersionStage: aws.String("AWSCURRENT"),
 	}
 
 	result, err := implmt.svc.GetSecretValue(implmt.ctx, input)
 	if err != nil {
-		klog.Errorf("SecretsMgr: %s", err)
+		log.Errorf("SecretsMgr: %s", err)
 		return "", err
 	}
 

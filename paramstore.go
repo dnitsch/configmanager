@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
-	klog "k8s.io/klog/v2"
+	"github.com/dnitsch/genvars/pkg/log"
 )
 
 type ParamStore struct {
@@ -18,7 +18,7 @@ type ParamStore struct {
 func NewParamStore(ctx context.Context) (*ParamStore, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		klog.Errorf("unable to load SDK config, %v", err)
+		log.Errorf("unable to load SDK config, %v", err)
 		return nil, err
 	}
 	initService := ssm.NewFromConfig(cfg)
@@ -35,17 +35,17 @@ func (paramStr *ParamStore) setToken(token string) {
 }
 
 func (imp *ParamStore) getTokenValue(v *genVars) (string, error) {
-	klog.Infof("%s", "Concrete implementation ParameterStore SecureString")
-	klog.Infof("ParamStore Token: %s", imp.token)
+	log.Infof("%s", "Concrete implementation ParameterStore SecureString")
+	log.Infof("ParamStore Token: %s", imp.token)
 
 	input := &ssm.GetParameterInput{
-		Name:           aws.String(stripPrefix(imp.token, ParamStorePrefix)),
+		Name:           aws.String(v.stripPrefix(imp.token, ParamStorePrefix)),
 		WithDecryption: true,
 	}
 
 	result, err := imp.svc.GetParameter(imp.ctx, input)
 	if err != nil {
-		klog.Errorf("ParamStore: %s", err)
+		log.Errorf("ParamStore: %s", err)
 		return "", err
 	}
 

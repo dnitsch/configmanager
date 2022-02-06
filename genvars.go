@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	klog "k8s.io/klog/v2"
+	"github.com/dnitsch/genvars/pkg/log"
 )
 
 const (
@@ -69,12 +69,12 @@ func (c *genVars) setToken(s string) {
 }
 
 func (c *genVars) getTokenValue() (string, error) {
-	klog.Info("Strategy implementation")
+	log.Info("Strategy implementation")
 	return c.implementation.getTokenValue(c)
 }
 
-func stripPrefix(in, prefix string) string {
-	return strings.Replace(in, fmt.Sprintf("%s%s", prefix, TokenSeparator), "", 1)
+func (c *genVars) stripPrefix(in, prefix string) string {
+	return strings.Replace(in, fmt.Sprintf("%s%s", prefix, c.config.TokenSeparator), "", 1)
 }
 
 func (c *genVars) Generate(tokens []string) (string, error) {
@@ -139,7 +139,7 @@ func (c *genVars) implemetnationSepcificDecodedString(prefix, in string) (string
 // and any characters
 func isParsed(res string, trm *parsedMap) bool {
 	if err := json.Unmarshal([]byte(res), &trm); err != nil {
-		klog.Info("unable to parse into a k/v map returning a string instead")
+		log.Info("unable to parse into a k/v map returning a string instead")
 		return false
 	}
 	return true
@@ -155,15 +155,10 @@ func envVarNormalize(pmap parsedMap) parsedMap {
 }
 
 func (c *genVars) exportVars(exportMap parsedMap) {
-	// path, err := os.Getwd()
-	// if err != nil {
-	// 	return "", nil
-	// }
-	// filePath := path + "/app.env"
 
 	for k, v := range exportMap {
 		// NOTE: \n lineending is not totaly cross platform
-		c.output += fmt.Sprintf("export %s=%s\n", normalizeKey(k), v)
+		c.output += fmt.Sprintf("export %s='%s'\n", normalizeKey(k), v)
 	}
 }
 

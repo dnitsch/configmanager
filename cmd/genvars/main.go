@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
+	"os"
 
 	"github.com/dnitsch/genvars"
+	"github.com/dnitsch/genvars/pkg/log"
 )
 
 type tokenArray []string
@@ -30,10 +31,11 @@ func main() {
 	gv.WithConfig(&genvars.GenVarsConfig{Outpath: path})
 	path, err := gv.Generate(tokens)
 	if err != nil {
-		fmt.Errorf("%e", err)
+		log.Errorf("%e", err)
+		os.Exit(1)
 	}
-	fmt.Printf(path)
-
+	log.Infof("Vars written to: %s\n", path)
+	os.Exit(0)
 }
 
 func init() {

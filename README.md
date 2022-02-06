@@ -41,3 +41,13 @@ If contents of the `AWSSECRETS#/appxyz/service1-password` are a string
 More implementations should be easily added with a specific implementation 
 
 TODO: lots more documentation and UNITTESTS
+
+
+## Download 
+
+<!-- `uname -s`-`uname -m` -->
+```bash
+curl -L https://github.com/dnitsch/genvars/releases/download/v0.0.1/genvars-0.0.1 -o genvars
+chmod +x genvars
+sudo mv genvars /usr/local/bin
+```
