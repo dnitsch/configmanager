@@ -28,10 +28,10 @@ buildprep: tidy
 	mkdir -p bin
 
 build: buildprep
-	GOOS=linux go build -o bin/genvars-linux .
+	GOOS=linux go build -o bin/genvars-Linux .
 
 buildmac: buildprep
-	GOOS=darwin go build -o bin/genvars-darwin .
+	GOOS=darwin go build -o bin/genvars-Darwin .
 
 buildwin: buildprep
 	GOOS=windows go build -o bin/genvars.exe .

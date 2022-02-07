@@ -19,8 +19,10 @@ export VAR2=VALUE2
 
 ## Installation
 
+Major platform binaries [here](https://github.com/dnitsch/genvars/releases)
+
 ```bash
-curl -L https://github.com/dnitsch/genvars/releases/download/v0.1.0/genvars-`uname -s` -o genvars
+curl -L https://github.com/dnitsch/genvars/releases/download/v0.3.0/genvars-`uname -s` -o genvars
 chmod +x genvars
 sudo mv genvars /usr/local/bin
 ```
