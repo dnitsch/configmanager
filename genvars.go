@@ -5,7 +5,7 @@ import (
 	"flag"
 	"os"
 
-	"github.com/dnitsch/genvars/pkg/genvars"
+	"github.com/dnitsch/genvars/pkg/generator"
 	"github.com/dnitsch/genvars/pkg/log"
 )
 
@@ -27,8 +27,8 @@ var (
 
 func main() {
 	flag.Parse()
-	gv := genvars.NewGenVars(path, context.TODO())
-	gv.WithConfig(&genvars.GenVarsConfig{Outpath: path})
+	gv := generator.NewGenVars(path, context.TODO())
+	gv.WithConfig(&generator.GenVarsConfig{Outpath: path})
 	_, err := gv.Generate(token)
 	if err != nil {
 		log.Errorf("%e", err)

@@ -1,4 +1,4 @@
-package genvars
+package generator
 
 import (
 	"context"

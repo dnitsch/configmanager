@@ -1,4 +1,4 @@
-package genvars
+package generator
 
 import (
 	"context"
@@ -20,6 +20,7 @@ var (
 	VarPrefix = map[string]bool{SecretMgrPrefix: true, ParamStorePrefix: true}
 )
 
+// GenVarsConfig defines the input config object to be passed
 type GenVarsConfig struct {
 	Outpath        string
 	TokenSeparator string
@@ -39,6 +40,8 @@ type genVarsStrategy interface {
 	setToken(s string)
 }
 
+// ParsedMap is the internal working object definition and
+// the return type if results are not flushed to file
 type ParsedMap map[string]string
 
 func NewGenVars(out string, ctx context.Context) *genVars {

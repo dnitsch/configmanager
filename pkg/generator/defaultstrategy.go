@@ -1,4 +1,4 @@
-package genvars
+package generator
 
 import "github.com/dnitsch/genvars/pkg/log"
 

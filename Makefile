@@ -25,13 +25,13 @@ install:
 	go mod vendor
 
 buildprep: tidy
-	rm -rf bin && mkdir -p bin
+	mkdir -p bin
 
 build: buildprep
-	GOOS=linux go build -o bin/genvars-linux ./cmd/genvars
+	GOOS=linux go build -o bin/genvars-linux .
 
 buildmac: buildprep
-	GOOS=darwin go build -o bin/genvars-darwin ./cmd/genvars
+	GOOS=darwin go build -o bin/genvars-darwin .
 
 buildwin: buildprep
-	GOOS=windows go build -o bin/genvars.exe ./cmd/genvars
+	GOOS=windows go build -o bin/genvars.exe .
