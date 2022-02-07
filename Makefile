@@ -35,3 +35,4 @@ buildmac: buildprep
 
 buildwin: buildprep
 	GOOS=windows go build -o bin/genvars.exe .
+ 

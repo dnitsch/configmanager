@@ -1,3 +1,7 @@
+# mac
+.DS_Store
+
+# IDEs
 .vscode 
 *.env
 

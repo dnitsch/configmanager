@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/dnitsch/genvars/pkg/log"
@@ -172,8 +173,9 @@ func (c *genVars) exportVars(exportMap ParsedMap) {
 
 func normalizeKey(k string) string {
 	// TODO: include a more complete regex of vaues to replace
-	// r := regexp.MustCompile(``)
-	return strings.ReplaceAll(strings.ToUpper(k), "-", "")
+	r := regexp.MustCompile(`[\s\@\!]`).ReplaceAll([]byte(k), []byte(""))
+	r = regexp.MustCompile(`[\-]`).ReplaceAll(r, []byte("_"))
+	return string(r)
 }
 
 func (c *genVars) FlushToFile() (string, error) {
