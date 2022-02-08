@@ -70,8 +70,8 @@ func TestNormlizedMap(t *testing.T) {
 	a := map[string]string{"foo": "bar"}
 	got := envVarNormalize(a)
 	for k := range got {
-		if k != normalizeKey(k) {
-			t.Errorf(testutils.TestPhrase, k, got)
+		if k != "FOO" {
+			t.Errorf(testutils.TestPhrase, "FOO", k)
 		}
 	}
 }

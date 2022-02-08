@@ -175,7 +175,7 @@ func normalizeKey(k string) string {
 	// TODO: include a more complete regex of vaues to replace
 	r := regexp.MustCompile(`[\s\@\!]`).ReplaceAll([]byte(k), []byte(""))
 	r = regexp.MustCompile(`[\-]`).ReplaceAll(r, []byte("_"))
-	return string(r)
+	return strings.ToUpper(string(r))
 }
 
 func (c *genVars) FlushToFile() (string, error) {
