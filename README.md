@@ -8,14 +8,13 @@ Currently supported variable and secrets implementations - AWS SecretsManager an
 
 Must reference an existing token in a path like format.
 
-GenVars will then write them to a file in this format: 
+GenVars will then write them to a file in this format:
 
 ```bash
 export VAR=VALUE
 export VAR2=VALUE2
 ...
 ```
-
 
 ## Installation
 
