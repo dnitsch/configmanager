@@ -1,4 +1,6 @@
-# GENVARS
+# GENVARS 
+
+! MOVED [HERE](https://github.com/dnitsch/configmanager)
 
 Package used for retrieving application settings from various sources.
 
