@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/dnitsch/genvars/internal/testutils"
+	"github.com/dnitsch/configmanager/internal/testutils"
 )
 
 var (

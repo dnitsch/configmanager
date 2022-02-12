@@ -5,8 +5,8 @@ import (
 	"flag"
 	"os"
 
-	"github.com/dnitsch/genvars/pkg/generator"
-	"github.com/dnitsch/genvars/pkg/log"
+	"github.com/dnitsch/configmanager/pkg/generator"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 type tokenArray []string
@@ -29,11 +29,13 @@ func main() {
 	flag.Parse()
 	gv := generator.NewGenVars(path, context.TODO())
 	gv.WithConfig(&generator.GenVarsConfig{Outpath: path})
-	_, err := gv.Generate(token)
+	rawmap, err := gv.Generate(token)
 	if err != nil {
 		log.Errorf("%e", err)
 		os.Exit(1)
 	}
+	log.Infof("%+v", rawmap)
+
 	f, err := gv.FlushToFile()
 	if err != nil {
 		log.Errorf("%e", err)

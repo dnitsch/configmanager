@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
-	"github.com/dnitsch/genvars/pkg/log"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 type ParamStore struct {
@@ -32,6 +32,9 @@ func NewParamStore(ctx context.Context) (*ParamStore, error) {
 
 func (paramStr *ParamStore) setToken(token string) {
 	paramStr.token = token
+}
+
+func (implmt *ParamStore) setValue(val string) {
 }
 
 func (imp *ParamStore) getTokenValue(v *genVars) (string, error) {

@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dnitsch/genvars/pkg/log"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 const (
@@ -39,6 +39,7 @@ type genVars struct {
 type genVarsStrategy interface {
 	getTokenValue(c *genVars) (s string, e error)
 	setToken(s string)
+	setValue(s string)
 }
 
 // ParsedMap is the internal working object definition and
@@ -75,6 +76,10 @@ func (c *genVars) setToken(s string) {
 	c.implementation.setToken(s)
 }
 
+func (c *genVars) setVaule(s string) {
+	c.implementation.setValue(s)
+}
+
 func (c *genVars) getTokenValue() (string, error) {
 	log.Info("Strategy implementation")
 	return c.implementation.getTokenValue(c)
@@ -84,36 +89,46 @@ func (c *genVars) stripPrefix(in, prefix string) string {
 	return strings.Replace(in, fmt.Sprintf("%s%s", prefix, c.config.TokenSeparator), "", 1)
 }
 
+// Generate will return a k/v map of the tokens with their secret/paramstore
+// the standard pattern of a token should foll
 func (c *genVars) Generate(tokens []string) (ParsedMap, error) {
 
+	m := ParsedMap{}
 	for _, token := range tokens {
 		prefix := strings.Split(token, TokenSeparator)[0]
 		if found := VarPrefix[prefix]; found {
 			// TODO: allow for more customization here
-			rawKeyToken := strings.Split(strings.Split(token, prefix)[1], "/")
-			topLevelKey := rawKeyToken[len(rawKeyToken)-1]
+			// rawKeyToken := strings.Split(strings.Split(token, prefix)[1], "/")
+			// topLevelKey := rawKeyToken[len(rawKeyToken)-1]
 			rawString, err := c.implemetnationSepcificDecodedString(prefix, token)
 			if err != nil {
 				return nil, err
 			}
-			trm := &ParsedMap{}
-			isOk := isParsed(rawString, trm)
-			if isOk {
-				normMap := envVarNormalize(*trm)
-				c.exportVars(normMap)
-			} else {
-				c.exportVars(ParsedMap{topLevelKey: rawString})
-			}
-
-		} else {
-			log.Info("NotFound")
+			m[token] = rawString
 		}
 	}
-	if c.output == "" {
-		return nil, fmt.Errorf("no Tokens received that could generate an output: %v", tokens)
-	}
+	return m, nil
 
-	return c.mapOut, nil
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		trm := &ParsedMap{}
+	// 		isOk := isParsed(rawString, trm)
+	// 		if isOk {
+	// 			normMap := envVarNormalize(*trm)
+	// 			c.exportVars(normMap)
+	// 		} else {
+	// 			c.exportVars(ParsedMap{topLevelKey: rawString})
+	// 		}
+
+	// 	} else {
+	// 		log.Info("NotFound")
+	// 	}
+	// }
+	// if c.output == "" {
+	// 	return nil, fmt.Errorf("no Tokens received that could generate an output: %v", tokens)
+	// }
+
 	// return c.flushToFile()
 }
 
@@ -151,6 +166,11 @@ func isParsed(res string, trm *ParsedMap) bool {
 		return false
 	}
 	return true
+}
+
+func (c *genVars) DoExport(ramMap ParsedMap, useUpperLevelAsKey bool) ParsedMap {
+
+	return ParsedMap{}
 }
 
 //

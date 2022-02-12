@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	"github.com/dnitsch/genvars/pkg/log"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 type SecretsMgr struct {
@@ -32,6 +32,9 @@ func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
 
 func (implmt *SecretsMgr) setToken(token string) {
 	implmt.token = token
+}
+
+func (implmt *SecretsMgr) setValue(val string) {
 }
 
 func (implmt *SecretsMgr) getTokenValue(v *genVars) (string, error) {

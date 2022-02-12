@@ -1,6 +1,6 @@
 package generator
 
-import "github.com/dnitsch/genvars/pkg/log"
+import "github.com/dnitsch/configmanager/pkg/log"
 
 type DefaultStrategy struct {
 }
@@ -10,6 +10,9 @@ func NewDefatultStrategy() *DefaultStrategy {
 }
 
 func (implmt *DefaultStrategy) setToken(token string) {
+}
+
+func (implmt *DefaultStrategy) setValue(val string) {
 }
 
 func (implmt *DefaultStrategy) getTokenValue(v *genVars) (string, error) {

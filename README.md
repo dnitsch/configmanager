@@ -1,6 +1,4 @@
-# GENVARS 
-
-! MOVED [HERE](https://github.com/dnitsch/configmanager)
+# Config Manager
 
 Package used for retrieving application settings from various sources.
 
@@ -20,12 +18,12 @@ export VAR2=VALUE2
 
 ## Installation
 
-Major platform binaries [here](https://github.com/dnitsch/genvars/releases)
+Major platform binaries [here](https://github.com/dnitsch/configmanager/releases)
 
 ```bash
-curl -L https://github.com/dnitsch/genvars/releases/download/v0.3.0/genvars-`uname -s` -o genvars
-chmod +x genvars
-sudo mv genvars /usr/local/bin
+curl -L https://github.com/dnitsch/configmanager/releases/download/v0.3.0/configmanager-`uname -s` -o configmanager
+chmod +x configmanager
+sudo mv configmanager /usr/local/bin
 ```
 
 ### TODO
@@ -37,7 +35,7 @@ sudo mv genvars /usr/local/bin
 ## Usage
 
 ```bash
-genvars --tokens AWSSECRETS#/appxyz/service1-password --tokens AWSPARAMSTR#/appxyz/service1-password
+configmanager --tokens AWSSECRETS#/appxyz/service1-password --tokens AWSPARAMSTR#/appxyz/service1-password
 source app.env
 ./startapp
 ```
@@ -47,7 +45,7 @@ By default the output path is `app.env` relative to the exec binary.
 This can be overridden by passing in the `--path` param.
 
 ```bash
-genvars --token AWSSECRETS#/appxyz/service1-password --token AWSPARAMSTR#/appxyz/service12-settings --path /some/path/app.env
+configmanager --token AWSSECRETS#/appxyz/service1-password --token AWSPARAMSTR#/appxyz/service12-settings --path /some/path/app.env
 source /some/path/app.env
 ./startapp # psuedo script to start an application
 ```

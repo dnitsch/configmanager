@@ -1,4 +1,4 @@
-module github.com/dnitsch/genvars
+module github.com/dnitsch/configmanager
 
 go 1.17
 

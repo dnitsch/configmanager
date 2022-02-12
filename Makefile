@@ -1,9 +1,4 @@
-.PHONY: codegen
-
-# export GO111MODULE=on
-
-codegen_verify:
-	./hack/verify-codegen.sh
+.PHONY: 
 
 test: test_prereq
 	go test `go list ./... | grep -v */generated/` -v -mod=readonly -coverprofile=.coverage/out | go-junit-report > .coverage/report-junit.xml && \
@@ -28,11 +23,11 @@ buildprep: tidy
 	mkdir -p bin
 
 build: buildprep
-	GOOS=linux go build -o bin/genvars-Linux .
+	GOOS=linux go build -o bin/configmanager-Linux ./cmd/configmanager
 
 buildmac: buildprep
-	GOOS=darwin go build -o bin/genvars-Darwin .
+	GOOS=darwin go build -o bin/configmanager-Darwin ./cmd/configmanager
 
 buildwin: buildprep
-	GOOS=windows go build -o bin/genvars.exe .
+	GOOS=windows go build -o bin/configmanager.exe ./cmd/configmanager
  
