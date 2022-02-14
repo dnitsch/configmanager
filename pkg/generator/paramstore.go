@@ -11,7 +11,6 @@ import (
 
 type ParamStore struct {
 	svc   *ssm.Client
-	ctx   context.Context
 	token string
 }
 
@@ -25,7 +24,6 @@ func NewParamStore(ctx context.Context) (*ParamStore, error) {
 
 	return &ParamStore{
 		svc: initService,
-		ctx: ctx,
 	}, nil
 
 }
@@ -45,8 +43,10 @@ func (imp *ParamStore) getTokenValue(v *genVars) (string, error) {
 		Name:           aws.String(v.stripPrefix(imp.token, ParamStorePrefix)),
 		WithDecryption: true,
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	result, err := imp.svc.GetParameter(imp.ctx, input)
+	result, err := imp.svc.GetParameter(ctx, input)
 	if err != nil {
 		log.Errorf("ParamStore: %s", err)
 		return "", err

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"os"
 
@@ -21,13 +20,14 @@ func (i *tokenArray) Set(value string) error {
 }
 
 var (
-	token tokenArray
-	path  string
+	token          tokenArray
+	path           string
+	tokenSeparator string
 )
 
 func main() {
 	flag.Parse()
-	gv := generator.NewGenVars(path, context.TODO())
+	gv := generator.New()
 	gv.WithConfig(&generator.GenVarsConfig{Outpath: path})
 	rawmap, err := gv.Generate(token)
 	if err != nil {
@@ -35,6 +35,8 @@ func main() {
 		os.Exit(1)
 	}
 	log.Infof("%+v", rawmap)
+
+	gv.ConvertToExportVar()
 
 	f, err := gv.FlushToFile()
 	if err != nil {
@@ -48,4 +50,5 @@ func main() {
 func init() {
 	flag.Var(&token, "token", "token value to look for in specifc implementation")
 	flag.StringVar(&path, "path", "./app.env", "Path to write the sourceable file to")
+	flag.StringVar(&tokenSeparator, "tokenseparator", generator.TokenSeparator, "Token Separator symbol to use")
 }

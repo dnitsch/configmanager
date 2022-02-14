@@ -1,19 +1,19 @@
 package configmanager
 
 import (
-	"context"
+	"fmt"
 
 	"github.com/dnitsch/configmanager/pkg/generator"
-	"github.com/dnitsch/configmanager/pkg/log"
 )
 
-func Retrieve(tokens []string, ctx context.Context) (generator.ParsedMap, error) {
-	gv := generator.NewGenVars(context.TODO())
-	gv.WithConfig(&generator.GenVarsConfig{})
-	rawmap, err := gv.Generate(tokens)
-	if err != nil {
-		log.Errorf("%e", err)
-		return err
-	}
-	log.Infof("%+v", rawmap)
+// Retrieve gets a rawMap from a set implementaion
+// will be empty if no matches found
+func Retrieve(tokens []string, config *generator.GenVarsConfig) (generator.ParsedMap, error) {
+	gv := generator.New()
+	gv.WithConfig(config)
+	return gv.Generate(tokens)
+}
+
+func Insert() error {
+	return fmt.Errorf("%s", "NotYetImplemented")
 }

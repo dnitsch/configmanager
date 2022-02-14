@@ -11,7 +11,6 @@ import (
 
 type SecretsMgr struct {
 	svc   *secretsmanager.Client
-	ctx   context.Context
 	token string
 }
 
@@ -25,7 +24,6 @@ func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
 
 	return &SecretsMgr{
 		svc: initService,
-		ctx: ctx,
 	}, nil
 
 }
@@ -46,7 +44,10 @@ func (implmt *SecretsMgr) getTokenValue(v *genVars) (string, error) {
 		VersionStage: aws.String("AWSCURRENT"),
 	}
 
-	result, err := implmt.svc.GetSecretValue(implmt.ctx, input)
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	result, err := implmt.svc.GetSecretValue(ctx, input)
 	if err != nil {
 		log.Errorf("SecretsMgr: %s", err)
 		return "", err

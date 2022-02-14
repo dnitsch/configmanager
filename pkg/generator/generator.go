@@ -32,8 +32,9 @@ type genVars struct {
 	token          string
 	ctx            context.Context
 	config         GenVarsConfig
-	output         string
-	mapOut         ParsedMap
+	outString      string
+	// rawMap is the internal object that holds the values of original token => retrieved value
+	rawMap ParsedMap
 }
 
 type genVarsStrategy interface {
@@ -46,17 +47,16 @@ type genVarsStrategy interface {
 // the return type if results are not flushed to file
 type ParsedMap map[string]string
 
-func NewGenVars(out string, ctx context.Context) *genVars {
+func New() *genVars {
 	defaultStrategy := NewDefatultStrategy()
-	return newGenVars(defaultStrategy, out, ctx)
+	return newGenVars(defaultStrategy)
 }
 
-func newGenVars(e genVarsStrategy, out string, ctx context.Context) *genVars {
-	mo := ParsedMap{}
+func newGenVars(e genVarsStrategy) *genVars {
+	m := ParsedMap{}
 	return &genVars{
 		implementation: e,
-		ctx:            ctx,
-		mapOut:         mo,
+		rawMap:         m,
 	}
 }
 
@@ -89,50 +89,25 @@ func (c *genVars) stripPrefix(in, prefix string) string {
 	return strings.Replace(in, fmt.Sprintf("%s%s", prefix, c.config.TokenSeparator), "", 1)
 }
 
-// Generate will return a k/v map of the tokens with their secret/paramstore
-// the standard pattern of a token should foll
+// Generate generates a k/v map of the tokens with their corresponding secret/paramstore values
+// the standard pattern of a token should follow a path like
 func (c *genVars) Generate(tokens []string) (ParsedMap, error) {
 
-	m := ParsedMap{}
 	for _, token := range tokens {
 		prefix := strings.Split(token, TokenSeparator)[0]
 		if found := VarPrefix[prefix]; found {
 			// TODO: allow for more customization here
-			// rawKeyToken := strings.Split(strings.Split(token, prefix)[1], "/")
-			// topLevelKey := rawKeyToken[len(rawKeyToken)-1]
-			rawString, err := c.implemetnationSepcificDecodedString(prefix, token)
+			rawString, err := c.retrieveSpecific(prefix, token)
 			if err != nil {
 				return nil, err
 			}
-			m[token] = rawString
+			c.rawMap[token] = rawString
 		}
 	}
-	return m, nil
-
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		trm := &ParsedMap{}
-	// 		isOk := isParsed(rawString, trm)
-	// 		if isOk {
-	// 			normMap := envVarNormalize(*trm)
-	// 			c.exportVars(normMap)
-	// 		} else {
-	// 			c.exportVars(ParsedMap{topLevelKey: rawString})
-	// 		}
-
-	// 	} else {
-	// 		log.Info("NotFound")
-	// 	}
-	// }
-	// if c.output == "" {
-	// 	return nil, fmt.Errorf("no Tokens received that could generate an output: %v", tokens)
-	// }
-
-	// return c.flushToFile()
+	return c.rawMap, nil
 }
 
-func (c *genVars) implemetnationSepcificDecodedString(prefix, in string) (string, error) {
+func (c *genVars) retrieveSpecific(prefix, in string) (string, error) {
 	switch prefix {
 	case SecretMgrPrefix:
 		// default strategy paramstore
@@ -168,9 +143,20 @@ func isParsed(res string, trm *ParsedMap) bool {
 	return true
 }
 
-func (c *genVars) DoExport(ramMap ParsedMap, useUpperLevelAsKey bool) ParsedMap {
-
-	return ParsedMap{}
+// ConvertToExportVar 
+func (c *genVars) ConvertToExportVar() {
+	for k, v := range c.rawMap {
+		rawKeyToken := strings.Split(k, "/") // assumes a path like token was used
+		topLevelKey := rawKeyToken[len(rawKeyToken)-1]
+		trm := &ParsedMap{}
+		isOk := isParsed(v, trm)
+		if isOk {
+			normMap := envVarNormalize(*trm)
+			c.exportVars(normMap)
+		} else {
+			c.exportVars(ParsedMap{topLevelKey: v})
+		}
+	}
 }
 
 //
@@ -185,10 +171,10 @@ func envVarNormalize(pmap ParsedMap) ParsedMap {
 func (c *genVars) exportVars(exportMap ParsedMap) {
 
 	for k, v := range exportMap {
-		// NOTE: \n lineending is not totaly cross platform
-		c.output += fmt.Sprintf("export %s='%s'\n", normalizeKey(k), v)
-		c.mapOut[normalizeKey(k)] = v
+		// NOTE: \n line ending is not totaly cross platform
+		c.outString += fmt.Sprintf("export %s='%s'\n", normalizeKey(k), v)
 	}
+	// c.mapOut[normalizeKey(k)] = v
 }
 
 func normalizeKey(k string) string {
@@ -200,7 +186,7 @@ func normalizeKey(k string) string {
 
 func (c *genVars) FlushToFile() (string, error) {
 
-	e := os.WriteFile(c.config.Outpath, []byte(c.output), 0644)
+	e := os.WriteFile(c.config.Outpath, []byte(c.outString), 0644)
 	if e != nil {
 		return "", e
 	}

@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -30,7 +29,7 @@ func newFixture(t *testing.T) *fixture {
 func (f *fixture) goodGenVars(op, ts string) {
 	f.conf = GenVarsConfig{Outpath: op, TokenSeparator: ts}
 
-	gv := NewGenVars("foobar", context.TODO())
+	gv := New()
 	gv.WithConfig(&f.conf)
 	f.c = gv
 }
@@ -73,5 +72,20 @@ func TestNormlizedMap(t *testing.T) {
 		if k != "FOO" {
 			t.Errorf(testutils.TestPhrase, "FOO", k)
 		}
+	}
+}
+
+func TestConvertToExportVars(t *testing.T) {
+	want := `export FOO='BAR'
+`
+	m := ParsedMap{}
+	m["foo"] = "BAR"
+	f := newFixture(t)
+	f.goodGenVars(standardop, standardts)
+	f.c.rawMap = m
+	f.c.ConvertToExportVar()
+	got := f.c.outString
+	if got != want {
+		t.Errorf(testutils.TestPhrase, want, got)
 	}
 }
