@@ -21,7 +21,7 @@ export VAR2=VALUE2
 Major platform binaries [here](https://github.com/dnitsch/configmanager/releases)
 
 ```bash
-curl -L https://github.com/dnitsch/configmanager/releases/download/v0.3.0/configmanager-`uname -s` -o configmanager
+curl -L https://github.com/dnitsch/configmanager/releases/download/v0.5.0/configmanager-`uname -s` -o configmanager
 chmod +x configmanager
 sudo mv configmanager /usr/local/bin
 ```
