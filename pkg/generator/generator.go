@@ -143,7 +143,7 @@ func isParsed(res string, trm *ParsedMap) bool {
 	return true
 }
 
-// ConvertToExportVar 
+// ConvertToExportVar
 func (c *genVars) ConvertToExportVar() {
 	for k, v := range c.rawMap {
 		rawKeyToken := strings.Split(k, "/") // assumes a path like token was used

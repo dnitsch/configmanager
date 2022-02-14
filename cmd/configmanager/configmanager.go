@@ -29,13 +29,11 @@ func main() {
 	flag.Parse()
 	gv := generator.New()
 	gv.WithConfig(&generator.GenVarsConfig{Outpath: path})
-	rawmap, err := gv.Generate(token)
+	_, err := gv.Generate(token)
 	if err != nil {
 		log.Errorf("%e", err)
 		os.Exit(1)
 	}
-	log.Infof("%+v", rawmap)
-
 	gv.ConvertToExportVar()
 
 	f, err := gv.FlushToFile()
