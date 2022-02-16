@@ -8,9 +8,9 @@ import (
 
 // Retrieve gets a rawMap from a set implementaion
 // will be empty if no matches found
-func Retrieve(tokens []string, config *generator.GenVarsConfig) (generator.ParsedMap, error) {
+func Retrieve(tokens []string, config generator.GenVarsConfig) (generator.ParsedMap, error) {
 	gv := generator.New()
-	gv.WithConfig(config)
+	gv.WithConfig(&config)
 	return gv.Generate(tokens)
 }
 

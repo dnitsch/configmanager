@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 
+	"github.com/dnitsch/configmanager"
 	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
@@ -27,6 +28,7 @@ var (
 
 func main() {
 	flag.Parse()
+	configmanager.Retrieve(token, generator.GenVarsConfig{Outpath: path, TokenSeparator: tokenSeparator})
 	gv := generator.New()
 	gv.WithConfig(&generator.GenVarsConfig{Outpath: path})
 	_, err := gv.Generate(token)
@@ -34,6 +36,8 @@ func main() {
 		log.Errorf("%e", err)
 		os.Exit(1)
 	}
+
+	// Conver to ExportVars 
 	gv.ConvertToExportVar()
 
 	f, err := gv.FlushToFile()
