@@ -1,4 +1,4 @@
-.PHONY: 
+.PHONY: test test_ci tidy install buildprep build buildmac buildwin
 
 test: test_prereq
 	go test `go list ./... | grep -v */generated/` -v -mod=readonly -coverprofile=.coverage/out | go-junit-report > .coverage/report-junit.xml && \
@@ -30,4 +30,3 @@ buildmac: buildprep
 
 buildwin: buildprep
 	GOOS=windows go build -o bin/configmanager.exe ./cmd/configmanager
- 
