@@ -65,7 +65,7 @@ func TestStripPrefixNormal(t *testing.T) {
 	}
 }
 
-func TestNormlizedMap(t *testing.T) {
+func TestNormalizedMapWithString(t *testing.T) {
 	a := map[string]interface{}{"foo": "bar"}
 	got := envVarNormalize(a)
 	for k := range got {
@@ -75,11 +75,23 @@ func TestNormlizedMap(t *testing.T) {
 	}
 }
 
+func TestNormalizedMapWithInt(t *testing.T) {
+	a := map[string]interface{}{"num": 123}
+	got := envVarNormalize(a)
+	for k := range got {
+		if k != "NUM" {
+			t.Errorf(testutils.TestPhrase, "NUM", k)
+		}
+	}
+}
+
 func TestConvertToExportVars(t *testing.T) {
 	want := `export FOO='BAR'
+export NUM=123
 `
 	m := ParsedMap{}
 	m["foo"] = "BAR"
+	m["num"] = 123
 	f := newFixture(t)
 	f.goodGenVars(standardop, standardts)
 	f.c.rawMap = m
