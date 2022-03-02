@@ -45,7 +45,7 @@ type genVarsStrategy interface {
 
 // ParsedMap is the internal working object definition and
 // the return type if results are not flushed to file
-type ParsedMap map[string]string
+type ParsedMap map[string]interface{}
 
 func New() *genVars {
 	defaultStrategy := NewDefatultStrategy()
@@ -135,8 +135,9 @@ func (c *genVars) retrieveSpecific(prefix, in string) (string, error) {
 // map[string]string
 // If found it will convert that to a map with all keys uppercased
 // and any characters
-func isParsed(res string, trm *ParsedMap) bool {
-	if err := json.Unmarshal([]byte(res), &trm); err != nil {
+func isParsed(res interface{}, trm *ParsedMap) bool {
+	str := fmt.Sprint(res)
+	if err := json.Unmarshal([]byte(str), &trm); err != nil {
 		log.Info("unable to parse into a k/v map returning a string instead")
 		return false
 	}
@@ -172,7 +173,14 @@ func (c *genVars) exportVars(exportMap ParsedMap) {
 
 	for k, v := range exportMap {
 		// NOTE: \n line ending is not totaly cross platform
-		c.outString += fmt.Sprintf("export %s='%s'\n", normalizeKey(k), v)
+		_type := fmt.Sprintf("%T", v)
+		switch _type {
+		case "string":
+			c.outString += fmt.Sprintf("export %s='%s'\n", normalizeKey(k), v)
+		default:
+			c.outString += fmt.Sprintf("export %s=%v\n", normalizeKey(k), v)
+		}
+
 	}
 	// c.mapOut[normalizeKey(k)] = v
 }

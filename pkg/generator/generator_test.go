@@ -66,7 +66,7 @@ func TestStripPrefixNormal(t *testing.T) {
 }
 
 func TestNormlizedMap(t *testing.T) {
-	a := map[string]string{"foo": "bar"}
+	a := map[string]interface{}{"foo": "bar"}
 	got := envVarNormalize(a)
 	for k := range got {
 		if k != "FOO" {
