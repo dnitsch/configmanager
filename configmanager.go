@@ -6,7 +6,7 @@ import (
 	"github.com/dnitsch/configmanager/pkg/generator"
 )
 
-// Retrieve gets a rawMap from a set implementaion
+// Retrieve gets a rawMap from a set implementation
 // will be empty if no matches found
 func Retrieve(tokens []string, config generator.GenVarsConfig) (generator.ParsedMap, error) {
 	gv := generator.New()

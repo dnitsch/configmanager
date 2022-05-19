@@ -138,10 +138,10 @@ func (c *genVars) retrieveSpecific(prefix, in string) (string, error) {
 func isParsed(res interface{}, trm *ParsedMap) bool {
 	str := fmt.Sprint(res)
 	if err := json.Unmarshal([]byte(str), &trm); err != nil {
-	    log.Infof("Err = %v", err)
 		log.Info("unable to parse into a k/v map returning a string instead")
 		return false
 	}
+	log.Info("parsed into a k/v map")
 	return true
 }
 

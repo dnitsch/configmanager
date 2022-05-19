@@ -37,7 +37,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Conver to ExportVars 
+	// Conver to ExportVars
 	gv.ConvertToExportVar()
 
 	f, err := gv.FlushToFile()
