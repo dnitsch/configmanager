@@ -8,6 +8,7 @@
 # Go
 vendor
 bin
+dist
 
 # tests
 .coverage

@@ -1,56 +1,49 @@
-package main
+package cmd
 
 import (
-	"flag"
+	"fmt"
 	"os"
 
-	"github.com/dnitsch/configmanager"
+	"github.com/dnitsch/configmanager/internal/config"
+	"github.com/dnitsch/configmanager/internal/utils"
 	"github.com/dnitsch/configmanager/pkg/generator"
-	"github.com/dnitsch/configmanager/pkg/log"
+	"github.com/spf13/cobra"
 )
 
-type tokenArray []string
-
-func (i *tokenArray) String() string {
-	return ""
-}
-
-func (i *tokenArray) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
+// Default empty string array
+var tokenArray []string
 
 var (
-	token          tokenArray
-	path           string
-	tokenSeparator string
+	tokens           []string
+	path             string
+	tokenSeparator   string
+	configmanagerCmd = &cobra.Command{
+		Use:   "version",
+		Short: fmt.Sprintf("Get version number %s", config.SELF_NAME),
+		Long:  `Version and Revision number of the installed CLI`,
+		Run:   cfgRun,
+	}
 )
 
-func main() {
-	flag.Parse()
-	configmanager.Retrieve(token, generator.GenVarsConfig{Outpath: path, TokenSeparator: tokenSeparator})
-	gv := generator.New()
-	gv.WithConfig(&generator.GenVarsConfig{Outpath: path})
-	_, err := gv.Generate(token)
-	if err != nil {
-		log.Errorf("%e", err)
+func Execute() {
+	if err := configmanagerCmd.Execute(); err != nil {
+		fmt.Errorf("Command Errord: %v", err)
 		os.Exit(1)
 	}
-
-	// Conver to ExportVars
-	gv.ConvertToExportVar()
-
-	f, err := gv.FlushToFile()
-	if err != nil {
-		log.Errorf("%e", err)
-		os.Exit(1)
-	}
-	log.Infof("Vars written to: %s\n", f)
 	os.Exit(0)
 }
 
 func init() {
-	flag.Var(&token, "token", "token value to look for in specifc implementation")
-	flag.StringVar(&path, "path", "./app.env", "Path to write the sourceable file to")
-	flag.StringVar(&tokenSeparator, "tokenseparator", generator.TokenSeparator, "Token Separator symbol to use")
+	configmanagerCmd.PersistentFlags().StringArrayVarP(&tokens, "token", "t", tokenArray, "Token pointing to a config/secret variable")
+	configmanagerCmd.MarkPersistentFlagRequired("token")
+	configmanagerCmd.PersistentFlags().StringVarP(&path, "path", "p", "./app.env", "Path where to write out the replaced a config/secret variables")
+	configmanagerCmd.PersistentFlags().StringVarP(&tokenSeparator, "token-separator", "s", "#", "Separator to use to mark concrete store and the key within it")
+}
+
+func cfgRun(cmd *cobra.Command, args []string) {
+	err := utils.GenerateTokens(generator.GenVarsConfig{Outpath: path, TokenSeparator: tokenSeparator}, tokens)
+	if err != nil {
+
+		os.Exit(1)
+	}
 }

@@ -1,5 +1,7 @@
 # Config Manager
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/dnitsch/configmanager)](https://goreportcard.com/report/github.com/dnitsch/configmanager)
+
 Package used for retrieving application settings from various sources.
 
 Currently supported variable and secrets implementations - AWS SecretsManager and AWS ParameterStore.

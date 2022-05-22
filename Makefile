@@ -1,4 +1,12 @@
-.PHONY: test test_ci tidy install buildprep build buildmac buildwin
+
+OWNER := dnitsch
+NAME := configmanager
+VERSION := v0.6.2
+REVISION := $(shell git rev-parse --short HEAD)
+
+LDFLAGS := -ldflags="-s -w -X \"github.com/$(OWNER)/$(NAME)/cmd.Version=$(VERSION)\" -X \"github.com/$(OWNER)/$(NAME)/cmd.Revision=$(REVISION)\" -extldflags -static"
+
+.PHONY: test test_ci tidy install cross-build 
 
 test: test_prereq
 	go test `go list ./... | grep -v */generated/` -v -mod=readonly -coverprofile=.coverage/out | go-junit-report > .coverage/report-junit.xml && \
@@ -19,14 +27,19 @@ tidy: install
 install:
 	go mod vendor
 
-buildprep: tidy
-	mkdir -p bin
+.PHONY: clean
+clean:
+	rm -rf bin/*
+	rm -rf dist/*
+	rm -rf vendor/*
 
-build: buildprep
-	GOOS=linux go build -o bin/configmanager-Linux ./cmd/configmanager
+cross-build:
+	for os in darwin linux windows; do \
+	    [ $$os = "windows" ] && EXT=".exe"; \
+		GOOS=$$os CGO_ENABLED=0 go build -a -tags netgo -installsuffix netgo $(LDFLAGS) -o dist/$(NAME)-$$os$$EXT .; \
+	done
 
-buildmac: buildprep
-	GOOS=darwin go build -o bin/configmanager-Darwin ./cmd/configmanager
-
-buildwin: buildprep
-	GOOS=windows go build -o bin/configmanager.exe ./cmd/configmanager
+release: cross-build
+	git tag $(VERSION)
+	git push origin $(VERSION)
+	OWNER=$(OWNER) NAME=$(NAME) PAT=$(PAT) VERSION=$(VERSION) . hack/release.sh 
