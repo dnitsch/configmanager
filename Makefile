@@ -4,7 +4,7 @@ NAME := configmanager
 VERSION := v0.6.3
 REVISION := $(shell git rev-parse --short HEAD)
 
-LDFLAGS := -ldflags="-s -w -X \"github.com/$(OWNER)/$(NAME)/cmd.Version=$(VERSION)\" -X \"github.com/$(OWNER)/$(NAME)/cmd.Revision=$(REVISION)\" -extldflags -static"
+LDFLAGS := -ldflags="-s -w -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Version=$(VERSION)\" -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Revision=$(REVISION)\" -extldflags -static"
 
 .PHONY: test test_ci tidy install cross-build 
 
@@ -36,7 +36,7 @@ clean:
 cross-build:
 	for os in darwin linux windows; do \
 	    [ $$os = "windows" ] && EXT=".exe"; \
-		GOOS=$$os CGO_ENABLED=0 go build -a -tags netgo -installsuffix netgo $(LDFLAGS) -o dist/$(NAME)-$$os$$EXT .; \
+		GOOS=$$os CGO_ENABLED=0 go build -a -tags netgo -installsuffix netgo $(LDFLAGS) -o dist/$(NAME)-$$os$$EXT ./cmd; \
 	done
 
 release: cross-build
