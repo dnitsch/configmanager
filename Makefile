@@ -1,7 +1,7 @@
 
 OWNER := dnitsch
 NAME := configmanager
-VERSION := v0.7.0
+VERSION := v0.7.1
 REVISION := $(shell git rev-parse --short HEAD)
 
 LDFLAGS := -ldflags="-s -w -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Version=$(VERSION)\" -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Revision=$(REVISION)\" -extldflags -static"
