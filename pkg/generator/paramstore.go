@@ -9,8 +9,12 @@ import (
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
+type paramStoreApi interface {
+	GetParameter(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error)
+}
+
 type ParamStore struct {
-	svc   *ssm.Client
+	svc   paramStoreApi
 	token string
 }
 
@@ -20,10 +24,10 @@ func NewParamStore(ctx context.Context) (*ParamStore, error) {
 		log.Errorf("unable to load SDK config, %v", err)
 		return nil, err
 	}
-	initService := ssm.NewFromConfig(cfg)
+	c := ssm.NewFromConfig(cfg)
 
 	return &ParamStore{
-		svc: initService,
+		svc: c,
 	}, nil
 
 }

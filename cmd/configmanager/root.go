@@ -1,0 +1,38 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/dnitsch/configmanager/internal/config"
+	"github.com/spf13/cobra"
+)
+
+var (
+	verbose          bool
+	configmanagerCmd = &cobra.Command{
+		Use:   config.SELF_NAME,
+		Short: fmt.Sprintf("%s CLI for retrieving and inserting config or secret variables", config.SELF_NAME),
+		Long: fmt.Sprintf(`%s CLI for retrieving config or secret variables.
+		Using a specific tokens as an array item`, config.SELF_NAME),
+	}
+)
+
+func Execute() {
+	if err := configmanagerCmd.Execute(); err != nil {
+		fmt.Errorf("cli error: %v", err)
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+func init() {
+	configmanagerCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbosity level")
+	// // Set global log level
+	// lvl, err := zerolog.ParseLevel(strings.ToLower(os.Getenv("LOG_LEVEL")))
+	// if err != nil {
+	// 	log.Error().Str("StartUpLogger", err.Error())
+	// 	return true, nil
+	// }
+	// logger := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(lvl)
+}

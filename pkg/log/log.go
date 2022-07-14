@@ -1,36 +1,50 @@
 package log
 
 import (
-	"log"
+	"fmt"
 	"os"
+	"strings"
+
+	"github.com/rs/zerolog"
 )
 
 var (
-	info     = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
-	warn     = log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime)
-	errorout = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime)
+	Logger zerolog.Logger
 )
 
-func Infof(format string, args ...interface{}) {
-	info.Printf(format, args...)
+func Infof(format string, args ...any) {
+	Logger.Info().Msg(fmt.Sprintf(format, args...))
 }
 
 func Info(msg string) {
-	info.Print(msg)
+	Logger.Info().Msg(msg)
 }
 
-func Warnf(format string, args ...interface{}) {
-	warn.Printf(format, args...)
+func Warnf(format string, args ...any) {
+	Logger.Warn().Msg(fmt.Sprintf(format, args...))
 }
 
 func Warn(msg string) {
-	warn.Print(msg)
+	Logger.Warn().Msg(msg)
 }
 
-func Errorf(format string, args ...interface{}) {
-	errorout.Printf(format, args...)
+func Errorf(format string, args ...any) {
+	Logger.Error().Msg(fmt.Sprintf(format, args...))
 }
 
-func Error(msg string) {
-	errorout.Print(msg)
+func Error(err error) {
+	Logger.Error().Err(err).Msg("")
+}
+
+func init() {
+	logLevel := "error"
+	// Set global log level
+	if level, found := os.LookupEnv("CONFIGMANAGER_LOG_LEVEL"); found {
+		logLevel = strings.ToLower(level)
+	}
+	lvl, err := zerolog.ParseLevel(logLevel)
+	if err != nil {
+		panic(fmt.Errorf("StartUpLoggerFailed: %v", err))
+	}
+	Logger = zerolog.New(os.Stderr).With().Timestamp().Logger().Level(lvl)
 }

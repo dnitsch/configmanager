@@ -9,7 +9,7 @@ import (
 // Retrieve gets a rawMap from a set implementation
 // will be empty if no matches found
 func Retrieve(tokens []string, config generator.GenVarsConfig) (generator.ParsedMap, error) {
-	gv := generator.New()
+	gv := generator.NewGenerator()
 	gv.WithConfig(&config)
 	return gv.Generate(tokens)
 }

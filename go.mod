@@ -1,6 +1,6 @@
 module github.com/dnitsch/configmanager
 
-go 1.17
+go 1.18
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.11.2
@@ -8,6 +8,12 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.10.2
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.17.1
 	github.com/spf13/cobra v1.4.0
+)
+
+require (
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6 // indirect
 )
 
 require (
@@ -22,6 +28,7 @@ require (
 	github.com/aws/smithy-go v1.9.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/rs/zerolog v1.27.0
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )

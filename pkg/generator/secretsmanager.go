@@ -9,8 +9,12 @@ import (
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
+type secretsMgrApi interface {
+	GetSecretValue(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error)
+}
+
 type SecretsMgr struct {
-	svc   *secretsmanager.Client
+	svc   secretsMgrApi
 	token string
 }
 
@@ -20,10 +24,10 @@ func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
 		log.Errorf("unable to load SDK config, %v", err)
 		return nil, err
 	}
-	initService := secretsmanager.NewFromConfig(cfg)
+	c := secretsmanager.NewFromConfig(cfg)
 
 	return &SecretsMgr{
-		svc: initService,
+		svc: c,
 	}, nil
 
 }
@@ -40,7 +44,7 @@ func (implmt *SecretsMgr) getTokenValue(v *genVars) (string, error) {
 	log.Infof("Getting Secret: %s", implmt.token)
 
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(v.stripPrefix(implmt.token, SecretMgrPrefix)),
+		SecretId:     aws.String(v.stripPrefix(implmt.token, secretMgrPrefix)),
 		VersionStage: aws.String("AWSCURRENT"),
 	}
 

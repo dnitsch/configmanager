@@ -12,30 +12,28 @@ import (
 )
 
 const (
-	TokenSeparator   = "#"
+	tokenSeparator = "#"
+	// keySeparator used for accessing nested
+	// objects within the retrieved map
+	keySeparator     = "|"
+	secretMgrPrefix  = "AWSSECRETS"
+	paramStorePrefix = "AWSPARAMSTR"
+
 	SecretMgrPrefix  = "AWSSECRETS"
 	ParamStorePrefix = "AWSPARAMSTR"
 )
 
+// // VarPrefix maps implementation to prefix
+// type VarPrefix struct {
+// 	secretsMgr string
+// 	paramStore string
+// }
+
 var (
+	// varPrefix = VarPrefix{secretsMgr: secretMgrPrefix, paramStore: paramStorePrefix}
+	// default varPrefix
 	VarPrefix = map[string]bool{SecretMgrPrefix: true, ParamStorePrefix: true}
 )
-
-// GenVarsConfig defines the input config object to be passed
-type GenVarsConfig struct {
-	Outpath        string
-	TokenSeparator string
-}
-
-type genVars struct {
-	implementation genVarsStrategy
-	token          string
-	ctx            context.Context
-	config         GenVarsConfig
-	outString      string
-	// rawMap is the internal object that holds the values of original token => retrieved value
-	rawMap ParsedMap
-}
 
 type genVarsStrategy interface {
 	getTokenValue(c *genVars) (s string, e error)
@@ -43,28 +41,83 @@ type genVarsStrategy interface {
 	setValue(s string)
 }
 
+type genVars struct {
+	implementation genVarsStrategy
+	token          string
+	ctx            context.Context
+	config         GenVarsConfig
+	outString      []string
+	// rawMap is the internal object that holds the values of original token => retrieved value - decrypted in plain text
+	rawMap ParsedMap
+}
+
 // ParsedMap is the internal working object definition and
 // the return type if results are not flushed to file
-type ParsedMap map[string]interface{}
+type ParsedMap map[string]any
 
-func New() *genVars {
+// NewGenerator returns a new instance
+func NewGenerator() *genVars {
 	defaultStrategy := NewDefatultStrategy()
 	return newGenVars(defaultStrategy)
 }
 
 func newGenVars(e genVarsStrategy) *genVars {
 	m := ParsedMap{}
+	defaultConf := GenVarsConfig{
+		tokenSeparator: tokenSeparator,
+		keySeparator:   keySeparator,
+	}
 	return &genVars{
 		implementation: e,
 		rawMap:         m,
+		// return using default config
+		config: defaultConf,
 	}
 }
 
+// WithConfig uses custom config
 func (c *genVars) WithConfig(cfg *GenVarsConfig) *genVars {
-	if cfg.TokenSeparator == "" {
-		cfg.TokenSeparator = TokenSeparator
+	// backwards compatibility
+	if cfg != nil {
+		c.config = *cfg
 	}
-	c.config = *cfg
+	return c
+}
+
+// GenVarsConfig defines the input config object to be passed
+type GenVarsConfig struct {
+	outpath        string
+	tokenSeparator string
+	keySeparator   string
+	// varPrefix      VarPrefix
+}
+
+// NewConfig
+func NewConfig() *GenVarsConfig {
+	return &GenVarsConfig{
+		tokenSeparator: tokenSeparator,
+		keySeparator:   keySeparator,
+		// varPrefix:      varPrefix,
+	}
+}
+
+// WithOutputPath
+func (c *GenVarsConfig) WithOutputPath(out string) *GenVarsConfig {
+	c.outpath = out
+	return c
+}
+
+// WithTokenSeparator adds a custom token separator
+// token is the actual value of the parameter/secret in the
+// provider store
+func (c *GenVarsConfig) WithTokenSeparator(tokenSeparator string) *GenVarsConfig {
+	c.tokenSeparator = tokenSeparator
+	return c
+}
+
+// WithKeySeparator adds a custom key separotor
+func (c *GenVarsConfig) WithKeySeparator(keySeparator string) *GenVarsConfig {
+	c.keySeparator = keySeparator
 	return c
 }
 
@@ -86,7 +139,7 @@ func (c *genVars) getTokenValue() (string, error) {
 }
 
 func (c *genVars) stripPrefix(in, prefix string) string {
-	return strings.Replace(in, fmt.Sprintf("%s%s", prefix, c.config.TokenSeparator), "", 1)
+	return strings.Replace(in, fmt.Sprintf("%s%s", prefix, c.config.tokenSeparator), "", 1)
 }
 
 // Generate generates a k/v map of the tokens with their corresponding secret/paramstore values
@@ -94,7 +147,7 @@ func (c *genVars) stripPrefix(in, prefix string) string {
 func (c *genVars) Generate(tokens []string) (ParsedMap, error) {
 
 	for _, token := range tokens {
-		prefix := strings.Split(token, TokenSeparator)[0]
+		prefix := strings.Split(token, c.config.tokenSeparator)[0]
 		if found := VarPrefix[prefix]; found {
 			// TODO: allow for more customization here
 			rawString, err := c.retrieveSpecific(prefix, token)
@@ -109,7 +162,7 @@ func (c *genVars) Generate(tokens []string) (ParsedMap, error) {
 
 func (c *genVars) retrieveSpecific(prefix, in string) (string, error) {
 	switch prefix {
-	case SecretMgrPrefix:
+	case secretMgrPrefix:
 		// default strategy paramstore
 		scrtMgr, err := NewSecretsMgr(c.ctx)
 		if err != nil {
@@ -118,7 +171,7 @@ func (c *genVars) retrieveSpecific(prefix, in string) (string, error) {
 		c.setImplementation(scrtMgr)
 		c.setToken(in)
 		return c.getTokenValue()
-	case ParamStorePrefix:
+	case paramStorePrefix:
 		paramStr, err := NewParamStore(c.ctx)
 		if err != nil {
 			return "", err
@@ -127,7 +180,7 @@ func (c *genVars) retrieveSpecific(prefix, in string) (string, error) {
 		c.setToken(in)
 		return c.getTokenValue()
 	default:
-		return "", fmt.Errorf("ImplementationNotFound for input string: %s", in)
+		return "", fmt.Errorf("implementationNotFound for input string: %s", in)
 	}
 }
 
@@ -135,7 +188,7 @@ func (c *genVars) retrieveSpecific(prefix, in string) (string, error) {
 // map[string]string
 // If found it will convert that to a map with all keys uppercased
 // and any characters
-func isParsed(res interface{}, trm *ParsedMap) bool {
+func isParsed(res any, trm *ParsedMap) bool {
 	str := fmt.Sprint(res)
 	if err := json.Unmarshal([]byte(str), &trm); err != nil {
 		log.Info("unable to parse into a k/v map returning a string instead")
@@ -173,17 +226,15 @@ func envVarNormalize(pmap ParsedMap) ParsedMap {
 func (c *genVars) exportVars(exportMap ParsedMap) {
 
 	for k, v := range exportMap {
-		// NOTE: \n line ending is not totaly cross platform
+		// NOTE: \n line ending is not totally cross platform
 		_type := fmt.Sprintf("%T", v)
 		switch _type {
 		case "string":
-			c.outString += fmt.Sprintf("export %s='%s'\n", normalizeKey(k), v)
+			c.outString = append(c.outString, fmt.Sprintf("export %s='%s'", normalizeKey(k), v))
 		default:
-			c.outString += fmt.Sprintf("export %s=%v\n", normalizeKey(k), v)
+			c.outString = append(c.outString, fmt.Sprintf("export %s=%v", normalizeKey(k), v))
 		}
-
 	}
-	// c.mapOut[normalizeKey(k)] = v
 }
 
 func normalizeKey(k string) string {
@@ -195,9 +246,20 @@ func normalizeKey(k string) string {
 
 func (c *genVars) FlushToFile() (string, error) {
 
-	e := os.WriteFile(c.config.Outpath, []byte(c.outString), 0644)
-	if e != nil {
-		return "", e
+	// moved up to
+	joinedStr := listToString(c.outString)
+
+	if c.config.outpath == "stdout" {
+		fmt.Fprint(os.Stdout, joinedStr)
+	} else {
+		e := os.WriteFile(c.config.outpath, []byte(joinedStr), 0644)
+		if e != nil {
+			return "", e
+		}
 	}
-	return c.config.Outpath, nil
+	return c.config.outpath, nil
+}
+
+func listToString(strList []string) string {
+	return strings.Join(strList, "\n")
 }

@@ -15,9 +15,8 @@ var (
 )
 
 type fixture struct {
-	t    *testing.T
-	c    *genVars
-	conf GenVarsConfig
+	t *testing.T
+	c *genVars
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -27,10 +26,8 @@ func newFixture(t *testing.T) *fixture {
 }
 
 func (f *fixture) goodGenVars(op, ts string) {
-	f.conf = GenVarsConfig{Outpath: op, TokenSeparator: ts}
-
-	gv := New()
-	gv.WithConfig(&f.conf)
+	conf := NewConfig().WithOutputPath(op).WithTokenSeparator(ts)
+	gv := NewGenerator().WithConfig(conf)
 	f.c = gv
 }
 
@@ -39,18 +36,18 @@ func TestGenVarsWithConfig(t *testing.T) {
 	f := newFixture(t)
 
 	f.goodGenVars(customop, customts)
-	if f.conf.Outpath != customop {
-		f.t.Errorf(testutils.TestPhrase, customop, f.conf.Outpath)
+	if f.c.config.outpath != customop {
+		f.t.Errorf(testutils.TestPhrase, customop, f.c.config.outpath)
 	}
-	if f.conf.TokenSeparator != customts {
-		f.t.Errorf(testutils.TestPhrase, customts, f.conf.TokenSeparator)
+	if f.c.config.tokenSeparator != customts {
+		f.t.Errorf(testutils.TestPhrase, customts, f.c.config.tokenSeparator)
 	}
 }
 
 func TestStripPrefixNormal(t *testing.T) {
 
 	want := "/normal/without/prefix"
-	prefix := SecretMgrPrefix
+	prefix := secretMgrPrefix
 	f := newFixture(t)
 	f.goodGenVars(standardop, standardts)
 
@@ -66,7 +63,7 @@ func TestStripPrefixNormal(t *testing.T) {
 }
 
 func TestNormalizedMapWithString(t *testing.T) {
-	a := map[string]interface{}{"foo": "bar"}
+	a := map[string]any{"foo": "bar"}
 	got := envVarNormalize(a)
 	for k := range got {
 		if k != "FOO" {
@@ -76,7 +73,7 @@ func TestNormalizedMapWithString(t *testing.T) {
 }
 
 func TestNormalizedMapWithInt(t *testing.T) {
-	a := map[string]interface{}{"num": 123}
+	a := map[string]any{"num": 123}
 	got := envVarNormalize(a)
 	for k := range got {
 		if k != "NUM" {
@@ -85,19 +82,82 @@ func TestNormalizedMapWithInt(t *testing.T) {
 	}
 }
 
-func TestConvertToExportVars(t *testing.T) {
-	want := `export FOO='BAR'
-export NUM=123
-`
-	m := ParsedMap{}
-	m["foo"] = "BAR"
-	m["num"] = 123
-	f := newFixture(t)
-	f.goodGenVars(standardop, standardts)
-	f.c.rawMap = m
-	f.c.ConvertToExportVar()
-	got := f.c.outString
-	if got != want {
-		t.Errorf(testutils.TestPhrase, want, got)
+func Test_ConvertToExportVars(t *testing.T) {
+	tests := []struct {
+		name   string
+		rawMap ParsedMap
+		expect []string
+	}{
+		{
+			name:   "number included",
+			rawMap: ParsedMap{"foo": "BAR", "num": 123},
+			expect: []string{`export FOO='BAR'`, `export NUM=123`},
+		},
+		{
+			name:   "strings only",
+			rawMap: ParsedMap{"foo": "BAR", "num": "a123"},
+			expect: []string{`export FOO='BAR'`, `export NUM='a123'`},
+		},
+		{
+			name:   "numbers only",
+			rawMap: ParsedMap{"foo": 123, "num": 456},
+			expect: []string{`export FOO=123`, `export NUM=456`},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.goodGenVars(standardop, standardts)
+			f.c.rawMap = tt.rawMap
+			f.c.ConvertToExportVar()
+			got := f.c.outString
+			if got == nil {
+				t.Errorf(testutils.TestPhrase, "not nil", got)
+			}
+			if len(tt.expect) != len(got) {
+				t.Errorf(testutils.TestPhrase, len(tt.expect), len(got))
+
+			}
+			for k, v := range got {
+				if v != tt.expect[k] {
+					t.Errorf(testutils.TestPhrase, tt.expect[k], got[k])
+				}
+			}
+		})
+	}
+}
+
+func Test_listToString(t *testing.T) {
+	tests := []struct {
+		name   string
+		in     []string
+		expect string
+	}{
+		{
+			name:   "1 item slice",
+			in:     []string{"export ONE=foo"},
+			expect: "export ONE=foo",
+		},
+		{
+			name:   "0 item slice",
+			in:     []string{},
+			expect: "",
+		},
+		{
+			name: "4 item slice",
+			in:   []string{"123", "123", "123", "123"},
+			expect: `123
+123
+123
+123`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := listToString(tt.in)
+			if got != tt.expect {
+				t.Errorf(testutils.TestPhrase, tt.expect, got)
+			}
+		})
 	}
 }
