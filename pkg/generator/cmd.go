@@ -1,16 +1,13 @@
-package utils
+package generator
 
 import (
 	"fmt"
 
-	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
-// GenerateTokens is a helper cmd method to call from retrieveCmd
-func GenerateTokens(config generator.GenVarsConfig, tokens []string) error {
-	gv := generator.NewGenerator()
-	gv.WithConfig(&config)
+// GenerateFromTokens is a helper cmd method to call from retrieveCmd
+func (gv *GenVars) GenerateFromCmd(tokens []string) error {
 	_, err := gv.Generate(tokens)
 	if err != nil {
 		log.Errorf("%e", err)
@@ -25,11 +22,11 @@ func GenerateTokens(config generator.GenVarsConfig, tokens []string) error {
 		log.Errorf("%e", err)
 		return err
 	}
-	log.Infof("Vars written to: %s\n", f)
+	log.Infof("Vars written to: %s", f)
 	return nil
 }
 
 //UploadTokensWithVals takes in a map of key/value pairs and uploads them
-func UploadTokensWithVals(config generator.GenVarsConfig, tokens map[string]string) error {
+func (gv *GenVars) UploadTokensWithVals(tokens map[string]string) error {
 	return fmt.Errorf("notYetImplemented")
 }

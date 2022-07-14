@@ -23,11 +23,11 @@ func (m mockParamApi) GetParameter(ctx context.Context, params *ssm.GetParameter
 
 func Test_GetParamStoreVarHappy(t *testing.T) {
 	tests := []struct {
-		name                 string
-		token                string
-		value                string
+		name       string
+		token      string
+		value      string
 		mockClient func(t *testing.T) paramStoreApi
-		genVars              *genVars
+		genVars    *GenVars
 	}{
 		{
 			name:  "successVal",
@@ -57,7 +57,7 @@ func Test_GetParamStoreVarHappy(t *testing.T) {
 					}, nil
 				})
 			},
-			genVars: &genVars{},
+			genVars: &GenVars{},
 		},
 	}
 	for _, tt := range tests {

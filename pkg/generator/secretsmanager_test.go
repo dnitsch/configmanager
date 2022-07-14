@@ -25,7 +25,7 @@ func Test_GetSecretMgrVarHappy(t *testing.T) {
 		token      string
 		value      string
 		mockClient func(t *testing.T) secretsMgrApi
-		genVars    *genVars
+		genVars    *GenVars
 	}{
 		{
 			name:  "successVal",
@@ -51,7 +51,7 @@ func Test_GetSecretMgrVarHappy(t *testing.T) {
 					}, nil
 				})
 			},
-			genVars: &genVars{},
+			genVars: &GenVars{},
 		},
 	}
 	for _, tt := range tests {

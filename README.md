@@ -75,7 +75,7 @@ Alternatively you can set the path as stdout which will reduce the need to save 
 >!Warning! about eval - if you are retrieving secrets from sources you don't control the input of - best to stick wtih the file approach and then delete the file.
 
 ```bash
-eval "$(AWS_PROFILE=iagadminnonprod configmanager r -t AWSSECRETS#/appxyz/service1-password -t AWSPARAMSTR#/appxyz/service12-settings -p stdout)" && ./.ignore-out.sh
+eval "$(configmanager r -t AWSSECRETS#/appxyz/service1-password -t AWSPARAMSTR#/appxyz/service12-settings -p stdout)" && ./.ignore-out.sh
 ```
 
 The token is made up of 3 parts:
@@ -112,12 +112,10 @@ func replaceTokens(in string, t *v1alpha.CustomFooCrdSpec) error {
 	m, err := configmanager.Retrieve(tokens, cnf)
 
 	if err != nil {
-		log.Error().Msgf("failed to retrieve vars from tokens. err: %s", err)
 		return err
 	}
 
 	if err := json.Unmarshal(replaceString(m, in), &t); err != nil {
-		log.Error().Msgf("failed to unmarshal back to type with replaced vars. err: %s", err)
 		return err
 	}
 	return nil

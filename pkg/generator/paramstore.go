@@ -39,7 +39,7 @@ func (paramStr *ParamStore) setToken(token string) {
 func (implmt *ParamStore) setValue(val string) {
 }
 
-func (imp *ParamStore) getTokenValue(v *genVars) (string, error) {
+func (imp *ParamStore) getTokenValue(v *GenVars) (string, error) {
 	log.Infof("%s", "Concrete implementation ParameterStore SecureString")
 	log.Infof("ParamStore Token: %s", imp.token)
 

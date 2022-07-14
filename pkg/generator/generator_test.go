@@ -16,7 +16,7 @@ var (
 
 type fixture struct {
 	t *testing.T
-	c *genVars
+	c *GenVars
 }
 
 func newFixture(t *testing.T) *fixture {

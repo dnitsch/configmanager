@@ -39,12 +39,12 @@ func (implmt *SecretsMgr) setToken(token string) {
 func (implmt *SecretsMgr) setValue(val string) {
 }
 
-func (implmt *SecretsMgr) getTokenValue(v *genVars) (string, error) {
+func (implmt *SecretsMgr) getTokenValue(v *GenVars) (string, error) {
 	log.Infof("%s", "Concrete implementation SecretsManager")
 	log.Infof("Getting Secret: %s", implmt.token)
 
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(v.stripPrefix(implmt.token, secretMgrPrefix)),
+		SecretId:     aws.String(v.stripPrefix(implmt.token, SecretMgrPrefix)),
 		VersionStage: aws.String("AWSCURRENT"),
 	}
 

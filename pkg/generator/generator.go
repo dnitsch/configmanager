@@ -15,33 +15,27 @@ const (
 	tokenSeparator = "#"
 	// keySeparator used for accessing nested
 	// objects within the retrieved map
-	keySeparator     = "|"
-	secretMgrPrefix  = "AWSSECRETS"
-	paramStorePrefix = "AWSPARAMSTR"
-
+	keySeparator = "|"
+	//
+	// secretMgrPrefix  = "AWSSECRETS"
+	// paramStorePrefix = "AWSPARAMSTR"
 	SecretMgrPrefix  = "AWSSECRETS"
 	ParamStorePrefix = "AWSPARAMSTR"
 )
 
-// // VarPrefix maps implementation to prefix
-// type VarPrefix struct {
-// 	secretsMgr string
-// 	paramStore string
-// }
-
 var (
-	// varPrefix = VarPrefix{secretsMgr: secretMgrPrefix, paramStore: paramStorePrefix}
 	// default varPrefix
 	VarPrefix = map[string]bool{SecretMgrPrefix: true, ParamStorePrefix: true}
 )
 
-type genVarsStrategy interface {
-	getTokenValue(c *genVars) (s string, e error)
-	setToken(s string)
-	setValue(s string)
+type Generatoriface interface {
+	Generate(tokens []string) (ParsedMap, error)
+	ConvertToExportVar()
+	FlushToFile() (string, error)
 }
 
-type genVars struct {
+type GenVars struct {
+	Generatoriface
 	implementation genVarsStrategy
 	token          string
 	ctx            context.Context
@@ -56,18 +50,18 @@ type genVars struct {
 type ParsedMap map[string]any
 
 // NewGenerator returns a new instance
-func NewGenerator() *genVars {
+func NewGenerator() *GenVars {
 	defaultStrategy := NewDefatultStrategy()
 	return newGenVars(defaultStrategy)
 }
 
-func newGenVars(e genVarsStrategy) *genVars {
+func newGenVars(e genVarsStrategy) *GenVars {
 	m := ParsedMap{}
 	defaultConf := GenVarsConfig{
 		tokenSeparator: tokenSeparator,
 		keySeparator:   keySeparator,
 	}
-	return &genVars{
+	return &GenVars{
 		implementation: e,
 		rawMap:         m,
 		// return using default config
@@ -76,7 +70,7 @@ func newGenVars(e genVarsStrategy) *genVars {
 }
 
 // WithConfig uses custom config
-func (c *genVars) WithConfig(cfg *GenVarsConfig) *genVars {
+func (c *GenVars) WithConfig(cfg *GenVarsConfig) *GenVars {
 	// backwards compatibility
 	if cfg != nil {
 		c.config = *cfg
@@ -121,30 +115,13 @@ func (c *GenVarsConfig) WithKeySeparator(keySeparator string) *GenVarsConfig {
 	return c
 }
 
-func (c *genVars) setImplementation(strategy genVarsStrategy) {
-	c.implementation = strategy
-}
-
-func (c *genVars) setToken(s string) {
-	c.implementation.setToken(s)
-}
-
-func (c *genVars) setVaule(s string) {
-	c.implementation.setValue(s)
-}
-
-func (c *genVars) getTokenValue() (string, error) {
-	log.Info("Strategy implementation")
-	return c.implementation.getTokenValue(c)
-}
-
-func (c *genVars) stripPrefix(in, prefix string) string {
+func (c *GenVars) stripPrefix(in, prefix string) string {
 	return strings.Replace(in, fmt.Sprintf("%s%s", prefix, c.config.tokenSeparator), "", 1)
 }
 
 // Generate generates a k/v map of the tokens with their corresponding secret/paramstore values
 // the standard pattern of a token should follow a path like
-func (c *genVars) Generate(tokens []string) (ParsedMap, error) {
+func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 
 	for _, token := range tokens {
 		prefix := strings.Split(token, c.config.tokenSeparator)[0]
@@ -160,9 +137,9 @@ func (c *genVars) Generate(tokens []string) (ParsedMap, error) {
 	return c.rawMap, nil
 }
 
-func (c *genVars) retrieveSpecific(prefix, in string) (string, error) {
+func (c *GenVars) retrieveSpecific(prefix, in string) (string, error) {
 	switch prefix {
-	case secretMgrPrefix:
+	case SecretMgrPrefix:
 		// default strategy paramstore
 		scrtMgr, err := NewSecretsMgr(c.ctx)
 		if err != nil {
@@ -171,7 +148,7 @@ func (c *genVars) retrieveSpecific(prefix, in string) (string, error) {
 		c.setImplementation(scrtMgr)
 		c.setToken(in)
 		return c.getTokenValue()
-	case paramStorePrefix:
+	case ParamStorePrefix:
 		paramStr, err := NewParamStore(c.ctx)
 		if err != nil {
 			return "", err
@@ -199,7 +176,7 @@ func isParsed(res any, trm *ParsedMap) bool {
 }
 
 // ConvertToExportVar
-func (c *genVars) ConvertToExportVar() {
+func (c *GenVars) ConvertToExportVar() {
 	for k, v := range c.rawMap {
 		rawKeyToken := strings.Split(k, "/") // assumes a path like token was used
 		topLevelKey := rawKeyToken[len(rawKeyToken)-1]
@@ -223,7 +200,7 @@ func envVarNormalize(pmap ParsedMap) ParsedMap {
 	return normalizedMap
 }
 
-func (c *genVars) exportVars(exportMap ParsedMap) {
+func (c *GenVars) exportVars(exportMap ParsedMap) {
 
 	for k, v := range exportMap {
 		// NOTE: \n line ending is not totally cross platform
@@ -244,7 +221,7 @@ func normalizeKey(k string) string {
 	return strings.ToUpper(string(r))
 }
 
-func (c *genVars) FlushToFile() (string, error) {
+func (c *GenVars) FlushToFile() (string, error) {
 
 	// moved up to
 	joinedStr := listToString(c.outString)

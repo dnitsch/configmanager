@@ -13,7 +13,7 @@ var (
 )
 
 func Infof(format string, args ...any) {
-	Logger.Info().Msg(fmt.Sprintf(format, args...))
+	Info(fmt.Sprintf(format, args...))
 }
 
 func Info(msg string) {
@@ -21,7 +21,7 @@ func Info(msg string) {
 }
 
 func Warnf(format string, args ...any) {
-	Logger.Warn().Msg(fmt.Sprintf(format, args...))
+	Warn(fmt.Sprintf(format, args...))
 }
 
 func Warn(msg string) {
@@ -29,7 +29,7 @@ func Warn(msg string) {
 }
 
 func Errorf(format string, args ...any) {
-	Logger.Error().Msg(fmt.Sprintf(format, args...))
+	Error(fmt.Errorf(format, args...))
 }
 
 func Error(err error) {

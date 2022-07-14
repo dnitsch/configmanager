@@ -28,11 +28,4 @@ func Execute() {
 
 func init() {
 	configmanagerCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbosity level")
-	// // Set global log level
-	// lvl, err := zerolog.ParseLevel(strings.ToLower(os.Getenv("LOG_LEVEL")))
-	// if err != nil {
-	// 	log.Error().Str("StartUpLogger", err.Error())
-	// 	return true, nil
-	// }
-	// logger := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(lvl)
 }
