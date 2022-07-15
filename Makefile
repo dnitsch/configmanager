@@ -1,7 +1,8 @@
 
 OWNER := dnitsch
 NAME := configmanager
-VERSION := v0.8.1
+GIT_TAG := "0.0.0"
+VERSION := "v$(shell git describe --tags --abbrev=0)"
 REVISION := $(shell git rev-parse --short HEAD)
 
 LDFLAGS := -ldflags="-s -w -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Version=$(VERSION)\" -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Revision=$(REVISION)\" -extldflags -static"
@@ -39,7 +40,11 @@ cross-build:
 		GOOS=$$os CGO_ENABLED=0 go build -a -tags netgo -installsuffix netgo $(LDFLAGS) -o dist/$(NAME)-$$os$$EXT ./cmd; \
 	done
 
-release: cross-build
-	git tag $(VERSION)
-	git push origin $(VERSION)
+release:
 	OWNER=$(OWNER) NAME=$(NAME) PAT=$(PAT) VERSION=$(VERSION) . hack/release.sh 
+
+tag: 
+	git tag "v$(GIT_TAG)"
+	git push origin "v$(GIT_TAG)"
+
+tagbuildrelease: tag cross-build release

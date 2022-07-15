@@ -45,12 +45,6 @@ Download specific version:
 curl -L https://github.com/dnitsch/configmanager/releases/download/v0.5.0/configmanager-`uname -s` -o configmanager
 ```
 
-### TODO
-
-- Go API and GoDoc
-
-- Ideally should be split into numerous packages for reading vars and creating using the same token reversal
-
 ## Usage
 
 ```bash
@@ -147,8 +141,7 @@ Above example would ensure that you can safely store config/secret values on a C
 
 ## Help
 
-- More implementations should be easily added with a specific implementation under the strategy interface
+- More implementations should be easily added with a specific implementation under the strategy interface 
+    - e.g. AzureKMS or GCP equivalent
 
 - maybe run as cron in the background to perform a periodic sync in case values change?
-
-TODO: lots more documentation and UNITTESTS
