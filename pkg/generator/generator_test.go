@@ -47,7 +47,7 @@ func TestGenVarsWithConfig(t *testing.T) {
 func TestStripPrefixNormal(t *testing.T) {
 
 	want := "/normal/without/prefix"
-	prefix := secretMgrPrefix
+	prefix := SecretMgrPrefix
 	f := newFixture(t)
 	f.goodGenVars(standardop, standardts)
 
