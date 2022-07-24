@@ -2,7 +2,8 @@
 OWNER := dnitsch
 NAME := configmanager
 GIT_TAG := "0.0.0"
-VERSION := "v$(shell git describe --tags --abbrev=0)"
+VERSION := "v0.9.2"
+# VERSION := "$(shell git describe --tags --abbrev=0)"
 REVISION := $(shell git rev-parse --short HEAD)
 
 LDFLAGS := -ldflags="-s -w -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Version=$(VERSION)\" -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Revision=$(REVISION)\" -extldflags -static"

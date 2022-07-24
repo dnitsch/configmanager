@@ -155,7 +155,7 @@ func (c *GenVars) retrieveSpecific(prefix, in string) (string, error) {
 		c.setToken(in)
 		return c.getTokenValue()
 	case AzKeyVaultPrefix:
-		azKv, err := NewKvStoreWithToken(c.ctx, in, c.config.tokenSeparator)
+		azKv, err := NewKvStoreWithToken(c.ctx, in, c.config.tokenSeparator, c.config.keySeparator)
 		if err != nil {
 			return "", err
 		}
@@ -259,11 +259,13 @@ func (c *GenVars) normalizeKey(k string) string {
 }
 
 func (c *GenVars) stripPrefix(in, prefix string) string {
-	return stripPrefix(in, prefix, c.config.tokenSeparator)
+	return stripPrefix(in, prefix, c.config.tokenSeparator, c.config.keySeparator)
 }
 
-func stripPrefix(in, prefix, tokenSeparator string) string {
-	return strings.Replace(in, fmt.Sprintf("%s%s", prefix, tokenSeparator), "", 1)
+func stripPrefix(in, prefix, tokenSeparator, keySeparator string) string {
+	t := in
+	b := regexp.MustCompile(`[|].*`).ReplaceAll([]byte(t), []byte(""))
+	return strings.Replace(string(b), fmt.Sprintf("%s%s", prefix, tokenSeparator), "", 1)
 }
 
 // FlushToFile saves contents to file provided

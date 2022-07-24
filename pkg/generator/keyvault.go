@@ -40,10 +40,10 @@ func NewKvStore(ctx context.Context) (*KvStore, error) {
 
 // NewKvStore returns a KvStore
 // requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfuly work
-func NewKvStoreWithToken(ctx context.Context, token, tokenSeparator string) (*KvStore, error) {
+func NewKvStoreWithToken(ctx context.Context, token, tokenSeparator, keySeparator string) (*KvStore, error) {
 
 	//
-	conf := azSplitToken(stripPrefix(token, AzKeyVaultPrefix, tokenSeparator))
+	conf := azSplitToken(stripPrefix(token, AzKeyVaultPrefix, tokenSeparator, keySeparator))
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
