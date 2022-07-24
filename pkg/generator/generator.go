@@ -21,6 +21,7 @@ const (
 	// paramStorePrefix = "AWSPARAMSTR"
 	SecretMgrPrefix  = "AWSSECRETS"
 	ParamStorePrefix = "AWSPARAMSTR"
+	AzKeyVaultPrefix = "AZKEYVAULT"
 )
 
 var (
@@ -115,10 +116,6 @@ func (c *GenVarsConfig) WithKeySeparator(keySeparator string) *GenVarsConfig {
 	return c
 }
 
-func (c *GenVars) stripPrefix(in, prefix string) string {
-	return strings.Replace(in, fmt.Sprintf("%s%s", prefix, c.config.tokenSeparator), "", 1)
-}
-
 // Generate generates a k/v map of the tokens with their corresponding secret/paramstore values
 // the standard pattern of a token should follow a path like
 func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
@@ -131,7 +128,8 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 			if err != nil {
 				return nil, err
 			}
-			c.rawMap[token] = rawString
+			// check if token includes keySeparator
+			c.rawMap[token] = c.keySeparatorLookup(token, rawString)
 		}
 	}
 	return c.rawMap, nil
@@ -156,8 +154,19 @@ func (c *GenVars) retrieveSpecific(prefix, in string) (string, error) {
 		c.setImplementation(paramStr)
 		c.setToken(in)
 		return c.getTokenValue()
+	case AzKeyVaultPrefix:
+		azKv, err := NewKvStoreWithToken(c.ctx, in, c.config.tokenSeparator)
+		if err != nil {
+			return "", err
+		}
+		// Need to swap this around for AzKV as the
+		// client is initialised via vaultURI
+		//
+		c.setImplementation(azKv)
+		c.setToken(in)
+		return c.getTokenValue()
 	default:
-		return "", fmt.Errorf("implementationNotFound for input string: %s", in)
+		return "", fmt.Errorf("implementation not found for input string: %s", in)
 	}
 }
 
@@ -175,7 +184,30 @@ func isParsed(res any, trm *ParsedMap) bool {
 	return true
 }
 
-// ConvertToExportVar
+// keySeparatorLookup checks if the key contains
+// keySeparator character
+// If it does contain one then it tries to parse
+func (c *GenVars) keySeparatorLookup(key, val string) string {
+	// key has separator
+	kl := strings.Split(key, c.config.keySeparator)
+	if len(kl) < 2 {
+		return val
+	}
+
+	pmptr := &ParsedMap{}
+
+	if ok := isParsed(val, pmptr); ok {
+		pm := *pmptr
+		if foundVal, ok := pm[kl[1]]; ok {
+			return fmt.Sprintf("%v", foundVal)
+		}
+	}
+	// returns the input value string as is
+	return val
+}
+
+// ConvertToExportVar assigns the k/v out
+// as unix style export key=val pairs seperated by `\n`
 func (c *GenVars) ConvertToExportVar() {
 	for k, v := range c.rawMap {
 		rawKeyToken := strings.Split(k, "/") // assumes a path like token was used
@@ -183,7 +215,9 @@ func (c *GenVars) ConvertToExportVar() {
 		trm := &ParsedMap{}
 		isOk := isParsed(v, trm)
 		if isOk {
-			normMap := envVarNormalize(*trm)
+			// if is a map
+			// try look up on key if separator defined
+			normMap := c.envVarNormalize(*trm)
 			c.exportVars(normMap)
 		} else {
 			c.exportVars(ParsedMap{topLevelKey: v})
@@ -191,11 +225,11 @@ func (c *GenVars) ConvertToExportVar() {
 	}
 }
 
-//
-func envVarNormalize(pmap ParsedMap) ParsedMap {
+// envVarNormalize
+func (c *GenVars) envVarNormalize(pmap ParsedMap) ParsedMap {
 	normalizedMap := ParsedMap{}
 	for k, v := range pmap {
-		normalizedMap[normalizeKey(k)] = v
+		normalizedMap[c.normalizeKey(k)] = v
 	}
 	return normalizedMap
 }
@@ -207,20 +241,33 @@ func (c *GenVars) exportVars(exportMap ParsedMap) {
 		_type := fmt.Sprintf("%T", v)
 		switch _type {
 		case "string":
-			c.outString = append(c.outString, fmt.Sprintf("export %s='%s'", normalizeKey(k), v))
+			c.outString = append(c.outString, fmt.Sprintf("export %s='%s'", c.normalizeKey(k), v))
 		default:
-			c.outString = append(c.outString, fmt.Sprintf("export %s=%v", normalizeKey(k), v))
+			c.outString = append(c.outString, fmt.Sprintf("export %s=%v", c.normalizeKey(k), v))
 		}
 	}
 }
 
-func normalizeKey(k string) string {
+// normalizeKeys returns env var compatible key
+func (c *GenVars) normalizeKey(k string) string {
 	// TODO: include a more complete regex of vaues to replace
 	r := regexp.MustCompile(`[\s\@\!]`).ReplaceAll([]byte(k), []byte(""))
 	r = regexp.MustCompile(`[\-]`).ReplaceAll(r, []byte("_"))
+	// Double underscore replace key separator
+	r = regexp.MustCompile(`[`+c.config.keySeparator+`]`).ReplaceAll(r, []byte("__"))
 	return strings.ToUpper(string(r))
 }
 
+func (c *GenVars) stripPrefix(in, prefix string) string {
+	return stripPrefix(in, prefix, c.config.tokenSeparator)
+}
+
+func stripPrefix(in, prefix, tokenSeparator string) string {
+	return strings.Replace(in, fmt.Sprintf("%s%s", prefix, tokenSeparator), "", 1)
+}
+
+// FlushToFile saves contents to file provided
+// in the config input into the generator
 func (c *GenVars) FlushToFile() (string, error) {
 
 	// moved up to

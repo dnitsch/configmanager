@@ -62,23 +62,87 @@ func TestStripPrefixNormal(t *testing.T) {
 	}
 }
 
-func TestNormalizedMapWithString(t *testing.T) {
-	a := map[string]any{"foo": "bar"}
-	got := envVarNormalize(a)
-	for k := range got {
-		if k != "FOO" {
-			t.Errorf(testutils.TestPhrase, "FOO", k)
-		}
+func Test_NormaliseMap(t *testing.T) {
+	f := newFixture(t)
+	f.goodGenVars(standardop, standardts)
+	tests := []struct {
+		name     string
+		gv       *GenVars
+		input    map[string]any
+		expected string
+	}{
+		{
+			name:     "foo->FOO",
+			gv:       f.c,
+			input:    map[string]any{"foo": "bar"},
+			expected: "FOO",
+		},
+		{
+			name:     "num->NUM",
+			gv:       f.c,
+			input:    map[string]any{"num": 123},
+			expected: "NUM",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := f.c.envVarNormalize(tt.input)
+			for k := range got {
+				if k != tt.expected {
+					t.Errorf(testutils.TestPhrase, tt.expected, k)
+				}
+			}
+		})
 	}
 }
 
-func TestNormalizedMapWithInt(t *testing.T) {
-	a := map[string]any{"num": 123}
-	got := envVarNormalize(a)
-	for k := range got {
-		if k != "NUM" {
-			t.Errorf(testutils.TestPhrase, "NUM", k)
-		}
+func Test_KeyLookup(t *testing.T) {
+	f := newFixture(t)
+	f.goodGenVars(standardop, standardts)
+
+	tests := []struct {
+		name   string
+		gv     *GenVars
+		val    string
+		key    string
+		expect string
+	}{
+		{
+			name:   "lowercase key found in str val",
+			gv:     f.c,
+			key:    `something|key`,
+			val:    `{"key": "11235"}`,
+			expect: "11235",
+		},
+		{
+			name:   "lowercase key found in numeric val",
+			gv:     f.c,
+			key:    `something|key`,
+			val:    `{"key": 11235}`,
+			expect: "11235",
+		},
+		{
+			name:   "uppercase key found in val",
+			gv:     f.c,
+			key:    `something|KEY`,
+			val:    `{"KEY": "upposeres"}`,
+			expect: "upposeres",
+		},
+		{
+			name:   "no key found in val",
+			gv:     f.c,
+			key:    `something`,
+			val:    `{"key": "notfound"}`,
+			expect: `{"key": "notfound"}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := f.c.keySeparatorLookup(tt.key, tt.val)
+			if got != tt.expect {
+				t.Errorf(testutils.TestPhrase, tt.expect, got)
+			}
+		})
 	}
 }
 

@@ -22,10 +22,10 @@ test_prereq:
 	go install github.com/axw/gocov/gocov@v1.0.0 && \
 	go install github.com/AlekSi/gocov-xml@v1.0.0
 
-tidy: install 
+tidy: 
 	go mod tidy
 
-install:
+install: tidy
 	go mod vendor
 
 .PHONY: clean
