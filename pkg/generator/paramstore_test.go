@@ -59,6 +59,40 @@ func Test_GetParamStoreVarHappy(t *testing.T) {
 			},
 			genVars: &GenVars{},
 		},
+		{
+			name:  "successVal with keyseparator",
+			token: "AWSPARAMSTR#/token/1|somekey",
+			value: tsuccessParam,
+			mockClient: func(t *testing.T) paramStoreApi {
+				return mockParamApi(func(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error) {
+					t.Helper()
+					if params.Name == nil {
+						t.Fatal("expect name to not be nil")
+					}
+
+					if strings.Contains(*params.Name, "#") {
+						t.Errorf("incorrectly stripped token separator")
+					}
+
+					if strings.Contains(*params.Name, "|somekey") {
+						t.Errorf("incorrectly stripped key separator")
+					}
+
+					if strings.Contains(*params.Name, ParamStorePrefix) {
+						t.Errorf("incorrectly stripped prefix")
+					}
+
+					if !params.WithDecryption {
+						t.Fatal("expect WithDecryption to not be false")
+					}
+
+					return &ssm.GetParameterOutput{
+						Parameter: &types.Parameter{Value: &tsuccessParam},
+					}, nil
+				})
+			},
+			genVars: &GenVars{},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

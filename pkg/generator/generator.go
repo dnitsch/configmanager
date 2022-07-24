@@ -262,6 +262,7 @@ func (c *GenVars) stripPrefix(in, prefix string) string {
 	return stripPrefix(in, prefix, c.config.tokenSeparator, c.config.keySeparator)
 }
 
+// stripPrefix 
 func stripPrefix(in, prefix, tokenSeparator, keySeparator string) string {
 	t := in
 	b := regexp.MustCompile(`[|].*`).ReplaceAll([]byte(t), []byte(""))

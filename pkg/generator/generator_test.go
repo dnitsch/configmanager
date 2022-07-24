@@ -62,6 +62,38 @@ func TestStripPrefixNormal(t *testing.T) {
 	}
 }
 
+func Test_stripPrefix(t *testing.T) {
+	f := newFixture(t)
+	f.goodGenVars(standardop, standardts)
+	tests := []struct {
+		name   string
+		token  string
+		prefix string
+		expect string
+	}{
+		{
+			name:   "simple",
+			token:  fmt.Sprintf("%s#/test/123", SecretMgrPrefix),
+			prefix: SecretMgrPrefix,
+			expect: "/test/123",
+		},
+		{
+			name:   "key appended",
+			token:  fmt.Sprintf("%s#/test/123|key", ParamStorePrefix),
+			prefix: ParamStorePrefix,
+			expect: "/test/123",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := f.c.stripPrefix(tt.token, tt.prefix)
+			if tt.expect != got {
+				t.Errorf(testutils.TestPhrase, tt.expect, got)
+			}
+		})
+	}
+}
+
 func Test_NormaliseMap(t *testing.T) {
 	f := newFixture(t)
 	f.goodGenVars(standardop, standardts)
