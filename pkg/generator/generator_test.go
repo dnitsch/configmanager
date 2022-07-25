@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/dnitsch/configmanager/internal/testutils"
@@ -182,22 +183,22 @@ func Test_ConvertToExportVars(t *testing.T) {
 	tests := []struct {
 		name   string
 		rawMap ParsedMap
-		expect []string
+		expect string
 	}{
 		{
 			name:   "number included",
 			rawMap: ParsedMap{"foo": "BAR", "num": 123},
-			expect: []string{`export FOO='BAR'`, `export NUM=123`},
+			expect: `export FOO='BAR'`,
 		},
 		{
 			name:   "strings only",
 			rawMap: ParsedMap{"foo": "BAR", "num": "a123"},
-			expect: []string{`export FOO='BAR'`, `export NUM='a123'`},
+			expect: `export FOO='BAR'`,
 		},
 		{
 			name:   "numbers only",
 			rawMap: ParsedMap{"foo": 123, "num": 456},
-			expect: []string{`export FOO=123`, `export NUM=456`},
+			expect: `export FOO=123`,
 		},
 	}
 	for _, tt := range tests {
@@ -210,14 +211,13 @@ func Test_ConvertToExportVars(t *testing.T) {
 			if got == nil {
 				t.Errorf(testutils.TestPhrase, "not nil", got)
 			}
-			if len(tt.expect) != len(got) {
-				t.Errorf(testutils.TestPhrase, len(tt.expect), len(got))
+			if 2 != len(got) {
+				t.Errorf(testutils.TestPhrase, 2, len(got))
 
 			}
-			for k, v := range got {
-				if v != tt.expect[k] {
-					t.Errorf(testutils.TestPhrase, tt.expect[k], got[k])
-				}
+			st := strings.Join(got, "\n")
+			if !strings.Contains(st, tt.expect) {
+				t.Errorf(testutils.TestPhrase, tt.expect, st)
 			}
 		})
 	}

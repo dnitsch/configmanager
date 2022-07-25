@@ -19,22 +19,29 @@ type ConfigManager struct{}
 // Retrieve gets a rawMap from a set implementation
 // will be empty if no matches found
 func (c *ConfigManager) Retrieve(tokens []string, config generator.GenVarsConfig) (generator.ParsedMap, error) {
-	gv := generator.NewGenerator()
-	gv.WithConfig(&config)
+	gv := generator.NewGenerator().WithConfig(&config)
+	return retrieve(tokens, gv)
+}
+
+func retrieve(tokens []string, gv generator.Generatoriface) (generator.ParsedMap, error) {
 	return gv.Generate(tokens)
 }
 
 // RetrieveWithInputReplaced parses given input against all possible token strings
 // using regex to grab a list of found tokens in the given string
 func (c *ConfigManager) RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error) {
+	gv := generator.NewGenerator().WithConfig(&config)
+	return retrieveWithInputReplaced(input, gv)
+}
+
+func retrieveWithInputReplaced(input string, gv generator.Generatoriface) (string, error) {
 	tokens := []string{}
 	for k := range generator.VarPrefix {
 		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(k)+`.([^\"]+)`).FindAllString(input, -1)
 		tokens = append(tokens, matches...)
 	}
 
-	cnf := generator.GenVarsConfig{}
-	m, err := c.Retrieve(tokens, cnf)
+	m, err := retrieve(tokens, gv)
 
 	if err != nil {
 		return "", err

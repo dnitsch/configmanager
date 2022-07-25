@@ -1,8 +1,12 @@
 package generator
 
 import (
+	"context"
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets"
 	"github.com/dnitsch/configmanager/internal/testutils"
 )
 
@@ -36,6 +40,14 @@ func Test_azSplitToken(t *testing.T) {
 				token:    "some/json/test",
 			},
 		},
+		{
+			name:  "with_initial_slash_multislash_secretname",
+			token: "test-vault//some/json/test",
+			expect: azVaultHelper{
+				vaultUri: "https://test-vault.vault.azure.net",
+				token:    "/some/json/test",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -45,6 +57,109 @@ func Test_azSplitToken(t *testing.T) {
 			}
 			if got.vaultUri != tt.expect.vaultUri {
 				t.Errorf(testutils.TestPhrase, tt.expect.vaultUri, got.vaultUri)
+			}
+		})
+	}
+}
+
+var (
+	tazkvsuccessObj map[string]string = map[string]string{fmt.Sprintf("%s#/token/1", AzKeyVaultSecretsPrefix): tsuccessParam}
+)
+
+type mockAzKvSecretApi func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error)
+
+func (m mockAzKvSecretApi) GetSecret(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
+	return m(ctx, name, version, options)
+}
+
+func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
+	tests := []struct {
+		name       string
+		token      string
+		value      string
+		mockClient func(t *testing.T) kvApi
+		genVars    *GenVars
+	}{
+		{
+			name:  "successVal",
+			token: "AZKVSECRET#/test-vault//token/1",
+			value: tsuccessParam,
+			mockClient: func(t *testing.T) kvApi {
+				return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
+					t.Helper()
+					if name == "" {
+						t.Errorf("expect name to not be nil")
+					}
+					if name != "/token/1" {
+						t.Errorf(testutils.TestPhrase, "/token/1", name)
+					}
+
+					if strings.Contains(name, "#") {
+						t.Errorf("incorrectly stripped token separator")
+					}
+
+					if strings.Contains(name, AzKeyVaultSecretsPrefix) {
+						t.Errorf("incorrectly stripped prefix")
+					}
+
+					if version != "" {
+						t.Fatal("expect version to be \"\" an empty string ")
+					}
+
+					resp := azsecrets.GetSecretResponse{}
+					resp.Value = &tsuccessParam
+					return resp, nil
+				})
+			},
+			genVars: &GenVars{},
+		},
+		{
+			name:  "successVal with keyseparator",
+			token: "AZKVSECRET#/test-vault/token/1|somekey",
+			value: tsuccessParam,
+			mockClient: func(t *testing.T) kvApi {
+				return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
+					t.Helper()
+					if name == "" {
+						t.Error("expect name to not be nil")
+					}
+					if name != "token/1" {
+						t.Errorf(testutils.TestPhrase, "token/1", name)
+					}
+					if strings.Contains(name, "#") {
+						t.Errorf("incorrectly stripped token separator")
+					}
+
+					if strings.Contains(name, AzKeyVaultSecretsPrefix) {
+						t.Errorf("incorrectly stripped prefix")
+					}
+
+					if version != "" {
+						t.Fatal("expect version to be \"\" an empty string ")
+					}
+					resp := azsecrets.GetSecretResponse{}
+					resp.Value = &tsuccessParam
+					return resp, nil
+				})
+			},
+			genVars: &GenVars{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.genVars.config = GenVarsConfig{tokenSeparator: tokenSeparator}
+			kvStr, err := NewKvScrtStoreWithToken(context.TODO(), tt.token, "#", "|")
+			if err != nil {
+				t.Errorf("failed to init azkvstore")
+			}
+			kvStr.svc = tt.mockClient(t)
+			tt.genVars.setImplementation(kvStr)
+			want, err := tt.genVars.getTokenValue()
+			if err != nil {
+				t.Errorf("%v", err)
+			}
+			if want != tt.value {
+				t.Errorf(testutils.TestPhrase, want, tt.value)
 			}
 		})
 	}

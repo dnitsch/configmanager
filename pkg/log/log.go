@@ -12,6 +12,14 @@ var (
 	Logger zerolog.Logger
 )
 
+func Debugf(format string, args ...any) {
+	Debug(fmt.Sprintf(format, args...))
+}
+
+func Debug(msg string) {
+	Logger.Debug().Msg(msg)
+}
+
 func Infof(format string, args ...any) {
 	Info(fmt.Sprintf(format, args...))
 }

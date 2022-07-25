@@ -19,9 +19,9 @@ const (
 	//
 	// secretMgrPrefix  = "AWSSECRETS"
 	// paramStorePrefix = "AWSPARAMSTR"
-	SecretMgrPrefix  = "AWSSECRETS"
-	ParamStorePrefix = "AWSPARAMSTR"
-	AzKeyVaultPrefix = "AZKEYVAULT"
+	SecretMgrPrefix         = "AWSSECRETS"
+	ParamStorePrefix        = "AWSPARAMSTR"
+	AzKeyVaultSecretsPrefix = "AZKVSECRET"
 )
 
 var (
@@ -154,8 +154,8 @@ func (c *GenVars) retrieveSpecific(prefix, in string) (string, error) {
 		c.setImplementation(paramStr)
 		c.setToken(in)
 		return c.getTokenValue()
-	case AzKeyVaultPrefix:
-		azKv, err := NewKvStoreWithToken(c.ctx, in, c.config.tokenSeparator, c.config.keySeparator)
+	case AzKeyVaultSecretsPrefix:
+		azKv, err := NewKvScrtStoreWithToken(c.ctx, in, c.config.tokenSeparator, c.config.keySeparator)
 		if err != nil {
 			return "", err
 		}
@@ -262,7 +262,7 @@ func (c *GenVars) stripPrefix(in, prefix string) string {
 	return stripPrefix(in, prefix, c.config.tokenSeparator, c.config.keySeparator)
 }
 
-// stripPrefix 
+// stripPrefix
 func stripPrefix(in, prefix, tokenSeparator, keySeparator string) string {
 	t := in
 	b := regexp.MustCompile(`[|].*`).ReplaceAll([]byte(t), []byte(""))

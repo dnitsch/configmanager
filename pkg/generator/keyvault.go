@@ -21,7 +21,7 @@ type kvApi interface {
 	GetSecret(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error)
 }
 
-type KvStore struct {
+type KvScrtStore struct {
 	svc   kvApi
 	token string
 }
@@ -32,18 +32,18 @@ type azVaultHelper struct {
 	token    string
 }
 
-// NewKvStore returns a KvStore
+// NewKvScrtStore returns a KvStore
 // requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfuly work
-func NewKvStore(ctx context.Context) (*KvStore, error) {
-	return &KvStore{}, nil
+func NewKvScrtStore(ctx context.Context) (*KvScrtStore, error) {
+	return &KvScrtStore{}, nil
 }
 
 // NewKvStore returns a KvStore
 // requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfuly work
-func NewKvStoreWithToken(ctx context.Context, token, tokenSeparator, keySeparator string) (*KvStore, error) {
+func NewKvScrtStoreWithToken(ctx context.Context, token, tokenSeparator, keySeparator string) (*KvScrtStore, error) {
 
 	//
-	conf := azSplitToken(stripPrefix(token, AzKeyVaultPrefix, tokenSeparator, keySeparator))
+	conf := azSplitToken(stripPrefix(token, AzKeyVaultSecretsPrefix, tokenSeparator, keySeparator))
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
@@ -53,20 +53,20 @@ func NewKvStoreWithToken(ctx context.Context, token, tokenSeparator, keySeparato
 
 	c := azsecrets.NewClient(conf.vaultUri, cred, nil)
 
-	return &KvStore{
+	return &KvScrtStore{
 		svc:   c,
 		token: conf.token,
 	}, nil
 }
 
-func (paramStr *KvStore) setToken(token string) {
+func (paramStr *KvScrtStore) setToken(token string) {
 	paramStr.token = token
 }
 
-func (implmt *KvStore) setValue(val string) {
+func (implmt *KvScrtStore) setValue(val string) {
 }
 
-func (imp *KvStore) getTokenValue(v *GenVars) (string, error) {
+func (imp *KvScrtStore) getTokenValue(v *GenVars) (string, error) {
 	log.Infof("%s", "Concrete implementation AzKeyVault Secret")
 	log.Infof("AzKeyVault Token: %s", imp.token)
 

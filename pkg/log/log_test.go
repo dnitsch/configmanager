@@ -10,17 +10,42 @@ import (
 
 func Test_LogInfo(t *testing.T) {
 	tests := []struct {
-		name    string
-		level   zerolog.Level
-		message string
-		expect  string
+		name      string
+		level     zerolog.Level
+		logMethod func(msg string)
+		message   string
+		expect    string
 	}{
 		{
-			name:    "info at debug",
-			level:   zerolog.DebugLevel,
-			message: "write me out...",
+			name:      "info at debug",
+			level:     zerolog.DebugLevel,
+			logMethod: Info,
+			message:   "write me out...",
 			expect: `{"level":"info","message":"write me out..."}
 `,
+		},
+		{
+			name:      "warn at debug",
+			level:     zerolog.DebugLevel,
+			logMethod: Warn,
+			message:   "write me out...",
+			expect: `{"level":"warn","message":"write me out..."}
+`,
+		},
+		{
+			name:      "debug at debug",
+			level:     zerolog.DebugLevel,
+			logMethod: Debug,
+			message:   "write me out...",
+			expect: `{"level":"debug","message":"write me out..."}
+`,
+		},
+		{
+			name:      "debug at info",
+			level:     zerolog.InfoLevel,
+			logMethod: Debug,
+			message:   "write me out...",
+			expect:    ``,
 		},
 	}
 	for _, tt := range tests {
@@ -29,7 +54,7 @@ func Test_LogInfo(t *testing.T) {
 			var buf bytes.Buffer
 			// overwrite logger for testing without timestamp
 			Logger = zerolog.New(&buf).With().Logger().Level(tt.level)
-			Info(tt.message)
+			tt.logMethod(tt.message)
 			s := buf.String()
 			if s != tt.expect {
 				t.Errorf(testutils.TestPhrase, tt.expect, s)
