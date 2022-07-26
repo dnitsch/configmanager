@@ -32,14 +32,14 @@ type azVaultHelper struct {
 	token    string
 }
 
-// NewKvScrtStore returns a KvStore
-// requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfuly work
+// NewKvScrtStore returns a KvScrtStore
+// requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfully work
 func NewKvScrtStore(ctx context.Context) (*KvScrtStore, error) {
 	return &KvScrtStore{}, nil
 }
 
-// NewKvStore returns a KvStore
-// requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfuly work
+// NewKvScrtStoreWithToken returns a KvScrtStore
+// requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfully work
 func NewKvScrtStoreWithToken(ctx context.Context, token, tokenSeparator, keySeparator string) (*KvScrtStore, error) {
 
 	//
@@ -83,7 +83,7 @@ func (imp *KvScrtStore) getTokenValue(v *GenVars) (string, error) {
 }
 
 func azSplitToken(token string) azVaultHelper {
-	// ensure preceeding slash is trimmed
+	// ensure preceding slash is trimmed
 	splitToken := strings.Split(strings.TrimPrefix(token, "/"), "/")
 	vaultUri := fmt.Sprintf("https://%s.vault.azure.net", splitToken[0])
 	return azVaultHelper{vaultUri: vaultUri, token: strings.Join(splitToken[1:], "/")}

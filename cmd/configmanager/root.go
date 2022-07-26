@@ -10,6 +10,8 @@ import (
 
 var (
 	verbose          bool
+	tokenSeparator   string
+	keySeparator     string
 	configmanagerCmd = &cobra.Command{
 		Use:   config.SELF_NAME,
 		Short: fmt.Sprintf("%s CLI for retrieving and inserting config or secret variables", config.SELF_NAME),
@@ -28,4 +30,6 @@ func Execute() {
 
 func init() {
 	configmanagerCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbosity level")
+	configmanagerCmd.PersistentFlags().StringVarP(&tokenSeparator, "token-separator", "s", "#", "Separator to use to mark concrete store and the key within it")
+	configmanagerCmd.PersistentFlags().StringVarP(&keySeparator, "key-separator", "k", "|", "Separator to use to mark a key look up in a map. e.g. AWSSECRETS#/token/map|key1")
 }

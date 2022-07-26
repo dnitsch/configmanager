@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/dnitsch/configmanager/cmd/utils"
 	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/spf13/cobra"
 )
@@ -11,10 +12,9 @@ import (
 var tokenArray []string
 
 var (
-	tokens         []string
-	path           string
-	tokenSeparator string
-	retrieveCmd    = &cobra.Command{
+	tokens      []string
+	path        string
+	retrieveCmd = &cobra.Command{
 		Use:     "retrieve",
 		Aliases: []string{"r", "fetch", "get"},
 		Short:   `Retrieves a value for token(s) specified`,
@@ -33,16 +33,11 @@ func init() {
 	retrieveCmd.PersistentFlags().StringArrayVarP(&tokens, "token", "t", tokenArray, "Token pointing to a config/secret variable. This can be specified multiple times.")
 	retrieveCmd.MarkPersistentFlagRequired("token")
 	retrieveCmd.PersistentFlags().StringVarP(&path, "path", "p", "./app.env", "Path where to write out the replaced a config/secret variables. Special value of stdout can be used to return the output to stdout e.g. -p stdout, unix style output only")
-	retrieveCmd.PersistentFlags().StringVarP(&tokenSeparator, "token-separator", "s", "#", "Separator to use to mark concrete store and the key within it")
 	configmanagerCmd.AddCommand(retrieveCmd)
 }
 
 func retrieveRun(cmd *cobra.Command, args []string) error {
 	conf := generator.NewConfig().WithTokenSeparator(tokenSeparator).WithOutputPath(path)
 	gv := generator.NewGenerator().WithConfig(conf)
-	err := gv.GenerateFromCmd(tokens)
-	if err != nil {
-		return err
-	}
-	return nil
+	return utils.GenerateFromCmd(gv, tokens)
 }

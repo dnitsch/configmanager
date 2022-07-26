@@ -82,9 +82,19 @@ The token is made up of 3 parts:
 
 If contents of the `AWSSECRETS#/appxyz/service1-password` are a string then `service1-password` will be the key and converted to UPPERCASE e.g. `SERVICE1_PASSWORD=som3V4lue`
 
+### Special AZKVSECRETS
 
+For Azure KeyVault the first part of the token needs to be the name of the vault. 
+
+> Azure Go SDK (v2) requires the vault Uri on initializing the client
+
+`AZKVSECRET#/test-vault//token/1` ==> will use KeyVault implementation to retrieve the `/token/1` from a `test-vault`.
+
+`AZKVSECRET#/test-vault/no-slash-token-1` ==> will use KeyVault implementation to retrieve the `no-slash-token-1` from a `test-vault`.
 
 ## Go API
+
+latest api [here](https://pkg.go.dev/github.com/dnitsch/configmanager)
 
 ### Sample Use case
 
@@ -92,47 +102,38 @@ One of the sample use cases includes implementation in a K8s controller.
 
 E.g. your Custom CRD stores some values in plain text that should really be secrets/nonpublic config parameters - something like this can be invoked from inside the controller code using the generator pkg API.
 
+See [examples](./examples/examples.go) for more examples and tests for sample input/usage
+
 ```go
-func replaceTokens(in string, t *v1alpha.CustomFooCrdSpec) error {
+import (
+	"context"
+	"fmt"
 
-	tokens := []string{}
+	"github.com/dnitsch/configmanager/pkg/generator"
+	"github.com/dnitsch/configmanager"
+)
 
-	for k := range generator.VarPrefix {
-		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(k)+`.([^\"]+)`).FindAllString(in, -1)
-		tokens = append(tokens, matches...)
-	}
-
-	cnf := generator.GenVarsConfig{}
-	m, err := configmanager.Retrieve(tokens, cnf)
-
-	if err != nil {
-		return err
-	}
-
-	if err := json.Unmarshal(replaceString(m, in), &t); err != nil {
-		return err
-	}
-	return nil
-}
-
-func replaceString(inputMap generator.ParsedMap, inputString string) []byte {
-	for oldVal, newVal := range inputMap {
-		inputString = strings.ReplaceAll(inputString, oldVal, fmt.Sprint(newVal))
-	}
-	return []byte(inputString)
-}
-```
-
-```yaml
-apiVersion: crd.foo.custom/v1alpha1
+func main() {
+	cm := &configmanager.ConfigManager{}
+	cnf := generator.NewConfig()
+	// JSON Marshal K8s CRD into
+	exampleK8sCrdMarshalled := `apiVersion: crd.foo.custom/v1alpha1
 kind: CustomFooCrd
 metadata:
-  name: foo
-  namespace: bar
+	name: foo
+	namespace: bar
 spec:
-  name: baz
-  secret_val: AWSSECRETS#/customfoo/secret-val
-  owner: test_10016@example.com
+	name: baz
+	secret_val: AWSSECRETS#/customfoo/secret-val
+	owner: test_10016@example.com
+`
+	pm, err := cm.RetrieveWithInputReplaced(exampleK8sCrdMarshalled, *cnf)
+
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(pm)
+}
 ```
 
 Above example would ensure that you can safely store config/secret values on a CRD in plain text.
@@ -141,7 +142,7 @@ Above example would ensure that you can safely store config/secret values on a C
 
 ## Help
 
-- More implementations should be easily added with a specific implementation under the strategy interface 
+- More implementations should be easily added with a specific implementation under the strategy interface
     - e.g. AzureKMS or GCP equivalent
 
 - maybe run as cron in the background to perform a periodic sync in case values change?

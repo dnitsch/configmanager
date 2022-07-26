@@ -31,8 +31,9 @@ var (
 
 type Generatoriface interface {
 	Generate(tokens []string) (ParsedMap, error)
-	ConvertToExportVar()
-	FlushToFile() (string, error)
+	ConvertToExportVar() []string
+	FlushToFile() error
+	StrToFile(str string) error
 }
 
 type GenVars struct {
@@ -77,6 +78,11 @@ func (c *GenVars) WithConfig(cfg *GenVarsConfig) *GenVars {
 		c.config = *cfg
 	}
 	return c
+}
+
+// Config gets Config on the GenVars
+func (c *GenVars) Config() *GenVarsConfig {
+	return &c.config
 }
 
 // GenVarsConfig defines the input config object to be passed
@@ -207,8 +213,8 @@ func (c *GenVars) keySeparatorLookup(key, val string) string {
 }
 
 // ConvertToExportVar assigns the k/v out
-// as unix style export key=val pairs seperated by `\n`
-func (c *GenVars) ConvertToExportVar() {
+// as unix style export key=val pairs separated by `\n`
+func (c *GenVars) ConvertToExportVar() []string {
 	for k, v := range c.rawMap {
 		rawKeyToken := strings.Split(k, "/") // assumes a path like token was used
 		topLevelKey := rawKeyToken[len(rawKeyToken)-1]
@@ -223,6 +229,7 @@ func (c *GenVars) ConvertToExportVar() {
 			c.exportVars(ParsedMap{topLevelKey: v})
 		}
 	}
+	return c.outString
 }
 
 // envVarNormalize
@@ -271,20 +278,25 @@ func stripPrefix(in, prefix, tokenSeparator, keySeparator string) string {
 
 // FlushToFile saves contents to file provided
 // in the config input into the generator
-func (c *GenVars) FlushToFile() (string, error) {
+func (c *GenVars) FlushToFile() error {
+	return c.flushToFile(listToString(c.outString))
+}
 
-	// moved up to
-	joinedStr := listToString(c.outString)
+func (c *GenVars) StrToFile(str string) error {
+	return c.flushToFile(str)
+}
 
+func (c *GenVars) flushToFile(str string) error {
 	if c.config.outpath == "stdout" {
-		fmt.Fprint(os.Stdout, joinedStr)
+		fmt.Fprint(os.Stdout, str)
 	} else {
-		e := os.WriteFile(c.config.outpath, []byte(joinedStr), 0644)
+		// TODO: a helper here to ensure a file exists
+		e := os.WriteFile(c.config.outpath, []byte(str), 0644)
 		if e != nil {
-			return "", e
+			return e
 		}
 	}
-	return c.config.outpath, nil
+	return nil
 }
 
 func listToString(strList []string) string {

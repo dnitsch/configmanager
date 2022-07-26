@@ -20,11 +20,16 @@ func (m *mockGenVars) Generate(tokens []string) (generator.ParsedMap, error) {
 	return pm, nil
 }
 
-func (m *mockGenVars) ConvertToExportVar() {
+func (m *mockGenVars) ConvertToExportVar() []string {
+	return []string{}
 }
 
-func (m *mockGenVars) FlushToFile() (string, error) {
-	return "", nil
+func (m *mockGenVars) FlushToFile() error {
+	return nil
+}
+
+func (m *mockGenVars) StrToFile(str string) error {
+	return nil
 }
 
 func Test_retrieve(t *testing.T) {
@@ -56,6 +61,66 @@ func Test_retrieve(t *testing.T) {
 				if v != tt.expectVal {
 					t.Errorf(testutils.TestPhrase, tt.expectVal, k)
 				}
+			}
+		})
+	}
+}
+
+var strT1 = `
+space: preserved
+	indents: preserved
+	arr: [ "FOO#/test" ]
+	// comments preserved
+	arr:
+		- "FOO#/test"
+`
+
+var strT2 = `
+// TOML
+[[somestuff]]
+key = "FOO#/test" 
+`
+
+func Test_retrieveWithInputReplaced(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		genvar generator.Generatoriface
+		expect string
+	}{
+		{
+			name:   "strYaml",
+			input:  strT1,
+			genvar: &mockGenVars{},
+			expect: `
+space: preserved
+	indents: preserved
+	arr: [ "val1" ]
+	// comments preserved
+	arr:
+		- "val1"
+`,
+		},
+		{
+			name:   "strToml",
+			input:  strT2,
+			genvar: &mockGenVars{},
+			expect: `
+// TOML
+[[somestuff]]
+key = "val1" 
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := retrieveWithInputReplaced(tt.input, tt.genvar)
+			if err != nil {
+				t.Errorf("failed with %v", err)
+			}
+			if got != tt.expect {
+				t.Errorf(testutils.TestPhrase, tt.expect, got)
 			}
 		})
 	}
