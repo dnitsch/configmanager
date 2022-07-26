@@ -66,7 +66,8 @@ func Test_retrieve(t *testing.T) {
 	}
 }
 
-var strT1 = `
+var (
+	strT1 = `
 space: preserved
 	indents: preserved
 	arr: [ "FOO#/test" ]
@@ -74,14 +75,13 @@ space: preserved
 	arr:
 		- "FOO#/test"
 `
-
-var strT2 = `
+	strT2 = `
 // TOML
 [[somestuff]]
 key = "FOO#/test" 
 `
 
-var strT3 = `
+	strT3 = `
 // TOML
 [[somestuff]]
 key = FOO#/test
@@ -89,6 +89,19 @@ key2 = FOO#/test
 key3 = FOO#/test
 key4 = FOO#/test
 `
+
+	strT4 = `
+export FOO=FOO#/test
+export FOO1=FOO#/test
+export FOO2=FOO#/test
+export FOO3=FOO#/test
+export FOO4=FOO#/test
+
+[[section]]
+
+foo23 = FOO#/test
+`
+)
 
 func Test_retrieveWithInputReplaced(t *testing.T) {
 	tests := []struct {
@@ -131,6 +144,22 @@ key = val1
 key2 = val1
 key3 = val1
 key4 = val1
+`,
+		},
+		{
+			name:   "strTomlWithoutMultiline",
+			input:  strT4,
+			genvar: &mockGenVars{},
+			expect: `
+export FOO=val1
+export FOO1=val1
+export FOO2=val1
+export FOO3=val1
+export FOO4=val1
+
+[[section]]
+
+foo23 = val1
 `,
 		},
 	}
