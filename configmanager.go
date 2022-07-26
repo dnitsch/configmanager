@@ -37,7 +37,7 @@ func (c *ConfigManager) RetrieveWithInputReplaced(input string, config generator
 func retrieveWithInputReplaced(input string, gv generator.Generatoriface) (string, error) {
 	tokens := []string{}
 	for k := range generator.VarPrefix {
-		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(k)+`.([^\"]+)`).FindAllString(input, -1)
+		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(k)+`.([^\"\s\n]+)`).FindAllString(input, -1)
 		tokens = append(tokens, matches...)
 	}
 

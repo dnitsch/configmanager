@@ -81,6 +81,15 @@ var strT2 = `
 key = "FOO#/test" 
 `
 
+var strT3 = `
+// TOML
+[[somestuff]]
+key = FOO#/test
+key2 = FOO#/test
+key3 = FOO#/test
+key4 = FOO#/test
+`
+
 func Test_retrieveWithInputReplaced(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -109,6 +118,19 @@ space: preserved
 // TOML
 [[somestuff]]
 key = "val1" 
+`,
+		},
+		{
+			name:   "strTomlWithoutQuotes",
+			input:  strT3,
+			genvar: &mockGenVars{},
+			expect: `
+// TOML
+[[somestuff]]
+key = val1
+key2 = val1
+key3 = val1
+key4 = val1
 `,
 		},
 	}
