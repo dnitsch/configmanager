@@ -91,9 +91,9 @@ key4 = FOO#/test
 `
 
 	strT4 = `
-export FOO=FOO#/test
+export FOO='FOO#/test'
 export FOO1=FOO#/test
-export FOO2=FOO#/test
+export FOO2='FOO#/test'
 export FOO3=FOO#/test
 export FOO4=FOO#/test
 
@@ -151,9 +151,9 @@ key4 = val1
 			input:  strT4,
 			genvar: &mockGenVars{},
 			expect: `
-export FOO=val1
+export FOO='val1'
 export FOO1=val1
-export FOO2=val1
+export FOO2='val1'
 export FOO3=val1
 export FOO4=val1
 
