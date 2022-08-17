@@ -127,19 +127,46 @@ func (c *GenVarsConfig) WithKeySeparator(keySeparator string) *GenVarsConfig {
 // the standard pattern of a token should follow a path like
 func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 
+	rawTokenPrefixMap := map[string]string{}
 	for _, token := range tokens {
 		prefix := strings.Split(token, c.config.tokenSeparator)[0]
 		if found := VarPrefix[prefix]; found {
-			// TODO: allow for more customization here
-			rawString, err := c.retrieveSpecific(prefix, token)
-			if err != nil {
-				return nil, err
-			}
-			// check if token includes keySeparator
-			c.rawMap[token] = c.keySeparatorLookup(token, rawString)
+			rawTokenPrefixMap[token] = prefix
 		}
 	}
+
+	// build an exact size channel
+	outCh := make(chan map[string]string, len(rawTokenPrefixMap))
+	errCh := make(chan error)
+
+	for token, prefix := range rawTokenPrefixMap {
+		go c.retrieveSpecificCh(prefix, token, outCh, errCh)
+	}
+
+	readCh := 0
+	for readCh < len(rawTokenPrefixMap) {
+		select {
+		case outRawSingleMap := <-outCh:
+			for k, out := range outRawSingleMap {
+				log.Debugf("ch key: %v", k)
+				c.rawMap[k] = c.keySeparatorLookup(k, out)
+			}
+			readCh++
+		case <-errCh:
+			return nil, <-errCh
+		}
+	}
+
 	return c.rawMap, nil
+}
+
+//
+func (c *GenVars) retrieveSpecificCh(prefix, in string, outCh chan map[string]string, errCh chan error) {
+	raw, err := c.retrieveSpecific(prefix, in)
+	if err != nil {
+		errCh <- err
+	}
+	outCh <- map[string]string{in: raw}
 }
 
 func (c *GenVars) retrieveSpecific(prefix, in string) (string, error) {

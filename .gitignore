@@ -12,3 +12,5 @@ dist
 
 # tests
 .coverage
+
+.ignore*
