@@ -27,7 +27,7 @@ const (
 
 var (
 	// default varPrefix
-	VarPrefix = map[string]bool{SecretMgrPrefix: true, ParamStorePrefix: true}
+	VarPrefix = map[string]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true}
 )
 
 type Generatoriface interface {
@@ -168,9 +168,8 @@ func (c *GenVars) retrieveSpecific(prefix, in string) (string, error) {
 		}
 		// Need to swap this around for AzKV as the
 		// client is initialised via vaultURI
-		//
+		// and sets the token on the implementation init via NewSrv
 		c.setImplementation(azKv)
-		c.setToken(in)
 		return c.getTokenValue()
 	default:
 		return "", fmt.Errorf("implementation not found for input string: %s", in)

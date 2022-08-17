@@ -251,6 +251,6 @@ Above example would ensure that you can safely store config/secret values on a C
 ## Help
 
 - More implementations should be easily added with a specific implementation under the strategy interface
-    - e.g. AzureKMS or GCP equivalent
+    - e.g. GCP equivalent
 
 - maybe run as cron in the background to perform a periodic sync in case values change?
