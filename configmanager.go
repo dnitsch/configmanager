@@ -7,11 +7,13 @@ import (
 
 	"github.com/dnitsch/configmanager/pkg/generator"
 )
-
+const (
+	TERMINATING_CHAR string = `[^\'\"\s\n]`
+)
 type ConfigManageriface interface {
 	Retrieve(tokens []string, config generator.GenVarsConfig) (generator.ParsedMap, error)
 	RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error)
-	Insert()
+	Insert(force bool)
 }
 
 type ConfigManager struct{}
@@ -28,7 +30,7 @@ func retrieve(tokens []string, gv generator.Generatoriface) (generator.ParsedMap
 }
 
 // RetrieveWithInputReplaced parses given input against all possible token strings
-// using regex to grab a list of found tokens in the given string
+// using regex to grab a list of found tokens in the given string and return the replaced string
 func (c *ConfigManager) RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error) {
 	gv := generator.NewGenerator().WithConfig(&config)
 	return retrieveWithInputReplaced(input, gv)
@@ -37,7 +39,7 @@ func (c *ConfigManager) RetrieveWithInputReplaced(input string, config generator
 func retrieveWithInputReplaced(input string, gv generator.Generatoriface) (string, error) {
 	tokens := []string{}
 	for k := range generator.VarPrefix {
-		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(k)+`.([^\'\"\s\n]+)`).FindAllString(input, -1)
+		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(k)+`.(`+ TERMINATING_CHAR +`+)`).FindAllString(input, -1)
 		tokens = append(tokens, matches...)
 	}
 
@@ -57,6 +59,7 @@ func replaceString(inputMap generator.ParsedMap, inputString string) string {
 	return inputString
 }
 
-func (c *ConfigManager) Insert() error {
+// Insert will update
+func (c *ConfigManager) Insert(force bool) error {
 	return fmt.Errorf("%s", "NotYetImplemented")
 }

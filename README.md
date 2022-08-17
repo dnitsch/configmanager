@@ -48,8 +48,48 @@ curl -L https://github.com/dnitsch/configmanager/releases/download/v0.5.0/config
 ## Usage
 
 ```bash
-configmanager --tokens AWSSECRETS#/appxyz/service1-password --tokens AWSPARAMSTR#/appxyz/service1-password
+configmanager CLI for retrieving config or secret variables.
+                Using a specific tokens as an array item
+
+Usage:
+  configmanager [command]
+
+Available Commands:
+  completion   Generate the autocompletion script for the specified shell
+  help         Help about any command
+  insert       Retrieves a value for token(s) specified and optionally writes to a file
+  retrieve     Retrieves a value for token(s) specified
+  string-input Retrieves all found token values in a specified string input
+  version      Get version number configmanager
+
+Flags:
+  -h, --help                     help for configmanager
+  -k, --key-separator string     Separator to use to mark a key look up in a map. e.g. AWSSECRETS#/token/map|key1 (default "|")
+  -s, --token-separator string   Separator to use to mark concrete store and the key within it (default "#")
+  -v, --verbose                  Verbosity level
+```
+
+### Commands
+
+#### retrieve
+
+Useful for retrieving a series of tokens in CI or before app start
+
+```bash
+configmanager retrieve --token AWSSECRETS#/appxyz/service1-password --token AWSPARAMSTR#/appxyz/service2-password
 source app.env
+```
+
+This will have written to a defaul out path `app.env` in current directory the below contents
+
+```bash
+export SERVICE1_PASSWORD='somepass!$@sdhf'
+export SERVICE2_PASSWORD='somepa22$!$'
+```
+
+Once sourced you could delete the file, however the environment variables will persist in the process info `/proc/someprocess`
+
+```bash
 rm -f app.env
 ./startapp
 ```
@@ -59,7 +99,7 @@ By default the output path is `app.env` relative to the exec binary.
 This can be overridden by passing in the `--path` param.
 
 ```bash
-configmanager --token AWSSECRETS#/appxyz/service1-password --token AWSPARAMSTR#/appxyz/service12-settings --path /some/path/app.env
+configmanager retrieve --token AWSSECRETS#/appxyz/service1-password --token AWSPARAMSTR#/appxyz/service12-settings --path /some/path/app.env
 source /some/path/app.env
 ./startapp # psuedo script to start an application
 ```
@@ -72,6 +112,14 @@ Alternatively you can set the path as stdout which will reduce the need to save 
 eval "$(configmanager r -t AWSSECRETS#/appxyz/service1-password -t AWSPARAMSTR#/appxyz/service12-settings -p stdout)" && ./.ignore-out.sh
 ```
 
+#### string-input
+
+Replaces all the occurences of tokens inside strings and writes them back out to files.
+
+
+
+## Config Tokens
+
 The token is made up of 3 parts:
 
 - `AWSSECRETS` the strategy identifier to choose at runtime
@@ -82,9 +130,69 @@ The token is made up of 3 parts:
 
 If contents of the `AWSSECRETS#/appxyz/service1-password` are a string then `service1-password` will be the key and converted to UPPERCASE e.g. `SERVICE1_PASSWORD=som3V4lue`
 
+### KeySeparator
+
+Specifying a key seperator on token items that can be parsed as a K/V map will result in only retrieving the specific key from the map. 
+
+e.g. if contents of the `AWSSECRETS#/appxyz/service1-db-config` are parseable into the below object
+```json
+{
+	"host": "db.internal",
+	"port": 3306,
+	"pass": "sUp3$ecr3T!",
+}
+```
+
+Then you can access the single values like this `AWSSECRETS#/appxyz/service1-db-config|host` ==> `export SERVICE1_DB_CONFIG__HOST='db.internal'`
+
+Alternatively if you are `configmanager`-ing a file via the fromstr command and the input is something like this:
+
+(YAML)
+
+```yaml
+app:
+	name: xyz
+db:
+	host: AWSSECRETS#/appxyz/service1-db-config|host
+	port: AWSSECRETS#/appxyz/service1-db-config|port
+	pass: AWSSECRETS#/appxyz/service1-db-config|pass
+```
+
+which would result in this
+
+```yaml
+app:
+	name: xyz
+db:
+	host: db.internal
+	port: 3306
+	pass: sUp3$ecr3T!
+```
+
+If your config parameter matches the config interface, you can also leave the entire token to point to the `db` key
+
+
+```yaml
+app:
+	name: xyz
+db: AWSSECRETS#/appxyz/service1-db-config
+```
+
+result:
+
+```yaml
+app:
+	name: xyz
+db: {
+ 	"host": "db.internal",
+	"port": 3306,
+	"pass": "sUp3$ecr3T!",
+}
+```
+
 ### Special AZKVSECRETS
 
-For Azure KeyVault the first part of the token needs to be the name of the vault. 
+For Azure KeyVault the first part of the token needs to be the name of the vault.
 
 > Azure Go SDK (v2) requires the vault Uri on initializing the client
 

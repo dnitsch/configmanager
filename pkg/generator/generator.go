@@ -12,15 +12,16 @@ import (
 )
 
 const (
+	// tokenSeparator used for identifying the end of a prefix and beginning of token
+	// see notes about special consideration for AZKVSECRET tokens
 	tokenSeparator = "#"
-	// keySeparator used for accessing nested
-	// objects within the retrieved map
+	// keySeparator used for accessing nested objects within the retrieved map
 	keySeparator = "|"
-	//
-	// secretMgrPrefix  = "AWSSECRETS"
-	// paramStorePrefix = "AWSPARAMSTR"
-	SecretMgrPrefix         = "AWSSECRETS"
-	ParamStorePrefix        = "AWSPARAMSTR"
+	// AWS SecretsManager prefix
+	SecretMgrPrefix = "AWSSECRETS"
+	// AWS Parameter Store prefix
+	ParamStorePrefix = "AWSPARAMSTR"
+	// Azure Key Vault Secrets prefix
 	AzKeyVaultSecretsPrefix = "AZKVSECRET"
 )
 
