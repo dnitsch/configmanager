@@ -3,13 +3,14 @@ package utils
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/dnitsch/configmanager"
 	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
-// GenerateFromTokens is a helper cmd method to call from retrieveCmd
+// GenerateFromTokens is a helper cmd method to call from retrieve command
 func GenerateFromCmd(gv *generator.GenVars, tokens []string) error {
 	_, err := gv.Generate(tokens)
 	if err != nil {
@@ -18,9 +19,17 @@ func GenerateFromCmd(gv *generator.GenVars, tokens []string) error {
 	}
 	// Conver to ExportVars
 	gv.ConvertToExportVar()
-	return gv.FlushToFile()
+
+	w, err := writer(gv.ConfigOutputPath())
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
+	return gv.FlushToFile(w)
 }
 
+// Generate a replaced string from string input command
 func GenerateStrOut(gv *generator.GenVars, input string) error {
 	c := configmanager.ConfigManager{}
 
@@ -29,7 +38,20 @@ func GenerateStrOut(gv *generator.GenVars, input string) error {
 		return err
 	}
 
-	return gv.StrToFile(str)
+	w, err := writer(gv.ConfigOutputPath())
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	return gv.StrToFile(w, str)
+}
+
+func writer(outputpath string) (*os.File, error) {
+	if outputpath == "stdout" {
+		return os.Stdout, nil
+	} else {
+		return os.OpenFile(outputpath, os.O_WRONLY|os.O_CREATE, 0644)
+	}
 }
 
 //UploadTokensWithVals takes in a map of key/value pairs and uploads them

@@ -1,6 +1,7 @@
 package configmanager
 
 import (
+	"io"
 	"testing"
 
 	"github.com/dnitsch/configmanager/internal/testutils"
@@ -24,11 +25,11 @@ func (m *mockGenVars) ConvertToExportVar() []string {
 	return []string{}
 }
 
-func (m *mockGenVars) FlushToFile() error {
+func (m *mockGenVars) FlushToFile(w io.Writer) error {
 	return nil
 }
 
-func (m *mockGenVars) StrToFile(str string) error {
+func (m *mockGenVars) StrToFile(w io.Writer, str string) error {
 	return nil
 }
 

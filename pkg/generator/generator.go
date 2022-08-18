@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -26,17 +27,27 @@ const (
 )
 
 var (
-	// default varPrefix
+	// default varPrefix used by the replacer function
+	// any token msut beging with one of these else
+	// it will be skipped as not a replaceable token
 	VarPrefix = map[string]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true}
 )
 
+// Generatoriface describes the exported methods
+// on the GenVars struct.
 type Generatoriface interface {
 	Generate(tokens []string) (ParsedMap, error)
 	ConvertToExportVar() []string
-	FlushToFile() error
-	StrToFile(str string) error
+	FlushToFile(w io.Writer) error
+	StrToFile(w io.Writer, str string) error
 }
 
+// GenVars is the main struct holding the
+// strategy patterns iface
+// any initialised config if overridded with withers
+// as well as the final outString and the initial rawMap
+// which wil be passed in a loop into a goroutine to perform the
+// relevant strategy network calls to the config store implementations
 type GenVars struct {
 	Generatoriface
 	implementation genVarsStrategy
@@ -52,7 +63,9 @@ type GenVars struct {
 // the return type if results are not flushed to file
 type ParsedMap map[string]any
 
-// NewGenerator returns a new instance
+// NewGenerator returns a new instance of Generator
+// with a default strategy pattern wil be overwritten
+// during the first run of a found tokens map
 func NewGenerator() *GenVars {
 	defaultStrategy := NewDefatultStrategy()
 	return newGenVars(defaultStrategy)
@@ -86,12 +99,25 @@ func (c *GenVars) Config() *GenVarsConfig {
 	return &c.config
 }
 
+// ConfigOutputPath returns the output path set on GenVars create
+// withconfig or default value
+func (c *GenVars) ConfigOutputPath() string {
+	return c.config.outpath
+}
+
 // GenVarsConfig defines the input config object to be passed
 type GenVarsConfig struct {
 	outpath        string
 	tokenSeparator string
 	keySeparator   string
-	// varPrefix      VarPrefix
+}
+
+// this is a bit pointless
+// GenVarsConfig defines the input config object to be passed
+type GenVarsPublicConfig struct {
+	Outpath        string
+	TokenSeparator string
+	KeySeparator   string
 }
 
 // NewConfig
@@ -99,7 +125,6 @@ func NewConfig() *GenVarsConfig {
 	return &GenVarsConfig{
 		tokenSeparator: tokenSeparator,
 		keySeparator:   keySeparator,
-		// varPrefix:      varPrefix,
 	}
 }
 
@@ -135,16 +160,29 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 		}
 	}
 
+	return c.generate(rawTokenPrefixMap)
+}
+
+// generate checks if any tokens found
+// initiates groutines with fixed size channel map
+// to capture responses and errors
+// generates ParsedMap which includes
+func (c *GenVars) generate(rawMap map[string]string) (ParsedMap, error) {
+	if len(rawMap) < 1 {
+		log.Debug("no replaceable tokens found in input strings")
+		return map[string]any{}, nil
+	}
+
 	// build an exact size channel
-	outCh := make(chan map[string]string, len(rawTokenPrefixMap))
+	outCh := make(chan map[string]string, len(rawMap))
 	errCh := make(chan error)
 
-	for token, prefix := range rawTokenPrefixMap {
+	for token, prefix := range rawMap {
 		go c.retrieveSpecificCh(prefix, token, outCh, errCh)
 	}
 
 	readCh := 0
-	for readCh < len(rawTokenPrefixMap) {
+	for readCh < len(rawMap) {
 		select {
 		case outRawSingleMap := <-outCh:
 			for k, out := range outRawSingleMap {
@@ -156,11 +194,11 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 			return nil, <-errCh
 		}
 	}
-
 	return c.rawMap, nil
 }
 
-//
+// retrieveSpecificCh wraps around the specific strategy implementation
+// and publishes results to a provided channel
 func (c *GenVars) retrieveSpecificCh(prefix, in string, outCh chan map[string]string, errCh chan error) {
 	raw, err := c.retrieveSpecific(prefix, in)
 	if err != nil {
@@ -169,6 +207,8 @@ func (c *GenVars) retrieveSpecificCh(prefix, in string, outCh chan map[string]st
 	outCh <- map[string]string{in: raw}
 }
 
+// retrieveSpecific executes a specif retrieval strategy
+// based on the found token prefix
 func (c *GenVars) retrieveSpecific(prefix, in string) (string, error) {
 	switch prefix {
 	case SecretMgrPrefix:
@@ -223,15 +263,18 @@ func isParsed(res any, trm *ParsedMap) bool {
 func (c *GenVars) keySeparatorLookup(key, val string) string {
 	// key has separator
 	kl := strings.Split(key, c.config.keySeparator)
+	log.Debugf("key list: %v", kl)
 	if len(kl) < 2 {
+		log.Infof("no keyseparator found")
 		return val
 	}
 
-	pmptr := &ParsedMap{}
+	pm := ParsedMap{}
 
-	if ok := isParsed(val, pmptr); ok {
-		pm := *pmptr
+	if ok := isParsed(val, &pm); ok {
+		log.Debugf("attempting to find by key: %v in value: %v", kl, val)
 		if foundVal, ok := pm[kl[1]]; ok {
+			log.Debugf("found by key: %v, in value: %v, of: %v", kl[1], val, foundVal)
 			return fmt.Sprintf("%v", foundVal)
 		}
 	}
@@ -292,6 +335,8 @@ func (c *GenVars) normalizeKey(k string) string {
 	return strings.ToUpper(string(r))
 }
 
+// stripPrefix returns the token which the config/secret store
+// expects to find in a provided vault/paramstore
 func (c *GenVars) stripPrefix(in, prefix string) string {
 	return stripPrefix(in, prefix, c.config.tokenSeparator, c.config.keySeparator)
 }
@@ -305,20 +350,21 @@ func stripPrefix(in, prefix, tokenSeparator, keySeparator string) string {
 
 // FlushToFile saves contents to file provided
 // in the config input into the generator
-func (c *GenVars) FlushToFile() error {
-	return c.flushToFile(listToString(c.outString))
+// default location is ./app.env
+func (c *GenVars) FlushToFile(w io.Writer) error {
+	return c.flushToFile(w, listToString(c.outString))
 }
 
-func (c *GenVars) StrToFile(str string) error {
-	return c.flushToFile(str)
+// StrToFile
+func (c *GenVars) StrToFile(w io.Writer, str string) error {
+	return c.flushToFile(w, str)
 }
 
-func (c *GenVars) flushToFile(str string) error {
+func (c *GenVars) flushToFile(f io.Writer, str string) error {
 	if c.config.outpath == "stdout" {
 		fmt.Fprint(os.Stdout, str)
 	} else {
-		// TODO: a helper here to ensure a file exists
-		e := os.WriteFile(c.config.outpath, []byte(str), 0644)
+		_, e := f.Write([]byte(str))
 		if e != nil {
 			return e
 		}

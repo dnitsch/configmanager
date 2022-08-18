@@ -3,13 +3,16 @@ package configmanager
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/dnitsch/configmanager/pkg/generator"
 )
+
 const (
 	TERMINATING_CHAR string = `[^\'\"\s\n]`
 )
+
 type ConfigManageriface interface {
 	Retrieve(tokens []string, config generator.GenVarsConfig) (generator.ParsedMap, error)
 	RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error)
@@ -39,7 +42,7 @@ func (c *ConfigManager) RetrieveWithInputReplaced(input string, config generator
 func retrieveWithInputReplaced(input string, gv generator.Generatoriface) (string, error) {
 	tokens := []string{}
 	for k := range generator.VarPrefix {
-		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(k)+`.(`+ TERMINATING_CHAR +`+)`).FindAllString(input, -1)
+		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(k)+`.(`+TERMINATING_CHAR+`+)`).FindAllString(input, -1)
 		tokens = append(tokens, matches...)
 	}
 
@@ -53,8 +56,23 @@ func retrieveWithInputReplaced(input string, gv generator.Generatoriface) (strin
 }
 
 func replaceString(inputMap generator.ParsedMap, inputString string) string {
-	for oldVal, newVal := range inputMap {
-		inputString = strings.ReplaceAll(inputString, oldVal, fmt.Sprint(newVal))
+	// order map by keys length
+	mkeys := make([]string, 0, len(inputMap))
+	for k := range inputMap {
+		mkeys = append(mkeys, k)
+	}
+
+	sort.Slice(mkeys, func(i, j int) bool {
+		l1, l2 := len(mkeys[i]), len(mkeys[j])
+		if l1 != l2 {
+			return l1 > l2
+		}
+		return mkeys[i] > mkeys[j]
+	})
+
+	// ordered values by index
+	for _, oval := range mkeys {
+		inputString = strings.ReplaceAll(inputString, oval, fmt.Sprint(inputMap[oval]))
 	}
 	return inputString
 }
