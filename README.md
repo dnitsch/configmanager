@@ -114,7 +114,11 @@ eval "$(configmanager r -t AWSSECRETS#/appxyz/service1-password -t AWSPARAMSTR#/
 
 #### string-input
 
-Replaces all the occurences of tokens inside strings and writes them back out to files.
+Replaces all the occurences of tokens inside strings and writes them back out to a file provided. 
+
+This method can be used with entire application property files such as `application.yml` or `application.properties` for springboot apps or netcore app config in which ever format.
+
+The `fromstr` (alias for `string-input`) respects all indentations so can be used on contents of a file of any type
 
 
 
@@ -137,9 +141,9 @@ Specifying a key seperator on token items that can be parsed as a K/V map will r
 e.g. if contents of the `AWSSECRETS#/appxyz/service1-db-config` are parseable into the below object
 ```json
 {
-	"host": "db.internal",
-	"port": 3306,
-	"pass": "sUp3$ecr3T!",
+  "host": "db.internal",
+  "port": 3306,
+  "pass": "sUp3$ecr3T!",
 }
 ```
 
@@ -151,22 +155,22 @@ Alternatively if you are `configmanager`-ing a file via the fromstr command and 
 
 ```yaml
 app:
-	name: xyz
+  name: xyz
 db:
-	host: AWSSECRETS#/appxyz/service1-db-config|host
-	port: AWSSECRETS#/appxyz/service1-db-config|port
-	pass: AWSSECRETS#/appxyz/service1-db-config|pass
+  host: AWSSECRETS#/appxyz/service1-db-config|host
+  port: AWSSECRETS#/appxyz/service1-db-config|port
+  pass: AWSSECRETS#/appxyz/service1-db-config|pass
 ```
 
 which would result in this
 
 ```yaml
 app:
-	name: xyz
+  name: xyz
 db:
-	host: db.internal
-	port: 3306
-	pass: sUp3$ecr3T!
+  host: db.internal
+  port: 3306
+  pass: sUp3$ecr3T!
 ```
 
 If your config parameter matches the config interface, you can also leave the entire token to point to the `db` key
@@ -174,7 +178,7 @@ If your config parameter matches the config interface, you can also leave the en
 
 ```yaml
 app:
-	name: xyz
+  name: xyz
 db: AWSSECRETS#/appxyz/service1-db-config
 ```
 
@@ -182,11 +186,11 @@ result:
 
 ```yaml
 app:
-	name: xyz
+  name: xyz
 db: {
- 	"host": "db.internal",
-	"port": 3306,
-	"pass": "sUp3$ecr3T!",
+  "host": "db.internal",
+  "port": 3306,
+  "pass": "sUp3$ecr3T!",
 }
 ```
 
