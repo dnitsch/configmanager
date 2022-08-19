@@ -4,21 +4,32 @@
 
 Package used for retrieving application settings from various sources.
 
-Currently supported variable and secrets implementations - AWS SecretsManager and AWS ParameterStore.
+Currently supported variable and secrets implementations:
 
-> The Intended use is within containers to generate required application config that can later be sourced and then read by application at start up time so that e.g. K8s secrets don't need to be used for true "secrets" or jsut to avoid overly large configmaps
+- AWS SecretsManager
+- AWS ParameterStore
+- AzureKeyvault Secrets
+- TODO:
+  - GCP
+  - Hashicorp  
 
-Must reference an existing token in a path like format.
+The main driver is to use component level configuration objects, if stored in a `"namespaced"` manner e.g. in AWS ParamStore as `/nonprod/component-service-a/configVar`, however this is not a requirement and the param name can be whatever. Though whilst using some sort of a organised manner it will be more straight forward to allow other services to consume certain secrets/params based on resource/access policies. 
 
-GenVars will then write them to a file in this format:
+> Beware size limitation with certain config/vault implementations. In which case it's best to split certain items up e.g. TLS certs `/nonprod/component-service-a/pub-cert`, `/nonprod/component-service-a/private-cert`, `/nonprod/component-service-a/chain1-cert`, etc... 
 
-```bash
-export VAR=VALUE
-export VAR2=VALUE2
-...
-```
+Where `configVar` can be either a primitive type like a string `'som3#!S$CRet'` or a number `3306` or a parseable single level JSON object like `{host: ..., pass: ...., port: ...}` which can be returned whole or accessed via a key separator for a specific value.
 
-## Installation
+## Use cases
+
+- Kubernetes
+
+   Avoid storing overly large configmaps and especially using secrets objects to store actual secrets e.g. DB passwords, 3rd party API creds, etc... By only storing a config file or a script containing only the tokens e.g. `AWSSECRETS#/$ENV/service/db-config` it can be git committed without writing numerous shell scripts, only storing either some interpolation vars like `$ENV` in a configmap or the entire configmanager token for smaller use cases.
+- VMs
+   VM deployments can function in a similar manner by passing in the contents or a path to the source config and the output path so that app at startup time can consume it.
+- Functions (written in Go)
+   Only storing tokens in env variables available to the function as plain text tokens gets around needing to store actual secrets in function env vars and can also be used across a variety of config stores.
+
+## CLI Installation
 
 Major platform binaries [here](https://github.com/dnitsch/configmanager/releases)
 
@@ -57,7 +68,7 @@ Usage:
 Available Commands:
   completion   Generate the autocompletion script for the specified shell
   help         Help about any command
-  insert       Retrieves a value for token(s) specified and optionally writes to a file
+  insert       Not yet implemented
   retrieve     Retrieves a value for token(s) specified
   string-input Retrieves all found token values in a specified string input
   version      Get version number configmanager
@@ -217,6 +228,8 @@ E.g. your Custom CRD stores some values in plain text that should really be secr
 See [examples](./examples/examples.go) for more examples and tests for sample input/usage
 
 ```go
+package main
+
 import (
 	"context"
 	"fmt"
@@ -251,6 +264,54 @@ spec:
 Above example would ensure that you can safely store config/secret values on a CRD in plain text.
 
 > Beware logging out the CRD after tokens have been replaced.
+
+Samlpe call to retrieve from inside an app/serverless function.
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/dnitsch/configmanager"
+	"github.com/dnitsch/configmanager/pkg/generator"
+)
+
+var (
+	DB_CONNECTION_STRING    string = "someuser:%v@tcp(%s:3306)/someschema"
+	DB_PASSWORD_SECRET_PATH string = os.Getenv("DB_PASSWORD_TOKEN")
+	DB_HOST_URL             string = os.Getenv("DB_URL_TOKEN")
+)
+
+func main() {
+	connString, err := credentialString(context.TODO, DB_PASSWORD_SECRET_PATH, DB_HOST_URL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func credentialString(ctx context.Context, pwdToken, hostToken string) (string, error) {
+
+	cnf := generator.NewConfig()
+
+	pm, err := configmanager.Retrieve([]string{pwdToken, hostToken}, *cnf)
+
+	if err != nil {
+		return "", err
+	}
+	if pwd, ok := pm[pwdToken]; ok {
+		if host, ok := pm[hostToken]; ok {
+			return fmt.Sprintf(DB_CONNECTION_STRING, pwd, host), nil
+		}
+	}
+
+	return "", fmt.Errorf("unable to find value via token")
+}
+```
 
 ## Help
 
