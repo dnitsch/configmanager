@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"strings"
 
@@ -361,14 +360,13 @@ func (c *GenVars) StrToFile(w io.Writer, str string) error {
 }
 
 func (c *GenVars) flushToFile(f io.Writer, str string) error {
-	if c.config.outpath == "stdout" {
-		fmt.Fprint(os.Stdout, str)
-	} else {
-		_, e := f.Write([]byte(str))
-		if e != nil {
-			return e
-		}
+
+	_, e := f.Write([]byte(str))
+
+	if e != nil {
+		return e
 	}
+
 	return nil
 }
 

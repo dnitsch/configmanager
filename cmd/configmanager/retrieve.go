@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/dnitsch/configmanager/cmd/utils"
+	"github.com/dnitsch/configmanager/internal/cmdutils"
 	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/spf13/cobra"
 )
@@ -37,7 +37,7 @@ func init() {
 }
 
 func retrieveRun(cmd *cobra.Command, args []string) error {
-	conf := generator.NewConfig().WithTokenSeparator(tokenSeparator).WithOutputPath(path)
+	conf := generator.NewConfig().WithTokenSeparator(tokenSeparator).WithOutputPath(path).WithKeySeparator(keySeparator)
 	gv := generator.NewGenerator().WithConfig(conf)
 	return utils.GenerateFromCmd(gv, tokens)
 }

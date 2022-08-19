@@ -38,5 +38,5 @@ func insertRun(cmd *cobra.Command, args []string) error {
 	// if err != nil {
 	// 	return err
 	// }
-	return nil
+	return fmt.Errorf("not yet implemented")
 }

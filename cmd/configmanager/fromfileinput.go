@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/dnitsch/configmanager/cmd/utils"
+	"github.com/dnitsch/configmanager/internal/cmdutils"
 	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/spf13/cobra"
 )
@@ -27,14 +27,26 @@ var (
 )
 
 func init() {
-	retrieveFromStrInput.PersistentFlags().StringVarP(&input, "input", "i", "", "Contents of a string inside a variable to be searched for tokens. e.g. -i $(cat /som/file)")
+	retrieveFromStrInput.PersistentFlags().StringVarP(&input, "input", "i", "", `Path to file which contents will be read in or the contents of a string 
+inside a variable to be searched for tokens. 
+If value is a valid path it will open it if not it will accept the string as an input. 
+e.g. -i /some/file or -i $"(cat /som/file)", are both valid input values`)
 	retrieveFromStrInput.MarkPersistentFlagRequired("input")
-	retrieveFromStrInput.PersistentFlags().StringVarP(&path, "path", "p", "./app.env", "Path where to write out the replaced a config/secret variables. Special value of stdout can be used to return the output to stdout e.g. -p stdout, unix style output only")
+	retrieveFromStrInput.PersistentFlags().StringVarP(&path, "path", "p", "./app.env", `Path where to write out the 
+replaced a config/secret variables. Special value of stdout can be used to return the output to stdout e.g. -p stdout, 
+unix style output only`)
+	// 	retrieveFromStrInput.PersistentFlags().BoolVarP(&overwriteinputfile, "overwrite", "o", false, `Writes the outputs of the templated file
+	// to a the same location as the input file path`)
 	configmanagerCmd.AddCommand(retrieveFromStrInput)
 }
 
 func retrieveFromStr(cmd *cobra.Command, args []string) error {
-	conf := generator.NewConfig().WithTokenSeparator(tokenSeparator).WithOutputPath(path)
+	conf := generator.NewConfig().WithTokenSeparator(tokenSeparator).WithOutputPath(path).WithKeySeparator(keySeparator)
 	gv := generator.NewGenerator().WithConfig(conf)
-	return utils.GenerateStrOut(gv, input)
+	return utils.GenerateStrOut(gv, input, path)
 }
+
+// func stringify(r io.Reader) (string, error) {
+
+// 	return
+// }
