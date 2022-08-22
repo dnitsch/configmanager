@@ -16,7 +16,7 @@ const (
 type ConfigManageriface interface {
 	Retrieve(tokens []string, config generator.GenVarsConfig) (generator.ParsedMap, error)
 	RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error)
-	Insert(force bool)
+	Insert(force bool) error
 }
 
 type ConfigManager struct{}
@@ -55,13 +55,14 @@ func retrieveWithInputReplaced(input string, gv generator.Generatoriface) (strin
 	return replaceString(m, input), nil
 }
 
+// replaceString fills tokens in a provided input with their actual secret/config values
 func replaceString(inputMap generator.ParsedMap, inputString string) string {
-	// order map by keys length
 	mkeys := make([]string, 0, len(inputMap))
 	for k := range inputMap {
 		mkeys = append(mkeys, k)
 	}
 
+	// order map by keys length
 	sort.Slice(mkeys, func(i, j int) bool {
 		l1, l2 := len(mkeys[i]), len(mkeys[j])
 		if l1 != l2 {

@@ -43,10 +43,5 @@ unix style output only`)
 func retrieveFromStr(cmd *cobra.Command, args []string) error {
 	conf := generator.NewConfig().WithTokenSeparator(tokenSeparator).WithOutputPath(path).WithKeySeparator(keySeparator)
 	gv := generator.NewGenerator().WithConfig(conf)
-	return utils.GenerateStrOut(gv, input, path)
+	return cmdutils.New(gv).GenerateStrOut(input, path)
 }
-
-// func stringify(r io.Reader) (string, error) {
-
-// 	return
-// }

@@ -1,6 +1,7 @@
 package configmanager
 
 import (
+	"fmt"
 	"io"
 	"testing"
 
@@ -173,6 +174,44 @@ foo23 = val1
 			}
 			if got != tt.expect {
 				t.Errorf(testutils.TestPhrase, tt.expect, got)
+			}
+		})
+	}
+}
+
+func Test_replaceString(t *testing.T) {
+	tests := []struct {
+		name      string
+		parsedMap generator.ParsedMap
+		inputStr  string
+		expectStr string
+	}{
+		{
+			name: "ordered correctly",
+			parsedMap: generator.ParsedMap{
+				"AZKVSECRET#/test-vault/db-config|user": "foo",
+				"AZKVSECRET#/test-vault/db-config|pass": "bar",
+				"AZKVSECRET#/test-vault/db-config":      fmt.Sprintf("%v", "{\"user\": \"foo\", \"pass\": \"bar\"}"),
+			},
+			inputStr: `app: foo
+db2: AZKVSECRET#/test-vault/db-config
+db: 
+	user: AZKVSECRET#/test-vault/db-config|user
+	pass: AZKVSECRET#/test-vault/db-config|pass
+`,
+			expectStr: `app: foo
+db2: {"user": "foo", "pass": "bar"}
+db: 
+	user: foo
+	pass: bar
+`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := replaceString(tt.parsedMap, tt.inputStr)
+			if got != tt.expectStr {
+				t.Errorf(testutils.TestPhrase, tt.expectStr, got)
 			}
 		})
 	}

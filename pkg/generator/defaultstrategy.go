@@ -1,5 +1,7 @@
 package generator
 
+import "fmt"
+
 type DefaultStrategy struct {
 }
 
@@ -14,5 +16,5 @@ func (implmt *DefaultStrategy) setValue(val string) {
 }
 
 func (implmt *DefaultStrategy) getTokenValue(v *GenVars) (string, error) {
-	return "", nil
+	return "", fmt.Errorf("default strategy does not implement token retrieval")
 }

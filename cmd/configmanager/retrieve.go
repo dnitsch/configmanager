@@ -39,5 +39,5 @@ func init() {
 func retrieveRun(cmd *cobra.Command, args []string) error {
 	conf := generator.NewConfig().WithTokenSeparator(tokenSeparator).WithOutputPath(path).WithKeySeparator(keySeparator)
 	gv := generator.NewGenerator().WithConfig(conf)
-	return utils.GenerateFromCmd(gv, tokens)
+	return cmdutils.New(gv).GenerateFromCmd(tokens, path)
 }

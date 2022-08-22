@@ -41,6 +41,13 @@ type Generatoriface interface {
 	StrToFile(w io.Writer, str string) error
 }
 
+// GenVarsiface stores strategy and GenVars implementation behaviour
+type GenVarsiface interface {
+	Generatoriface
+	Config() *GenVarsConfig
+	ConfigOutputPath() string
+}
+
 // GenVars is the main struct holding the
 // strategy patterns iface
 // any initialised config if overridded with withers
@@ -56,6 +63,11 @@ type GenVars struct {
 	outString      []string
 	// rawMap is the internal object that holds the values of original token => retrieved value - decrypted in plain text
 	rawMap ParsedMap
+}
+
+// setValue implements GenVarsiface
+func (*GenVars) setValue(s string) {
+	panic("unimplemented")
 }
 
 // ParsedMap is the internal working object definition and
@@ -109,14 +121,6 @@ type GenVarsConfig struct {
 	outpath        string
 	tokenSeparator string
 	keySeparator   string
-}
-
-// this is a bit pointless
-// GenVarsConfig defines the input config object to be passed
-type GenVarsPublicConfig struct {
-	Outpath        string
-	TokenSeparator string
-	KeySeparator   string
 }
 
 // NewConfig

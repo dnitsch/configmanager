@@ -205,7 +205,7 @@ db: {
 }
 ```
 
-### Special AZKVSECRETS
+### Special consideration for AZKVSECRET
 
 For Azure KeyVault the first part of the token needs to be the name of the vault.
 
@@ -214,6 +214,8 @@ For Azure KeyVault the first part of the token needs to be the name of the vault
 `AZKVSECRET#/test-vault//token/1` ==> will use KeyVault implementation to retrieve the `/token/1` from a `test-vault`.
 
 `AZKVSECRET#/test-vault/no-slash-token-1` ==> will use KeyVault implementation to retrieve the `no-slash-token-1` from a `test-vault`.
+
+> The preceeding slash to the vault name is optional - `AZKVSECRET#/test-vault/no-slash-token-1` and `AZKVSECRET#test-vault/no-slash-token-1` will both identify the vault of name `test-vault`
 
 ## Go API
 
