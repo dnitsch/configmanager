@@ -15,8 +15,9 @@ import (
 type mockGenVars struct{}
 
 var (
-	testKey = "FOO#/test"
-	testVal = "val1"
+	testKey     = "FOO#/test"
+	testVal     = "val1"
+	tempOutPath = ""
 )
 
 func (m *mockGenVars) Generate(tokens []string) (generator.ParsedMap, error) {
@@ -42,6 +43,7 @@ func (m *mockGenVars) Config() *generator.GenVarsConfig {
 }
 
 func (m *mockGenVars) ConfigOutputPath() string {
+	return tempOutPath
 }
 
 type mockConfMgr struct{}
@@ -122,15 +124,15 @@ func Test_generateFromStrOutOverwrite(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer os.Remove(tempoutfile.Name())
-
-			outwriter, err := os.Open(tempoutfile.Name())
+			tempOutPath = tempoutfile.Name()
+			outwriter, err := writer(tempoutfile.Name())
 			if err != nil {
 				t.Fatal(err)
 			}
 			if err := tt.cmdUtils.generateFromStrOutOverwrite(tempinfile.Name(), tempoutfile.Name(), outwriter); err != nil {
 				t.Fatal(err)
 			}
-			got, err := ioutil.ReadAll(outwriter)
+			got, err := ioutil.ReadFile(tempoutfile.Name())
 			if err != nil {
 				t.Fatal(err)
 			}
