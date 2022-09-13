@@ -1,8 +1,8 @@
 
 OWNER := dnitsch
 NAME := configmanager
-GIT_TAG := "1.6.0"
-VERSION := "v1.6.0"
+GIT_TAG := "1.7.0-pre"
+VERSION := "v1.7.0-pre"
 # VERSION := "$(shell git describe --tags --abbrev=0)"
 REVISION := $(shell git rev-parse --short HEAD)
 
@@ -47,5 +47,8 @@ release:
 tag: 
 	git tag "v$(GIT_TAG)"
 	git push origin "v$(GIT_TAG)"
+
+echo:
+	echo $(REVISION)
 
 tagbuildrelease: tag cross-build release

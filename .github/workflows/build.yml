@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.18-alpine3.16
+      image: golang:1.18-bullseye
       env:
         FOO: Bar
         REVISION: $GITHUB_SHA
@@ -23,21 +23,17 @@ jobs:
       - uses: actions/checkout@v3
       - name: install deps
         run: |
-          apk add make
-          pwd 
-          ls -lat ./*
-          make install
-          make test
-      - name: echo env 
-        run: env 
+          make REVISION=$GITHUB_SHA install
       - name: echo REVISION
         run: | 
           echo "REVISION -> $REVISION"
           echo "GITHUB_SHA -> $GITHUB_SHA"
       - name: make test 
         run: |
-          go test ./... -mod=readonly
+          make REVISION=$GITHUB_SHA test
       - name: release library
-        run: make tag
+        run: make REVISION=$GITHUB_SHA tag
       - name: release binary
-        run: PAT=${{ secrets.GITHUB_TOKEN }} make cross-build release
+        run: |
+          make REVISION=$GITHUB_SHA PAT=${{ secrets.GITHUB_TOKEN }} cross-build
+          make REVISION=$GITHUB_SHA PAT=${{ secrets.GITHUB_TOKEN }} release
