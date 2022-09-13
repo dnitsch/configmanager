@@ -20,6 +20,7 @@ jobs:
       #   - my_docker_volume:/volume_mount
       # options: --cpus 1
     steps:
+      - uses: actions/checkout@v3
       - name: install deps
         run: |
           apk add make
