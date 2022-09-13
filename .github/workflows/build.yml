@@ -23,6 +23,8 @@ jobs:
       - name: install deps
         run: |
           apk add make
+          echo pwd 
+          ls -lat
           make install
           make test
       - name: echo env 
