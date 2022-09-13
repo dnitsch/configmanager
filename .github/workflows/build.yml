@@ -1,0 +1,40 @@
+name: build and release 
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.18-alpine3.16
+      env:
+        FOO: Bar
+        REVISION: $GITHUB_SHA
+      # ports:
+      #   - 80
+      # volumes:
+      #   - my_docker_volume:/volume_mount
+      # options: --cpus 1
+    steps:
+      - name: install deps
+        run: |
+          apk add make
+          make install
+          make test
+      - name: echo env 
+        run: env 
+      - name: echo REVISION
+        run: | 
+          echo "REVISION -> $REVISION"
+          echo "GITHUB_SHA -> $GITHUB_SHA"
+      - name: make test 
+        run: |
+          go test ./... -mod=readonly
+      - name: release library
+        run: make tag
+      - name: release binary
+        run: PAT=${{ secrets.GITHUB_TOKEN }} make cross-build release
