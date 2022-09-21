@@ -56,5 +56,9 @@ func (imp *ParamStore) getTokenValue(v *GenVars) (string, error) {
 		return "", err
 	}
 
-	return *result.Parameter.Value, nil
+	if result.Parameter.Value != nil {
+		return *result.Parameter.Value, nil
+	}
+	log.Errorf("value retrieved but empty for token: %v", imp.token)
+	return "", nil
 }
