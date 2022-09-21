@@ -77,7 +77,11 @@ func (imp *KvScrtStore) getTokenValue(v *GenVars) (string, error) {
 		log.Errorf("AzKeyVault: %s", err)
 		return "", err
 	}
-	return *s.Value, nil
+	if s.Value != nil {
+		return *s.Value, nil
+	}
+	log.Errorf("value retrieved but empty for token: %v", imp.token)
+	return "", nil
 }
 
 func azSplitToken(token string) azVaultHelper {
