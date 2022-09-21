@@ -32,30 +32,33 @@ func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
 
 }
 
-func (implmt *SecretsMgr) setToken(token string) {
-	implmt.token = token
+func (imp *SecretsMgr) setToken(token string) {
+	imp.token = token
 }
 
-func (implmt *SecretsMgr) setValue(val string) {
+func (imp *SecretsMgr) setValue(val string) {
 }
 
-func (implmt *SecretsMgr) getTokenValue(v *GenVars) (string, error) {
+func (imp *SecretsMgr) getTokenValue(v *GenVars) (string, error) {
 	log.Infof("%s", "Concrete implementation SecretsManager")
-	log.Infof("Getting Secret: %s", implmt.token)
+	log.Infof("Getting Secret: %s", imp.token)
 
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(v.stripPrefix(implmt.token, SecretMgrPrefix)),
+		SecretId:     aws.String(v.stripPrefix(imp.token, SecretMgrPrefix)),
 		VersionStage: aws.String("AWSCURRENT"),
 	}
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	result, err := implmt.svc.GetSecretValue(ctx, input)
+	result, err := imp.svc.GetSecretValue(ctx, input)
 	if err != nil {
 		log.Errorf("SecretsMgr: %s", err)
 		return "", err
 	}
-
-	return *result.SecretString, nil
+	if result.SecretString != nil {
+		return *result.SecretString, nil
+	}
+	log.Errorf("value retrieved but empty for token: %v", imp.token)
+	return "", nil
 }

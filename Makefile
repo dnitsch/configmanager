@@ -1,8 +1,8 @@
 
 OWNER := dnitsch
 NAME := configmanager
-GIT_TAG := "1.7.1-pre"
-VERSION := "v1.7.1-pre"
+GIT_TAG := "1.7.2"
+VERSION := "v1.7.2"
 # VERSION := "$(shell git describe --tags --abbrev=0)"
 REVISION := $(shell git rev-parse --short HEAD)
 
