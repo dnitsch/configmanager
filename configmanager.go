@@ -1,6 +1,7 @@
 package configmanager
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -76,6 +77,27 @@ func replaceString(inputMap generator.ParsedMap, inputString string) string {
 		inputString = strings.ReplaceAll(inputString, oval, fmt.Sprint(inputMap[oval]))
 	}
 	return inputString
+}
+
+// KubeControllerSpecHelper is a helper method. It has to be static method
+// as an interface cannot have methods with type paramaters yet...
+//
+// It accepts a DI of configmanager and the config (for testability) to replace all occurences of replaceable tokens inside a Marshalled string of that type
+func KubeControllerSpecHelper[T any](inputType T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+	outType := new(T)
+	rawBytes, err := json.Marshal(inputType)
+	if err != nil {
+		return nil, err
+	}
+
+	replaced, err := cm.RetrieveWithInputReplaced(string(rawBytes), config)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal([]byte(replaced), outType); err != nil {
+		return nil, err
+	}
+	return outType, nil
 }
 
 // Insert will update
