@@ -29,109 +29,11 @@ Where `configVar` can be either a primitive type like a string `'som3#!S$CRet'` 
 - Functions (written in Go)
    Only storing tokens in env variables available to the function as plain text tokens gets around needing to store actual secrets in function env vars and can also be used across a variety of config stores.
 
-## CLI Installation
+## CLI
 
-Major platform binaries [here](https://github.com/dnitsch/configmanager/releases)
+ConfigManager comes packaged as a CLI for all major platforms, to see [download/installation](./docs/installation.md)
 
-*nix binary
-
-```bash
-curl -L https://github.com/dnitsch/configmanager/releases/latest/download/configmanager-linux -o configmanager
-```
-
-MacOS binary
-
-```bash
-curl -L https://github.com/dnitsch/configmanager/releases/latest/download/configmanager-darwin -o configmanager
-```
-
-```bash
-chmod +x configmanager
-sudo mv configmanager /usr/local/bin
-```
-
-Download specific version:
-
-```bash
-curl -L https://github.com/dnitsch/configmanager/releases/download/v0.5.0/configmanager-`uname -s` -o configmanager
-```
-
-## Usage
-
-```bash
-configmanager CLI for retrieving config or secret variables.
-                Using a specific tokens as an array item
-
-Usage:
-  configmanager [command]
-
-Available Commands:
-  completion   Generate the autocompletion script for the specified shell
-  help         Help about any command
-  insert       Not yet implemented
-  retrieve     Retrieves a value for token(s) specified
-  string-input Retrieves all found token values in a specified string input
-  version      Get version number configmanager
-
-Flags:
-  -h, --help                     help for configmanager
-  -k, --key-separator string     Separator to use to mark a key look up in a map. e.g. AWSSECRETS#/token/map|key1 (default "|")
-  -s, --token-separator string   Separator to use to mark concrete store and the key within it (default "#")
-  -v, --verbose                  Verbosity level
-```
-
-### Commands
-
-#### retrieve
-
-Useful for retrieving a series of tokens in CI or before app start
-
-```bash
-configmanager retrieve --token AWSSECRETS#/appxyz/service1-password --token AWSPARAMSTR#/appxyz/service2-password
-source app.env
-```
-
-This will have written to a defaul out path `app.env` in current directory the below contents
-
-```bash
-export SERVICE1_PASSWORD='somepass!$@sdhf'
-export SERVICE2_PASSWORD='somepa22$!$'
-```
-
-Once sourced you could delete the file, however the environment variables will persist in the process info `/proc/someprocess`
-
-```bash
-rm -f app.env
-./startapp
-```
-
-By default the output path is `app.env` relative to the exec binary.
-
-This can be overridden by passing in the `--path` param.
-
-```bash
-configmanager retrieve --token AWSSECRETS#/appxyz/service1-password --token AWSPARAMSTR#/appxyz/service12-settings --path /some/path/app.env
-source /some/path/app.env
-./startapp # psuedo script to start an application
-```
-
-Alternatively you can set the path as stdout which will reduce the need to save and source the env from file.
-
->!Warning! about eval - if you are retrieving secrets from sources you don't control the input of - best to stick wtih the file approach and then delete the file.
-
-```bash
-eval "$(configmanager r -t AWSSECRETS#/appxyz/service1-password -t AWSPARAMSTR#/appxyz/service12-settings -p stdout)" && ./.ignore-out.sh
-```
-
-#### string-input
-
-Replaces all the occurences of tokens inside strings and writes them back out to a file provided. 
-
-This method can be used with entire application property files such as `application.yml` or `application.properties` for springboot apps or netcore app config in which ever format.
-
-The `fromstr` (alias for `string-input`) respects all indentations so can be used on contents of a file of any type
-
-
+For more detailed usage you can run -h with each subcommand and additional info can be found [here](./docs/commands.md)
 
 ## Config Tokens
 
@@ -139,7 +41,19 @@ The token is made up of 3 parts:
 
 - `AWSSECRETS` the strategy identifier to choose at runtime
 
-- `#` separator - used for
+- `#` separator - used for separating the implementation indicator and the look up value.
+
+> The default is currently `#` - it will change to `://` to allow for a more natural reading of the "token". you can achieve this behaviour now by either specifying the `-s` to the CLI or 
+```go
+
+rawStr := `somePAss: AWSPARAMSTR:///int-test/pocketbase/admin-pwd`
+cm := configmanager.ConfigManager{}
+// use custom token separator
+// inline with v2 coming changes
+cnf := generator.NewConfig().WithTokenSeparator("://")
+replaced, err := cm.RetrieveWithInputReplaced(rawStr, *cnf)
+
+```
 
 - `/path/to/parameter` the actual path to the secret or parameter in the target system e.g. AWS SecretsManager or ParameterStore (it does assume a path like pattern might throw a runtime error if not found)
 
@@ -265,9 +179,11 @@ spec:
 
 Above example would ensure that you can safely store config/secret values on a CRD in plain text.
 
+Or using go1.19+ [generics example](https://github.com/dnitsch/reststrategy/blob/d14ccec2b29bff646678ab9cf1775c0e93308569/controller/controller.go#L353).
+
 > Beware logging out the CRD after tokens have been replaced.
 
-Samlpe call to retrieve from inside an app/serverless function.
+Samlpe call to retrieve from inside an app/serverless function to only grab the relevant values from config.
 
 ```go
 package main
