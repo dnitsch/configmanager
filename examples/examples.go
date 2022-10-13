@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/dnitsch/configmanager"
@@ -55,4 +56,31 @@ spec:
 		panic(err)
 	}
 	fmt.Println(pm)
+}
+
+// ConfigTokenReplace uses configmanager to replace all occurences of
+// replaceable tokens inside a []byte
+// this is a re-useable method on all controllers
+// will just ignore any non specs without tokens
+func SpecConfigTokenReplace[T any](inputType T) (*T, error) {
+	outType := new(T)
+	rawBytes, err := json.Marshal(inputType)
+	if err != nil {
+		return nil, err
+	}
+
+	cm := configmanager.ConfigManager{}
+
+	// use custom token separator
+	// inline with
+	cnf := generator.NewConfig().WithTokenSeparator("://")
+
+	replaced, err := cm.RetrieveWithInputReplaced(string(rawBytes), *cnf)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal([]byte(replaced), outType); err != nil {
+		return nil, err
+	}
+	return outType, nil
 }

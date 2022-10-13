@@ -3,6 +3,7 @@ package configmanager
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"testing"
 
 	"github.com/dnitsch/configmanager/internal/testutils"
@@ -212,6 +213,159 @@ db:
 			got := replaceString(tt.parsedMap, tt.inputStr)
 			if got != tt.expectStr {
 				t.Errorf(testutils.TestPhrase, tt.expectStr, got)
+			}
+		})
+	}
+}
+
+type MockCfgMgr struct {
+	RetrieveWithInputReplacedTest func(input string, config generator.GenVarsConfig) (string, error)
+}
+
+func (m *MockCfgMgr) RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error) {
+	if m.RetrieveWithInputReplacedTest != nil {
+		return m.RetrieveWithInputReplacedTest(input, config)
+	}
+	return "", nil
+}
+
+func (m *MockCfgMgr) Insert(force bool) error {
+	return nil
+}
+
+func (m *MockCfgMgr) Retrieve(tokens []string, config generator.GenVarsConfig) (generator.ParsedMap, error) {
+	return nil, nil
+}
+
+type testSimpleStruct struct {
+	Foo string `json:"foo"`
+	Bar string `json:"bar"`
+}
+
+type testAnotherNEst struct {
+	Number int     `json:"number,omitempty"`
+	Float  float32 `json:"float,omitempty"`
+}
+
+type testLol struct {
+	Bla     string          `json:"bla,omitempty"`
+	Another testAnotherNEst `json:"another,omitempty"`
+}
+
+type testNestedStruct struct {
+	Foo string  `json:"foo"`
+	Bar string  `json:"bar"`
+	Lol testLol `json:"lol,omitempty"`
+}
+
+func Test_KubeControllerSpecHelper(t *testing.T) {
+	tests := []struct {
+		name     string
+		testType testSimpleStruct
+		expect   testSimpleStruct
+		cfmgr    func(t *testing.T) ConfigManageriface
+	}{
+		{
+			name: "happy path simple struct",
+			testType: testSimpleStruct{
+				Foo: "AWSSECRETS:///bar/foo",
+				Bar: "quz",
+			},
+			expect: testSimpleStruct{
+				Foo: "baz",
+				Bar: "quz",
+			},
+			cfmgr: func(t *testing.T) ConfigManageriface {
+				mcm := &MockCfgMgr{}
+				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+					return `{"foo":"baz","bar":"quz"}`, nil
+				}
+				return mcm
+			},
+		},
+		{
+			name: "happy path simple struct2",
+			testType: testSimpleStruct{
+				Foo: "AWSSECRETS:///bar/foo2",
+				Bar: "quz",
+			},
+			expect: testSimpleStruct{
+				Foo: "baz2",
+				Bar: "quz",
+			},
+			cfmgr: func(t *testing.T) ConfigManageriface {
+				mcm := &MockCfgMgr{}
+				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+					return `{"foo":"baz2","bar":"quz"}`, nil
+				}
+				return mcm
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			config := generator.NewConfig()
+			resp, err := KubeControllerSpecHelper(tt.testType, tt.cfmgr(t), *config)
+			if err != nil {
+				t.Errorf("expected error to be <nil>, got: %v", err)
+			}
+			if !reflect.DeepEqual(resp, &tt.expect) {
+				t.Error("")
+			}
+		})
+	}
+}
+
+func Test_KubeControllerComplex(t *testing.T) {
+	tests := []struct {
+		name     string
+		testType testNestedStruct
+		expect   testNestedStruct
+		cfmgr    func(t *testing.T) ConfigManageriface
+	}{
+		{
+			name: "happy path simple struct",
+			testType: testNestedStruct{
+				Foo: "AWSSECRETS:///bar/foo",
+				Bar: "quz",
+				Lol: testLol{
+					Bla: "booo",
+					Another: testAnotherNEst{
+						Number: 1235,
+						Float:  123.09,
+					},
+				},
+			},
+			expect: testNestedStruct{
+				Foo: "baz",
+				Bar: "quz",
+				Lol: testLol{
+					Bla: "booo",
+					Another: testAnotherNEst{
+						Number: 1235,
+						Float:  123.09,
+					},
+				},
+			},
+			cfmgr: func(t *testing.T) ConfigManageriface {
+				mcm := &MockCfgMgr{}
+				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+					return `{"foo":"baz","bar":"quz", "lol":{"bla":"booo","another":{"number": 1235, "float": 123.09}}}`, nil
+				}
+				return mcm
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := generator.NewConfig()
+			resp, err := KubeControllerSpecHelper(tt.testType, tt.cfmgr(t), *config)
+			if err != nil {
+				t.Errorf("expected error to be <nil>, got: %v", err)
+			}
+			if !reflect.DeepEqual(resp, &tt.expect) {
+				t.Error("returned type does not deep equal to expected")
 			}
 		})
 	}
