@@ -43,17 +43,19 @@ The token is made up of 3 parts:
 
 - `#` separator - used for separating the implementation indicator and the look up value.
 
-> The default is currently `#` - it will change to `://` to allow for a more natural reading of the "token". you can achieve this behaviour now by either specifying the `-s` to the CLI or 
-```go
+> The default is currently `#` - it will change to `://` to allow for a more natural reading of the "token". you can achieve this behaviour now by either specifying the `-s` to the CLI or ConfigManager public methods, like below.
 
+```go
 rawStr := `somePAss: AWSPARAMSTR:///int-test/pocketbase/admin-pwd`
 cm := configmanager.ConfigManager{}
 // use custom token separator
 // inline with v2 coming changes
 cnf := generator.NewConfig().WithTokenSeparator("://")
+// replaced will be a string which needs unmarshalling
 replaced, err := cm.RetrieveWithInputReplaced(rawStr, *cnf)
-
 ```
+
+Alternatively you can use the helper methods for Yaml or Json tagged structs - see [examples](./examples/examples.go) for more details
 
 - `/path/to/parameter` the actual path to the secret or parameter in the target system e.g. AWS SecretsManager or ParameterStore (it does assume a path like pattern might throw a runtime error if not found)
 

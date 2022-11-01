@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	yaml "gopkg.in/yaml.v3"
+
 	"github.com/dnitsch/configmanager/pkg/generator"
 )
 
@@ -79,8 +81,10 @@ func replaceString(inputMap generator.ParsedMap, inputString string) string {
 	return inputString
 }
 
-// KubeControllerSpecHelper is a helper method. It has to be static method
-// as an interface cannot have methods with type paramaters yet...
+// @deprecated
+// left for compatibility
+// KubeControllerSpecHelper is a helper method, it marshalls an input value of that type into a string and passes it into the relevant configmanger retrieve method
+// and returns the unmarshalled object back
 //
 // It accepts a DI of configmanager and the config (for testability) to replace all occurences of replaceable tokens inside a Marshalled string of that type
 func KubeControllerSpecHelper[T any](inputType T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
@@ -98,6 +102,61 @@ func KubeControllerSpecHelper[T any](inputType T, cm ConfigManageriface, config 
 		return nil, err
 	}
 	return outType, nil
+}
+
+// RetrieveMarshalledJson is a helper method.
+//
+// It marshalls an input value of that type into a []byte and passes it into the relevant configmanger retrieve method
+// returns the unmarshalled object back with all tokens replaced IF found for their specific vault implementation values.
+// Type must contain all public members with a JSON tag on the struct
+func RetrieveMarshalledJson[T any](input T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+	outType := new(T)
+	rawBytes, err := json.Marshal(input)
+	if err != nil {
+		return nil, err
+	}
+	return RetrieveUnmarshalledFromJson(rawBytes, outType, cm, config)
+}
+
+// RetrieveUnmarshalledFromJson is a helper method.
+// Same as RetrieveMarshalledJson but it accepts an already marshalled byte slice
+func RetrieveUnmarshalledFromJson[T any](input []byte, output *T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+	replaced, err := cm.RetrieveWithInputReplaced(string(input), config)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal([]byte(replaced), output); err != nil {
+		return nil, err
+	}
+	return output, nil
+}
+
+// RetrieveMarshalledYaml is a helper method.
+//
+// It marshalls an input value of that type into a []byte and passes it into the relevant configmanger retrieve method
+// returns the unmarshalled object back with all tokens replaced IF found for their specific vault implementation values.
+// Type must contain all public members with a YAML tag on the struct
+func RetrieveMarshalledYaml[T any](input T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+	outType := new(T)
+	rawBytes, err := yaml.Marshal(input)
+	if err != nil {
+		return nil, err
+	}
+	return RetrieveUnmarshalledFromYaml(rawBytes, outType, cm, config)
+}
+
+// RetrieveUnmarshalledFromYaml is a helper method.
+//
+// Same as RetrieveMarshalledYaml but it accepts an already marshalled byte slice
+func RetrieveUnmarshalledFromYaml[T any](input []byte, output *T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+	replaced, err := cm.RetrieveWithInputReplaced(string(input), config)
+	if err != nil {
+		return nil, err
+	}
+	if err := yaml.Unmarshal([]byte(replaced), output); err != nil {
+		return nil, err
+	}
+	return output, nil
 }
 
 // Insert will update

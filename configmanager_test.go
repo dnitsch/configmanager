@@ -238,24 +238,24 @@ func (m *MockCfgMgr) Retrieve(tokens []string, config generator.GenVarsConfig) (
 }
 
 type testSimpleStruct struct {
-	Foo string `json:"foo"`
-	Bar string `json:"bar"`
+	Foo string `json:"foo" yaml:"foo"`
+	Bar string `json:"bar" yaml:"bar"`
 }
 
 type testAnotherNEst struct {
-	Number int     `json:"number,omitempty"`
-	Float  float32 `json:"float,omitempty"`
+	Number int     `json:"number,omitempty" yaml:"number"`
+	Float  float32 `json:"float,omitempty" yaml:"float"`
 }
 
 type testLol struct {
-	Bla     string          `json:"bla,omitempty"`
-	Another testAnotherNEst `json:"another,omitempty"`
+	Bla     string          `json:"bla,omitempty" yaml:"bla"`
+	Another testAnotherNEst `json:"another,omitempty" yaml:"another"`
 }
 
 type testNestedStruct struct {
-	Foo string  `json:"foo"`
-	Bar string  `json:"bar"`
-	Lol testLol `json:"lol,omitempty"`
+	Foo string  `json:"foo" yaml:"foo"`
+	Bar string  `json:"bar" yaml:"bar"`
+	Lol testLol `json:"lol,omitempty" yaml:"lol"`
 }
 
 func Test_KubeControllerSpecHelper(t *testing.T) {
@@ -325,7 +325,7 @@ func Test_KubeControllerComplex(t *testing.T) {
 		cfmgr    func(t *testing.T) ConfigManageriface
 	}{
 		{
-			name: "happy path simple struct",
+			name: "happy path complex struct",
 			testType: testNestedStruct{
 				Foo: "AWSSECRETS:///bar/foo",
 				Bar: "quz",
@@ -359,8 +359,154 @@ func Test_KubeControllerComplex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := generator.NewConfig()
+			config := generator.NewConfig().WithTokenSeparator("://")
 			resp, err := KubeControllerSpecHelper(tt.testType, tt.cfmgr(t), *config)
+			if err != nil {
+				t.Errorf("expected error to be <nil>, got: %v", err)
+			}
+			if !reflect.DeepEqual(resp, &tt.expect) {
+				t.Error("returned type does not deep equal to expected")
+			}
+		})
+	}
+}
+
+func Test_YamlRetrieveMarshalled(t *testing.T) {
+	tests := []struct {
+		name     string
+		testType testNestedStruct
+		expect   testNestedStruct
+		cfmgr    func(t *testing.T) ConfigManageriface
+	}{
+		{
+			name: "complex struct - complete",
+			testType: testNestedStruct{
+				Foo: "AWSSECRETS:///bar/foo",
+				Bar: "quz",
+				Lol: testLol{
+					Bla: "booo",
+					Another: testAnotherNEst{
+						Number: 1235,
+						Float:  123.09,
+					},
+				},
+			},
+			expect: testNestedStruct{
+				Foo: "baz",
+				Bar: "quz",
+				Lol: testLol{
+					Bla: "booo",
+					Another: testAnotherNEst{
+						Number: 1235,
+						Float:  123.09,
+					},
+				},
+			},
+			cfmgr: func(t *testing.T) ConfigManageriface {
+				mcm := &MockCfgMgr{}
+				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+					return `{"foo":"baz","bar":"quz", "lol":{"bla":"booo","another":{"number": 1235, "float": 123.09}}}`, nil
+				}
+				return mcm
+			},
+		},
+		{
+			name: "complex struct - missing fields",
+			testType: testNestedStruct{
+				Foo: "AWSSECRETS:///bar/foo",
+				Bar: "quz",
+			},
+			expect: testNestedStruct{
+				Foo: "baz",
+				Bar: "quz",
+				Lol: testLol{},
+			},
+			cfmgr: func(t *testing.T) ConfigManageriface {
+				mcm := &MockCfgMgr{}
+				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+					return `{"foo":"baz","bar":"quz", "lol":{"bla":"","another":{"number": 0, "float": 0}}}`, nil
+				}
+				return mcm
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := generator.NewConfig().WithTokenSeparator("://")
+			resp, err := RetrieveMarshalledYaml(tt.testType, tt.cfmgr(t), *config)
+			if err != nil {
+				t.Errorf("expected error to be <nil>, got: %v", err)
+			}
+			if !reflect.DeepEqual(resp, &tt.expect) {
+				t.Error("returned type does not deep equal to expected")
+			}
+		})
+	}
+}
+
+func Test_RetrieveMarshalledJson(t *testing.T) {
+	tests := []struct {
+		name     string
+		testType testNestedStruct
+		expect   testNestedStruct
+		cfmgr    func(t *testing.T) ConfigManageriface
+	}{
+		{
+			name: "happy path complex struct complete",
+			testType: testNestedStruct{
+				Foo: "AWSSECRETS:///bar/foo",
+				Bar: "quz",
+				Lol: testLol{
+					Bla: "booo",
+					Another: testAnotherNEst{
+						Number: 1235,
+						Float:  123.09,
+					},
+				},
+			},
+			expect: testNestedStruct{
+				Foo: "baz",
+				Bar: "quz",
+				Lol: testLol{
+					Bla: "booo",
+					Another: testAnotherNEst{
+						Number: 1235,
+						Float:  123.09,
+					},
+				},
+			},
+			cfmgr: func(t *testing.T) ConfigManageriface {
+				mcm := &MockCfgMgr{}
+				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+					return `{"foo":"baz","bar":"quz", "lol":{"bla":"booo","another":{"number": 1235, "float": 123.09}}}`, nil
+				}
+				return mcm
+			},
+		},
+		{
+			name: "complex struct - missing fields",
+			testType: testNestedStruct{
+				Foo: "AWSSECRETS:///bar/foo",
+				Bar: "quz",
+			},
+			expect: testNestedStruct{
+				Foo: "baz",
+				Bar: "quz",
+				Lol: testLol{},
+			},
+			cfmgr: func(t *testing.T) ConfigManageriface {
+				mcm := &MockCfgMgr{}
+				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+					return `{"foo":"baz","bar":"quz", "lol":{"bla":"","another":{"number": 0, "float": 0}}}`, nil
+				}
+				return mcm
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := generator.NewConfig().WithTokenSeparator("://")
+			resp, err := RetrieveMarshalledJson(tt.testType, tt.cfmgr(t), *config)
 			if err != nil {
 				t.Errorf("expected error to be <nil>, got: %v", err)
 			}

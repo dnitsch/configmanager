@@ -13,6 +13,7 @@ const DO_STUFF_WITH_VALS_HERE = "connstring:user@%v:host=%s/someschema..."
 func main() {
 	retrieveExample()
 	retrieveStringOut()
+	retrieveYaml()
 }
 
 // retrieveExample uses the standard Retrieve method on the API
@@ -28,6 +29,8 @@ func retrieveExample() {
 	}
 
 	// put in a loop for many config params
+	// or use the helper methods to return a yaml replaced struct
+	//
 	if pwd, ok := pm["token1"]; ok {
 		if host, ok := pm["token2"]; ok {
 			fmt.Println(fmt.Sprintf(DO_STUFF_WITH_VALS_HERE, pwd, fmt.Sprintf("%s", host)))
@@ -83,4 +86,29 @@ func SpecConfigTokenReplace[T any](inputType T) (*T, error) {
 		return nil, err
 	}
 	return outType, nil
+}
+
+// Example using a helper method
+func retrieveYaml() {
+	type config struct {
+		DbHost   string `yaml:"dbhost"`
+		Username string `yaml:"user"`
+		Password string `yaml:"pass"`
+	}
+	configMarshalled := `
+user: AWSPARAMSTR:///int-test/pocketbase/config|user
+pass: AWSPARAMSTR:///int-test/pocketbase/config|pwd
+dbhost: AWSPARAMSTR:///int-test/pocketbase/config|host
+`
+
+	cm := &configmanager.ConfigManager{}
+	// use custom token separator inline with future releases
+	cmConf := generator.NewConfig().WithTokenSeparator("://")
+	appConf, err := configmanager.RetrieveUnmarshalledFromYaml([]byte(configMarshalled), &config{}, cm, *cmConf)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(appConf.DbHost)
+	fmt.Println(appConf.Username)
+	fmt.Println(appConf.Password)
 }
