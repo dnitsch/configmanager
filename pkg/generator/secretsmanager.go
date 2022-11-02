@@ -15,6 +15,7 @@ type secretsMgrApi interface {
 
 type SecretsMgr struct {
 	svc   secretsMgrApi
+	ctx   context.Context
 	token string
 }
 
@@ -28,6 +29,7 @@ func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
 
 	return &SecretsMgr{
 		svc: c,
+		ctx: ctx,
 	}, nil
 
 }
@@ -39,7 +41,7 @@ func (imp *SecretsMgr) setToken(token string) {
 func (imp *SecretsMgr) setValue(val string) {
 }
 
-func (imp *SecretsMgr) getTokenValue(v *GenVars) (string, error) {
+func (imp *SecretsMgr) getTokenValue(v *retrieveStrategy) (string, error) {
 	log.Infof("%s", "Concrete implementation SecretsManager")
 	log.Infof("Getting Secret: %s", imp.token)
 
@@ -48,12 +50,12 @@ func (imp *SecretsMgr) getTokenValue(v *GenVars) (string, error) {
 		VersionStage: aws.String("AWSCURRENT"),
 	}
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
 
 	result, err := imp.svc.GetSecretValue(ctx, input)
 	if err != nil {
-		log.Errorf("SecretsMgr: %s", err)
+		log.Errorf("SecretsMgr: %v", err)
 		return "", err
 	}
 	if result.SecretString != nil {

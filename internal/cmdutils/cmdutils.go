@@ -1,14 +1,11 @@
-//
 // command line utils
 // testable methods that wrap around the low level
 // implementation when invoked from the cli method.
-//
 package cmdutils
 
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -54,6 +51,7 @@ func (c *CmdUtils) generateFromToken(tokens []string, w io.Writer) error {
 }
 
 // Generate a replaced string from string input command
+//
 // returns a non empty string if move of temp file is required
 func (c *CmdUtils) GenerateStrOut(input, output string) error {
 
@@ -62,7 +60,7 @@ func (c *CmdUtils) GenerateStrOut(input, output string) error {
 		log.Debugf("overwrite mode on")
 
 		// create a temp file
-		tempfile, err := ioutil.TempFile(os.TempDir(), "configmanager")
+		tempfile, err := os.CreateTemp(os.TempDir(), "configmanager")
 		if err != nil {
 			return err
 		}
@@ -118,10 +116,11 @@ func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string, outtmp io.
 	if err := c.generateStrOutFromInput(f, outtmp); err != nil {
 		return err
 	}
-	tr, err := ioutil.ReadFile(outtemp)
+	tr, err := os.ReadFile(outtemp)
 	if err != nil {
 		return err
 	}
+
 	// move temp file to output path
 	return os.WriteFile(c.generator.ConfigOutputPath(), tr, 0644)
 }
@@ -148,7 +147,7 @@ func writer(outputpath string) (*os.File, error) {
 	return os.OpenFile(outputpath, os.O_WRONLY|os.O_CREATE, 0644)
 }
 
-//UploadTokensWithVals takes in a map of key/value pairs and uploads them
+// UploadTokensWithVals takes in a map of key/value pairs and uploads them
 func (c *CmdUtils) UploadTokensWithVals(tokens map[string]string) error {
 	return fmt.Errorf("notYetImplemented")
 }

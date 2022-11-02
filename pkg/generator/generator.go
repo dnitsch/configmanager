@@ -7,6 +7,7 @@ import (
 	"io"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/dnitsch/configmanager/pkg/log"
 )
@@ -56,11 +57,9 @@ type GenVarsiface interface {
 // relevant strategy network calls to the config store implementations
 type GenVars struct {
 	Generatoriface
-	implementation genVarsStrategy
-	token          string
-	ctx            context.Context
-	config         GenVarsConfig
-	outString      []string
+	ctx       context.Context
+	config    GenVarsConfig
+	outString []string
 	// rawMap is the internal object that holds the values of original token => retrieved value - decrypted in plain text
 	rawMap ParsedMap
 }
@@ -78,19 +77,19 @@ type ParsedMap map[string]any
 // with a default strategy pattern wil be overwritten
 // during the first run of a found tokens map
 func NewGenerator() *GenVars {
-	defaultStrategy := NewDefatultStrategy()
-	return newGenVars(defaultStrategy)
+	// defaultStrategy := NewDefatultStrategy()
+	return newGenVars()
 }
 
-func newGenVars(e genVarsStrategy) *GenVars {
+func newGenVars() *GenVars {
 	m := ParsedMap{}
 	defaultConf := GenVarsConfig{
 		tokenSeparator: tokenSeparator,
 		keySeparator:   keySeparator,
 	}
 	return &GenVars{
-		implementation: e,
-		rawMap:         m,
+		rawMap: m,
+		ctx:    context.TODO(),
 		// return using default config
 		config: defaultConf,
 	}
@@ -102,6 +101,12 @@ func (c *GenVars) WithConfig(cfg *GenVarsConfig) *GenVars {
 	if cfg != nil {
 		c.config = *cfg
 	}
+	return c
+}
+
+// WithContext uses caller passed context
+func (c *GenVars) WithContext(ctx context.Context) *GenVars {
+	c.ctx = ctx
 	return c
 }
 
@@ -162,8 +167,18 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 			rawTokenPrefixMap[token] = prefix
 		}
 	}
+	pm, err := c.generate(rawTokenPrefixMap)
+	if err != nil {
+		return nil, err
+	}
+	c.rawMap = pm
+	return pm, nil
+}
 
-	return c.generate(rawTokenPrefixMap)
+type chanResp struct {
+	value string
+	key   string
+	err   error
 }
 
 // generate checks if any tokens found
@@ -171,79 +186,51 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 // to capture responses and errors
 // generates ParsedMap which includes
 func (c *GenVars) generate(rawMap map[string]string) (ParsedMap, error) {
+	outMap := ParsedMap{}
 	if len(rawMap) < 1 {
 		log.Debug("no replaceable tokens found in input strings")
 		return map[string]any{}, nil
 	}
 
+	var errors []error
 	// build an exact size channel
-	outCh := make(chan map[string]string, len(rawMap))
-	errCh := make(chan error)
+	var wg sync.WaitGroup
+	initChanLen := len(rawMap)
+	outCh := make(chan chanResp, initChanLen)
 
+	wg.Add(initChanLen)
 	for token, prefix := range rawMap {
-		go c.retrieveSpecificCh(prefix, token, outCh, errCh)
+		go func(a, p string) {
+			defer wg.Done()
+			rs := newRetrieveStrategy(NewDefatultStrategy(), c.config)
+			outCh <- rs.retrieveSpecificCh(c.ctx, p, a)
+		}(token, prefix)
 	}
 
-	readCh := 0
-	for readCh < len(rawMap) {
-		select {
-		case outRawSingleMap := <-outCh:
-			for k, out := range outRawSingleMap {
-				log.Debugf("ch key: %v", k)
-				c.rawMap[k] = c.keySeparatorLookup(k, out)
-			}
-			readCh++
-		case <-errCh:
-			return nil, <-errCh
-		}
-	}
-	return c.rawMap, nil
-}
+	go func() {
+		wg.Wait()
+		close(outCh)
+	}()
 
-// retrieveSpecificCh wraps around the specific strategy implementation
-// and publishes results to a provided channel
-func (c *GenVars) retrieveSpecificCh(prefix, in string, outCh chan map[string]string, errCh chan error) {
-	raw, err := c.retrieveSpecific(prefix, in)
-	if err != nil {
-		errCh <- err
-	}
-	outCh <- map[string]string{in: raw}
-}
+	for cro := range outCh {
+		log.Debugf("cro: %+v", cro)
+		cr := cro
+		if cr.err != nil {
+			log.Debugf("cr.err %v, for token: %s", cr.err, cr.key)
+			errors = append(errors, cr.err)
+		}
+		outMap[cr.key] = c.keySeparatorLookup(cr.key, cr.value)
+		log.Debugf("outMap iter: %+v", outMap)
 
-// retrieveSpecific executes a specif retrieval strategy
-// based on the found token prefix
-func (c *GenVars) retrieveSpecific(prefix, in string) (string, error) {
-	switch prefix {
-	case SecretMgrPrefix:
-		// default strategy paramstore
-		scrtMgr, err := NewSecretsMgr(c.ctx)
-		if err != nil {
-			return "", err
-		}
-		c.setImplementation(scrtMgr)
-		c.setToken(in)
-		return c.getTokenValue()
-	case ParamStorePrefix:
-		paramStr, err := NewParamStore(c.ctx)
-		if err != nil {
-			return "", err
-		}
-		c.setImplementation(paramStr)
-		c.setToken(in)
-		return c.getTokenValue()
-	case AzKeyVaultSecretsPrefix:
-		azKv, err := NewKvScrtStoreWithToken(c.ctx, in, c.config.tokenSeparator, c.config.keySeparator)
-		if err != nil {
-			return "", err
-		}
-		// Need to swap this around for AzKV as the
-		// client is initialised via vaultURI
-		// and sets the token on the implementation init via NewSrv
-		c.setImplementation(azKv)
-		return c.getTokenValue()
-	default:
-		return "", fmt.Errorf("implementation not found for input string: %s", in)
 	}
+
+	if len(errors) > 0 {
+		// crude ...
+		log.Debugf("found: %d errors", len(errors))
+		// return c.rawMap, fmt.Errorf("%+v", errors)
+	}
+	log.Debugf("complete outMap: %+v", outMap)
+	return outMap, nil
 }
 
 // isParsed will try to parse the return found string into
@@ -336,19 +323,6 @@ func (c *GenVars) normalizeKey(k string) string {
 	// Double underscore replace key separator
 	r = regexp.MustCompile(`[`+c.config.keySeparator+`]`).ReplaceAll(r, []byte("__"))
 	return strings.ToUpper(string(r))
-}
-
-// stripPrefix returns the token which the config/secret store
-// expects to find in a provided vault/paramstore
-func (c *GenVars) stripPrefix(in, prefix string) string {
-	return stripPrefix(in, prefix, c.config.tokenSeparator, c.config.keySeparator)
-}
-
-// stripPrefix
-func stripPrefix(in, prefix, tokenSeparator, keySeparator string) string {
-	t := in
-	b := regexp.MustCompile(`[|].*`).ReplaceAll([]byte(t), []byte(""))
-	return strings.Replace(string(b), fmt.Sprintf("%s%s", prefix, tokenSeparator), "", 1)
 }
 
 // FlushToFile saves contents to file provided

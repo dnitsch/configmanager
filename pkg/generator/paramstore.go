@@ -15,6 +15,7 @@ type paramStoreApi interface {
 
 type ParamStore struct {
 	svc   paramStoreApi
+	ctx   context.Context
 	token string
 }
 
@@ -28,6 +29,7 @@ func NewParamStore(ctx context.Context) (*ParamStore, error) {
 
 	return &ParamStore{
 		svc: c,
+		ctx: ctx,
 	}, nil
 
 }
@@ -39,20 +41,20 @@ func (paramStr *ParamStore) setToken(token string) {
 func (implmt *ParamStore) setValue(val string) {
 }
 
-func (imp *ParamStore) getTokenValue(v *GenVars) (string, error) {
-	log.Infof("%s", "Concrete implementation ParameterStore SecureString")
+func (imp *ParamStore) getTokenValue(v *retrieveStrategy) (string, error) {
+	log.Infof("%s", "Concrete implementation ParameterStore")
 	log.Infof("ParamStore Token: %s", imp.token)
 
 	input := &ssm.GetParameterInput{
 		Name:           aws.String(v.stripPrefix(imp.token, ParamStorePrefix)),
 		WithDecryption: true,
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
 
 	result, err := imp.svc.GetParameter(ctx, input)
 	if err != nil {
-		log.Errorf("ParamStore: %s", err)
+		log.Errorf("ParamStore: %v", err)
 		return "", err
 	}
 

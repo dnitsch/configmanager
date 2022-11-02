@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/dnitsch/configmanager/internal/cmdutils"
@@ -42,6 +43,6 @@ unix style output only`)
 
 func retrieveFromStr(cmd *cobra.Command, args []string) error {
 	conf := generator.NewConfig().WithTokenSeparator(tokenSeparator).WithOutputPath(path).WithKeySeparator(keySeparator)
-	gv := generator.NewGenerator().WithConfig(conf)
+	gv := generator.NewGenerator().WithConfig(conf).WithContext(context.Background())
 	return cmdutils.New(gv).GenerateStrOut(input, path)
 }

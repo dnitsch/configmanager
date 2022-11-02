@@ -73,12 +73,13 @@ func (m mockAzKvSecretApi) GetSecret(ctx context.Context, name string, version s
 }
 
 func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
+
 	tests := []struct {
 		name       string
 		token      string
 		value      string
 		mockClient func(t *testing.T) kvApi
-		genVars    *GenVars
+		config     *GenVarsConfig
 	}{
 		{
 			name:  "successVal",
@@ -111,7 +112,7 @@ func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 					return resp, nil
 				})
 			},
-			genVars: &GenVars{},
+			config: NewConfig(),
 		},
 		{
 			name:  "successVal with keyseparator",
@@ -142,19 +143,19 @@ func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 					return resp, nil
 				})
 			},
-			genVars: &GenVars{},
+			config: NewConfig(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.genVars.config = GenVarsConfig{tokenSeparator: tokenSeparator}
 			kvStr, err := NewKvScrtStoreWithToken(context.TODO(), tt.token, "#", "|")
 			if err != nil {
 				t.Errorf("failed to init azkvstore")
 			}
 			kvStr.svc = tt.mockClient(t)
-			tt.genVars.setImplementation(kvStr)
-			want, err := tt.genVars.getTokenValue()
+			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
+			rs.setImplementation(kvStr)
+			want, err := rs.getTokenValue()
 			if err != nil {
 				t.Errorf("%v", err)
 			}

@@ -16,8 +16,9 @@ var (
 )
 
 type fixture struct {
-	t *testing.T
-	c *GenVars
+	t  *testing.T
+	c  *GenVars
+	rs *retrieveStrategy
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -29,6 +30,7 @@ func newFixture(t *testing.T) *fixture {
 func (f *fixture) goodGenVars(op, ts string) {
 	conf := NewConfig().WithOutputPath(op).WithTokenSeparator(ts)
 	gv := NewGenerator().WithConfig(conf)
+	f.rs = newRetrieveStrategy(NewDefatultStrategy(), *conf)
 	f.c = gv
 }
 
@@ -52,12 +54,12 @@ func TestStripPrefixNormal(t *testing.T) {
 	f := newFixture(t)
 	f.goodGenVars(standardop, standardts)
 
-	got := f.c.stripPrefix(fmt.Sprintf("%s#%s", prefix, want), prefix)
+	got := f.rs.stripPrefix(fmt.Sprintf("%s#%s", prefix, want), prefix)
 	if got != want {
 		f.t.Errorf(testutils.TestPhrase, want, got)
 	}
 
-	gotNegative := f.c.stripPrefix(fmt.Sprintf("%s___%s", prefix, want), prefix)
+	gotNegative := f.rs.stripPrefix(fmt.Sprintf("%s___%s", prefix, want), prefix)
 	if gotNegative == want {
 		f.t.Errorf(testutils.TestPhrase, want, gotNegative)
 	}
@@ -87,7 +89,7 @@ func Test_stripPrefix(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := f.c.stripPrefix(tt.token, tt.prefix)
+			got := f.rs.stripPrefix(tt.token, tt.prefix)
 			if tt.expect != got {
 				t.Errorf(testutils.TestPhrase, tt.expect, got)
 			}

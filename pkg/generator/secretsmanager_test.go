@@ -25,7 +25,7 @@ func Test_GetSecretMgrVarHappy(t *testing.T) {
 		token      string
 		value      string
 		mockClient func(t *testing.T) secretsMgrApi
-		genVars    *GenVars
+		config     *GenVarsConfig
 	}{
 		{
 			name:  "successVal",
@@ -51,15 +51,17 @@ func Test_GetSecretMgrVarHappy(t *testing.T) {
 					}, nil
 				})
 			},
-			genVars: &GenVars{},
+			config: NewConfig(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.genVars.config = GenVarsConfig{tokenSeparator: tokenSeparator}
-			tt.genVars.setImplementation(&SecretsMgr{svc: tt.mockClient(t)})
-			tt.genVars.setToken(tt.token)
-			want, err := tt.genVars.getTokenValue()
+			tt.config.WithTokenSeparator(tokenSeparator)
+			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
+
+			rs.setImplementation(&SecretsMgr{svc: tt.mockClient(t), ctx: context.TODO()})
+			rs.setToken(tt.token)
+			want, err := rs.getTokenValue()
 			if err != nil {
 				t.Errorf("%v", err)
 			}

@@ -20,6 +20,7 @@ type kvApi interface {
 
 type KvScrtStore struct {
 	svc   kvApi
+	ctx   context.Context
 	token string
 }
 
@@ -32,7 +33,9 @@ type azVaultHelper struct {
 // NewKvScrtStore returns a KvScrtStore
 // requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfully work
 func NewKvScrtStore(ctx context.Context) (*KvScrtStore, error) {
-	return &KvScrtStore{}, nil
+	return &KvScrtStore{
+		ctx: ctx,
+	}, nil
 }
 
 // NewKvScrtStoreWithToken returns a KvScrtStore
@@ -40,7 +43,7 @@ func NewKvScrtStore(ctx context.Context) (*KvScrtStore, error) {
 func NewKvScrtStoreWithToken(ctx context.Context, token, tokenSeparator, keySeparator string) (*KvScrtStore, error) {
 
 	//
-	conf := azSplitToken(stripPrefix(token, AzKeyVaultSecretsPrefix, tokenSeparator, keySeparator))
+	vc := azSplitToken(stripPrefix(token, AzKeyVaultSecretsPrefix, tokenSeparator, keySeparator))
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
@@ -48,11 +51,12 @@ func NewKvScrtStoreWithToken(ctx context.Context, token, tokenSeparator, keySepa
 		return nil, err
 	}
 
-	c := azsecrets.NewClient(conf.vaultUri, cred, nil)
+	c := azsecrets.NewClient(vc.vaultUri, cred, nil)
 
 	return &KvScrtStore{
 		svc:   c,
-		token: conf.token,
+		ctx:   ctx,
+		token: vc.token,
 	}, nil
 }
 
@@ -64,17 +68,17 @@ func (implmt *KvScrtStore) setToken(token string) {
 func (implmt *KvScrtStore) setValue(val string) {
 }
 
-func (imp *KvScrtStore) getTokenValue(v *GenVars) (string, error) {
+func (imp *KvScrtStore) getTokenValue(v *retrieveStrategy) (string, error) {
 	log.Infof("%s", "Concrete implementation AzKeyVault Secret")
 	log.Infof("AzKeyVault Token: %s", imp.token)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
 
 	// secretVersion as "" => latest
 	s, err := imp.svc.GetSecret(ctx, imp.token, "", nil)
 	if err != nil {
-		log.Errorf("AzKeyVault: %s", err)
+		log.Errorf("AzKeyVault: %v", err)
 		return "", err
 	}
 	if s.Value != nil {
