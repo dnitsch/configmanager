@@ -17,17 +17,21 @@ The main driver is to use component level configuration objects, if stored in a 
 
 > Beware size limitation with certain config/vault implementations. In which case it's best to split certain items up e.g. TLS certs `/nonprod/component-service-a/pub-cert`, `/nonprod/component-service-a/private-cert`, `/nonprod/component-service-a/chain1-cert`, etc... 
 
-Where `configVar` can be either a primitive type like a string `'som3#!S$CRet'` or a number `3306` or a parseable single level JSON object like `{host: ..., pass: ...., port: ...}` which can be returned whole or accessed via a key separator for a specific value.
+Where `configVar` can be either a parseable string `'som3#!S$CRet'` or a number `3306` or a parseable single level JSON object like `{host: ..., pass: ...., port: ...}` which can be returned whole or accessed via a key separator for a specific value.
 
 ## Use cases
+
+- Go API
+
+   This can be leveraged from any application written in Go - on start up or at runtime. Secrets/Config items can be retrieved in "bulk" and parsed into a provided type, [see here for examples](./examples/examples.go).
 
 - Kubernetes
 
    Avoid storing overly large configmaps and especially using secrets objects to store actual secrets e.g. DB passwords, 3rd party API creds, etc... By only storing a config file or a script containing only the tokens e.g. `AWSSECRETS#/$ENV/service/db-config` it can be git committed without writing numerous shell scripts, only storing either some interpolation vars like `$ENV` in a configmap or the entire configmanager token for smaller use cases.
+
 - VMs
+
    VM deployments can function in a similar manner by passing in the contents or a path to the source config and the output path so that app at startup time can consume it.
-- Functions (written in Go)
-   Only storing tokens in env variables available to the function as plain text tokens gets around needing to store actual secrets in function env vars and can also be used across a variety of config stores.
 
 ## CLI
 

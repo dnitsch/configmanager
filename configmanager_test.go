@@ -374,13 +374,13 @@ func Test_KubeControllerComplex(t *testing.T) {
 func Test_YamlRetrieveMarshalled(t *testing.T) {
 	tests := []struct {
 		name     string
-		testType testNestedStruct
+		testType *testNestedStruct
 		expect   testNestedStruct
 		cfmgr    func(t *testing.T) ConfigManageriface
 	}{
 		{
 			name: "complex struct - complete",
-			testType: testNestedStruct{
+			testType: &testNestedStruct{
 				Foo: "AWSSECRETS:///bar/foo",
 				Bar: "quz",
 				Lol: testLol{
@@ -412,7 +412,7 @@ func Test_YamlRetrieveMarshalled(t *testing.T) {
 		},
 		{
 			name: "complex struct - missing fields",
-			testType: testNestedStruct{
+			testType: &testNestedStruct{
 				Foo: "AWSSECRETS:///bar/foo",
 				Bar: "quz",
 			},
@@ -433,11 +433,12 @@ func Test_YamlRetrieveMarshalled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := generator.NewConfig().WithTokenSeparator("://")
-			resp, err := RetrieveMarshalledYaml(tt.testType, tt.cfmgr(t), *config)
+
+			got, err := RetrieveMarshalledYaml(tt.testType, tt.cfmgr(t), *config)
 			if err != nil {
 				t.Errorf("expected error to be <nil>, got: %v", err)
 			}
-			if !reflect.DeepEqual(resp, &tt.expect) {
+			if !reflect.DeepEqual(got, &tt.expect) {
 				t.Error("returned type does not deep equal to expected")
 			}
 		})
@@ -447,13 +448,13 @@ func Test_YamlRetrieveMarshalled(t *testing.T) {
 func Test_RetrieveMarshalledJson(t *testing.T) {
 	tests := []struct {
 		name     string
-		testType testNestedStruct
+		testType *testNestedStruct
 		expect   testNestedStruct
 		cfmgr    func(t *testing.T) ConfigManageriface
 	}{
 		{
 			name: "happy path complex struct complete",
-			testType: testNestedStruct{
+			testType: &testNestedStruct{
 				Foo: "AWSSECRETS:///bar/foo",
 				Bar: "quz",
 				Lol: testLol{
@@ -485,7 +486,7 @@ func Test_RetrieveMarshalledJson(t *testing.T) {
 		},
 		{
 			name: "complex struct - missing fields",
-			testType: testNestedStruct{
+			testType: &testNestedStruct{
 				Foo: "AWSSECRETS:///bar/foo",
 				Bar: "quz",
 			},
@@ -506,11 +507,11 @@ func Test_RetrieveMarshalledJson(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := generator.NewConfig().WithTokenSeparator("://")
-			resp, err := RetrieveMarshalledJson(tt.testType, tt.cfmgr(t), *config)
+			got, err := RetrieveMarshalledJson(tt.testType, tt.cfmgr(t), *config)
 			if err != nil {
 				t.Errorf("expected error to be <nil>, got: %v", err)
 			}
-			if !reflect.DeepEqual(resp, &tt.expect) {
+			if !reflect.DeepEqual(got, &tt.expect) {
 				t.Error("returned type does not deep equal to expected")
 			}
 		})

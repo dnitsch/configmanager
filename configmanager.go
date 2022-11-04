@@ -109,13 +109,19 @@ func KubeControllerSpecHelper[T any](inputType T, cm ConfigManageriface, config 
 // It marshalls an input value of that type into a []byte and passes it into the relevant configmanger retrieve method
 // returns the unmarshalled object back with all tokens replaced IF found for their specific vault implementation values.
 // Type must contain all public members with a JSON tag on the struct
-func RetrieveMarshalledJson[T any](input T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+func RetrieveMarshalledJson[T any](input *T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
 	outType := new(T)
 	rawBytes, err := json.Marshal(input)
 	if err != nil {
 		return nil, err
 	}
-	return RetrieveUnmarshalledFromJson(rawBytes, outType, cm, config)
+
+	outVal, err := RetrieveUnmarshalledFromJson(rawBytes, outType, cm, config)
+	if err != nil {
+		return outType, err
+	}
+
+	return outVal, nil
 }
 
 // RetrieveUnmarshalledFromJson is a helper method.
@@ -123,10 +129,10 @@ func RetrieveMarshalledJson[T any](input T, cm ConfigManageriface, config genera
 func RetrieveUnmarshalledFromJson[T any](input []byte, output *T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
 	replaced, err := cm.RetrieveWithInputReplaced(string(input), config)
 	if err != nil {
-		return nil, err
+		return output, err
 	}
 	if err := json.Unmarshal([]byte(replaced), output); err != nil {
-		return nil, err
+		return output, err
 	}
 	return output, nil
 }
@@ -136,13 +142,19 @@ func RetrieveUnmarshalledFromJson[T any](input []byte, output *T, cm ConfigManag
 // It marshalls an input value of that type into a []byte and passes it into the relevant configmanger retrieve method
 // returns the unmarshalled object back with all tokens replaced IF found for their specific vault implementation values.
 // Type must contain all public members with a YAML tag on the struct
-func RetrieveMarshalledYaml[T any](input T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+func RetrieveMarshalledYaml[T any](input *T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
 	outType := new(T)
+
 	rawBytes, err := yaml.Marshal(input)
 	if err != nil {
-		return nil, err
+		return outType, err
 	}
-	return RetrieveUnmarshalledFromYaml(rawBytes, outType, cm, config)
+	outVal, err := RetrieveUnmarshalledFromYaml(rawBytes, outType, cm, config)
+	if err != nil {
+		return outType, err
+	}
+
+	return outVal, nil
 }
 
 // RetrieveUnmarshalledFromYaml is a helper method.
@@ -151,10 +163,10 @@ func RetrieveMarshalledYaml[T any](input T, cm ConfigManageriface, config genera
 func RetrieveUnmarshalledFromYaml[T any](input []byte, output *T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
 	replaced, err := cm.RetrieveWithInputReplaced(string(input), config)
 	if err != nil {
-		return nil, err
+		return output, err
 	}
 	if err := yaml.Unmarshal([]byte(replaced), output); err != nil {
-		return nil, err
+		return output, err
 	}
 	return output, nil
 }
