@@ -42,7 +42,7 @@ func (imp *SecretsMgr) setValue(val string) {
 }
 
 func (imp *SecretsMgr) getTokenValue(v *retrieveStrategy) (string, error) {
-	resp := ""
+
 	log.Infof("%s", "Concrete implementation SecretsManager")
 	log.Infof("Getting Secret: %s", imp.token)
 
@@ -60,13 +60,13 @@ func (imp *SecretsMgr) getTokenValue(v *retrieveStrategy) (string, error) {
 		return "", err
 	}
 	if result.SecretString != nil {
-		resp = *result.SecretString
+		return *result.SecretString, nil
 	}
 
 	if len(result.SecretBinary) > 0 {
-		resp = string(result.SecretBinary)
+		return string(result.SecretBinary), nil
 	}
 
 	log.Errorf("value retrieved but empty for token: %v", imp.token)
-	return resp, nil
+	return "", nil
 }
