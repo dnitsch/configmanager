@@ -48,7 +48,7 @@ func Test_GetParamStoreVarHappy(t *testing.T) {
 						t.Errorf("incorrectly stripped prefix")
 					}
 
-					if !params.WithDecryption {
+					if !*params.WithDecryption {
 						t.Fatal("expect WithDecryption to not be false")
 					}
 
@@ -82,7 +82,7 @@ func Test_GetParamStoreVarHappy(t *testing.T) {
 						t.Errorf("incorrectly stripped prefix")
 					}
 
-					if !params.WithDecryption {
+					if !*params.WithDecryption {
 						t.Fatal("expect WithDecryption to not be false")
 					}
 

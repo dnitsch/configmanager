@@ -47,7 +47,7 @@ func (imp *ParamStore) getTokenValue(v *retrieveStrategy) (string, error) {
 
 	input := &ssm.GetParameterInput{
 		Name:           aws.String(v.stripPrefix(imp.token, ParamStorePrefix)),
-		WithDecryption: true,
+		WithDecryption: aws.Bool(true),
 	}
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()

@@ -1,8 +1,8 @@
 
 OWNER := dnitsch
 NAME := configmanager
-GIT_TAG := "1.11.1"
-VERSION := "v1.11.1"
+GIT_TAG := "1.12.0"
+VERSION := "v1.12.0"
 # VERSION := "$(shell git describe --tags --abbrev=0)"
 REVISION := $(shell git rev-parse --short HEAD)
 
@@ -19,9 +19,6 @@ test_ci:
 
 test_prereq: 
 	mkdir -p .coverage
-	go install github.com/jstemmer/go-junit-report@v0.9.1 && \
-	go install github.com/axw/gocov/gocov@v1.0.0 && \
-	go install github.com/AlekSi/gocov-xml@v1.0.0
 
 tidy: 
 	go mod tidy

@@ -16,12 +16,6 @@ const (
 	TERMINATING_CHAR string = `[^\'\"\s\n]`
 )
 
-type ConfigManageriface interface {
-	Retrieve(tokens []string, config generator.GenVarsConfig) (generator.ParsedMap, error)
-	RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error)
-	Insert(force bool) error
-}
-
 type ConfigManager struct{}
 
 // Retrieve gets a rawMap from a set implementation
@@ -81,13 +75,17 @@ func replaceString(inputMap generator.ParsedMap, inputString string) string {
 	return inputString
 }
 
+type CMRetrieveWithInputReplacediface interface {
+	RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error)
+}
+
 // @deprecated
 // left for compatibility
 // KubeControllerSpecHelper is a helper method, it marshalls an input value of that type into a string and passes it into the relevant configmanger retrieve method
 // and returns the unmarshalled object back
 //
 // It accepts a DI of configmanager and the config (for testability) to replace all occurences of replaceable tokens inside a Marshalled string of that type
-func KubeControllerSpecHelper[T any](inputType T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+func KubeControllerSpecHelper[T any](inputType T, cm CMRetrieveWithInputReplacediface, config generator.GenVarsConfig) (*T, error) {
 	outType := new(T)
 	rawBytes, err := json.Marshal(inputType)
 	if err != nil {
@@ -109,7 +107,7 @@ func KubeControllerSpecHelper[T any](inputType T, cm ConfigManageriface, config 
 // It marshalls an input value of that type into a []byte and passes it into the relevant configmanger retrieve method
 // returns the unmarshalled object back with all tokens replaced IF found for their specific vault implementation values.
 // Type must contain all public members with a JSON tag on the struct
-func RetrieveMarshalledJson[T any](input *T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+func RetrieveMarshalledJson[T any](input *T, cm CMRetrieveWithInputReplacediface, config generator.GenVarsConfig) (*T, error) {
 	outType := new(T)
 	rawBytes, err := json.Marshal(input)
 	if err != nil {
@@ -126,7 +124,7 @@ func RetrieveMarshalledJson[T any](input *T, cm ConfigManageriface, config gener
 
 // RetrieveUnmarshalledFromJson is a helper method.
 // Same as RetrieveMarshalledJson but it accepts an already marshalled byte slice
-func RetrieveUnmarshalledFromJson[T any](input []byte, output *T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+func RetrieveUnmarshalledFromJson[T any](input []byte, output *T, cm CMRetrieveWithInputReplacediface, config generator.GenVarsConfig) (*T, error) {
 	replaced, err := cm.RetrieveWithInputReplaced(string(input), config)
 	if err != nil {
 		return output, err
@@ -142,7 +140,7 @@ func RetrieveUnmarshalledFromJson[T any](input []byte, output *T, cm ConfigManag
 // It marshalls an input value of that type into a []byte and passes it into the relevant configmanger retrieve method
 // returns the unmarshalled object back with all tokens replaced IF found for their specific vault implementation values.
 // Type must contain all public members with a YAML tag on the struct
-func RetrieveMarshalledYaml[T any](input *T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+func RetrieveMarshalledYaml[T any](input *T, cm CMRetrieveWithInputReplacediface, config generator.GenVarsConfig) (*T, error) {
 	outType := new(T)
 
 	rawBytes, err := yaml.Marshal(input)
@@ -160,7 +158,7 @@ func RetrieveMarshalledYaml[T any](input *T, cm ConfigManageriface, config gener
 // RetrieveUnmarshalledFromYaml is a helper method.
 //
 // Same as RetrieveMarshalledYaml but it accepts an already marshalled byte slice
-func RetrieveUnmarshalledFromYaml[T any](input []byte, output *T, cm ConfigManageriface, config generator.GenVarsConfig) (*T, error) {
+func RetrieveUnmarshalledFromYaml[T any](input []byte, output *T, cm CMRetrieveWithInputReplacediface, config generator.GenVarsConfig) (*T, error) {
 	replaced, err := cm.RetrieveWithInputReplaced(string(input), config)
 	if err != nil {
 		return output, err

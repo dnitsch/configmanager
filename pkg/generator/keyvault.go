@@ -51,7 +51,11 @@ func NewKvScrtStoreWithToken(ctx context.Context, token, tokenSeparator, keySepa
 		return nil, err
 	}
 
-	c := azsecrets.NewClient(vc.vaultUri, cred, nil)
+	c, err := azsecrets.NewClient(vc.vaultUri, cred, nil)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
 
 	return &KvScrtStore{
 		svc:   c,

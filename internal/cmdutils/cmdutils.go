@@ -14,8 +14,12 @@ import (
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
+type confMgrRetrieveWithInputReplacediface interface {
+	RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error)
+}
+
 type CmdUtils struct {
-	cfgmgr    configmanager.ConfigManageriface
+	cfgmgr    configmanager.CMRetrieveWithInputReplacediface
 	generator generator.GenVarsiface
 }
 
