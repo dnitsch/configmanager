@@ -9,7 +9,7 @@ on:
       - completed
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     container:
       image: golang:1.19-bullseye
