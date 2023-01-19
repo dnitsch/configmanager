@@ -85,6 +85,14 @@ func (rs *retrieveStrategy) retrieveSpecific(ctx context.Context, prefix, in str
 		// and sets the token on the implementation init via NewSrv
 		rs.setImplementation(azKv)
 		return rs.getTokenValue()
+	case GcpSecretsPrefix:
+		gcpSecret, err := NewGcpSecrets(ctx)
+		if err != nil {
+			return "", err
+		}
+		rs.setImplementation(gcpSecret)
+		rs.setToken(in)
+		return rs.getTokenValue()
 	default:
 		return "", fmt.Errorf("implementation not found for input string: %s", in)
 	}

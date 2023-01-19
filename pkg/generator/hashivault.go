@@ -77,4 +77,5 @@ func (imp *VaultStore) getTokenValue(v *retrieveStrategy) (string, error) {
 	}
 
 	fmt.Println("Access granted!")
+	return "", nil
 }

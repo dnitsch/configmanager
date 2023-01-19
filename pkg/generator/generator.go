@@ -24,13 +24,15 @@ const (
 	ParamStorePrefix = "AWSPARAMSTR"
 	// Azure Key Vault Secrets prefix
 	AzKeyVaultSecretsPrefix = "AZKVSECRET"
+	// GCP SecretsManager prefix
+	GcpSecretsPrefix = "GCPSECRETS"
 )
 
 var (
 	// default varPrefix used by the replacer function
 	// any token msut beging with one of these else
 	// it will be skipped as not a replaceable token
-	VarPrefix = map[string]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true}
+	VarPrefix = map[string]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true, GcpSecretsPrefix: true}
 )
 
 // Generatoriface describes the exported methods
