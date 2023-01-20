@@ -85,6 +85,14 @@ func (rs *retrieveStrategy) retrieveSpecific(ctx context.Context, prefix Impleme
 		// and sets the token on the implementation init via NewSrv
 		rs.setImplementation(azKv)
 		return rs.getTokenValue()
+	case GcpSecretsPrefix:
+		gcpSecret, err := NewGcpSecrets(ctx)
+		if err != nil {
+			return "", err
+		}
+		rs.setImplementation(gcpSecret)
+		rs.setToken(in)
+		return rs.getTokenValue()
 	case HashicorpVaultPrefix:
 		vault, err := NewVaultStore(ctx, in, rs.config.tokenSeparator, rs.config.keySeparator)
 		if err != nil {
