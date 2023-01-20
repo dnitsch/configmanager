@@ -23,6 +23,8 @@ const (
 	AzKeyVaultSecretsPrefix ImplementationPrefix = "AZKVSECRET"
 	// Hashicorp Vault prefix
 	HashicorpVaultPrefix ImplementationPrefix = "VAULT"
+	// GcpSecrets
+	GcpSecretsPrefix ImplementationPrefix = "GCPSECRETS"
 )
 
 const (

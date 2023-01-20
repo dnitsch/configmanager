@@ -92,6 +92,7 @@ func (rs *retrieveStrategy) retrieveSpecific(ctx context.Context, prefix Impleme
 		}
 		rs.setImplementation(gcpSecret)
 		rs.setToken(in)
+		return rs.getTokenValue()
 	case HashicorpVaultPrefix:
 		vault, err := NewVaultStore(ctx, in, rs.config.tokenSeparator, rs.config.keySeparator)
 		if err != nil {
