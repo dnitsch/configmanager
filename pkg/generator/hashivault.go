@@ -3,8 +3,6 @@ package generator
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/dnitsch/configmanager/pkg/log"
@@ -16,6 +14,10 @@ import (
 type vaultHelper struct {
 	path  string
 	token string
+}
+
+type hashiVaultClient interface {
+	KVv2(mountPath string) *vault.KVv2
 }
 
 type hashiVaultApi interface {
@@ -35,12 +37,6 @@ func NewVaultStore(ctx context.Context, token, tokenSeparator, keySeparator stri
 	if err != nil {
 		log.Errorf("unable to initialize Vault client: %v", err)
 	}
-	secToken, found := os.LookupEnv("VAULT_TOKEN")
-	if !found {
-		return nil, fmt.Errorf("VAULT_TOKEN not specified, cannot initialize vault client")
-	}
-	// Authenticate
-	client.SetToken(secToken)
 
 	return &VaultStore{
 		svc:   client.KVv2(vt.path),
@@ -48,6 +44,10 @@ func NewVaultStore(ctx context.Context, token, tokenSeparator, keySeparator stri
 		token: vt.token,
 	}, nil
 }
+
+// func newVaultStore(ctx context.Context) (*VaultStore, error) {
+
+// }
 
 // setToken already happens in Vault constructor
 // no need to re-set it here
@@ -80,21 +80,6 @@ func (imp *VaultStore) getTokenValue(v *retrieveStrategy) (string, error) {
 	log.Errorf("value retrieved but empty for token: %v", imp.token)
 	return "", nil
 }
-
-// // verifyVaultToken ensures the token includes
-// // a key separator to perform a lookup on the
-// // secret KV
-// func verifyVaultToken(token, keySeparator string) (vaultHelper, error) {
-// 	vh := vaultHelper{}
-// 	s := strings.Split(token, keySeparator)
-// 	if len(s[1]) < 1 {
-// 		return vh, fmt.Errorf("vault needs a key specified on each token in order to be able to retrieve it")
-// 	}
-// 	vh.key = s[1]
-// 	return splitToken(token, vh), nil
-// 	// s := strings.Split(strings.TrimPrefix(token, "/"), "/")
-// 	// return vaultHelper{token: strings.Join(s[1:], "/"), path: s[0]}
-// }
 
 func splitToken(token string) vaultHelper {
 	vh := vaultHelper{}

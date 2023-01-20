@@ -3,6 +3,7 @@ package generator
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/dnitsch/configmanager/internal/testutils"
@@ -40,17 +41,17 @@ func (m mockVaultApi) Get(ctx context.Context, secretPath string) (*vault.KVSecr
 
 func TestVaultScenarios(t *testing.T) {
 	ttests := map[string]struct {
-		token       string
-		conf        GenVarsConfig
-		expect      string
-		vaultClient func(t *testing.T) hashiVaultApi
+		token      string
+		conf       GenVarsConfig
+		expect     string
+		mockClient func(t *testing.T) hashiVaultApi
 	}{
 		"happy return": {"VAULT://secret/foo", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `{"foo":"test2130-9sd-0ds"}`,
 			func(t *testing.T) hashiVaultApi {
 				return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
 					t.Helper()
-					if secretPath != "secret/foo" {
-						t.Errorf("got %v; want %s", secretPath, `secret/foo`)
+					if secretPath != "foo" {
+						t.Errorf("got %v; want %s", secretPath, `foo`)
 					}
 					m := make(map[string]interface{})
 					m["foo"] = "test2130-9sd-0ds"
@@ -62,8 +63,8 @@ func TestVaultScenarios(t *testing.T) {
 			func(t *testing.T) hashiVaultApi {
 				return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
 					t.Helper()
-					if secretPath != "secret/foo" {
-						t.Errorf("got %v; want %s", secretPath, `secret/foo`)
+					if secretPath != "foo" {
+						t.Errorf("got %v; want %s", secretPath, `foo`)
 					}
 					m := make(map[string]interface{})
 					m["error"] = func() error { return fmt.Errorf("ddodod") }
@@ -71,75 +72,74 @@ func TestVaultScenarios(t *testing.T) {
 				})
 			},
 		},
-		"another return": {
-			token:  "VAULT://secret/some/other/foo2",
-			conf:   GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
-			expect: `{"foo1":"test2130-9sd-0ds","foo2":"dsfsdf3454456"}`,
-			vaultClient: func(t *testing.T) hashiVaultApi {
-				return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
-					t.Helper()
-					if secretPath != "secret/some/other/foo2" {
-						t.Errorf("got %v; want %s", secretPath, `secret/some/other/foo2`)
-					}
-					m := make(map[string]interface{})
-					m["foo1"] = "test2130-9sd-0ds"
-					m["foo2"] = "dsfsdf3454456"
-					return &vault.KVSecret{Data: m}, nil
-				})
-			},
+		"another return": {"VAULT://secret/some/other/foo2", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `{"foo1":"test2130-9sd-0ds","foo2":"dsfsdf3454456"}`, func(t *testing.T) hashiVaultApi {
+			return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+				t.Helper()
+				if secretPath != "some/other/foo2" {
+					t.Errorf("got %v; want %s", secretPath, `some/other/foo2`)
+				}
+				m := make(map[string]interface{})
+				m["foo1"] = "test2130-9sd-0ds"
+				m["foo2"] = "dsfsdf3454456"
+				return &vault.KVSecret{Data: m}, nil
+			})
+		},
 		},
 		"not found": {"VAULT://secret/foo", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `secret not found`,
 			func(t *testing.T) hashiVaultApi {
 				return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
 					t.Helper()
-					if secretPath != "secret/foo" {
-						t.Errorf("got %v; want %s", secretPath, `secret/foo`)
+					if secretPath != "foo" {
+						t.Errorf("got %v; want %s", secretPath, `foo`)
 					}
 					return nil, fmt.Errorf("secret not found")
 				})
 			},
 		},
-		"403": {
-			token:  "VAULT://secret/some/other/foo2",
-			conf:   GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
-			expect: `client 403`,
-			vaultClient: func(t *testing.T) hashiVaultApi {
-				return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
-					t.Helper()
-					if secretPath != "secret/some/other/foo2" {
-						t.Errorf("got %v; want %s", secretPath, `secret/some/other/foo2`)
-					}
-					return nil, fmt.Errorf("client 403")
-				})
-			},
+		"403": {"VAULT://secret/some/other/foo2", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `client 403`, func(t *testing.T) hashiVaultApi {
+			return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+				t.Helper()
+				if secretPath != "some/other/foo2" {
+					t.Errorf("got %v; want %s", secretPath, `some/other/foo2`)
+				}
+				return nil, fmt.Errorf("client 403")
+			})
 		},
-		"found but empty": {
-			token:  "VAULT://secret/some/other/foo2",
-			conf:   GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
-			expect: `{}`,
-			vaultClient: func(t *testing.T) hashiVaultApi {
-				return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
-					t.Helper()
-					if secretPath != "secret/some/other/foo2" {
-						t.Errorf("got %v; want %s", secretPath, `secret/some/other/foo2`)
-					}
-					m := make(map[string]interface{})
-					return &vault.KVSecret{Data: m}, nil
-				})
-			},
+		},
+		"found but empty": {"VAULT://secret/some/other/foo2", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `{}`, func(t *testing.T) hashiVaultApi {
+			return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+				t.Helper()
+				if secretPath != "some/other/foo2" {
+					t.Errorf("got %v; want %s", secretPath, `some/other/foo2`)
+				}
+				m := make(map[string]interface{})
+				return &vault.KVSecret{Data: m}, nil
+			})
+		},
+		},
+		"found but nil returned": {"VAULT://secret/some/other/foo2", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, "", func(t *testing.T) hashiVaultApi {
+			return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+				t.Helper()
+				if secretPath != "some/other/foo2" {
+					t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
+				}
+				return &vault.KVSecret{Data: nil}, nil
+			})
+		},
 		},
 	}
 
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
-			vs := &VaultStore{
-				svc:   tt.vaultClient(t),
-				ctx:   context.TODO(),
-				token: tt.token,
+			os.Setenv("VAULT_TOKEN", "129378y1231283")
+			impl, err := NewVaultStore(context.TODO(), tt.token, tt.conf.tokenSeparator, tt.conf.keySeparator)
+			if err != nil {
+				t.Errorf("failed to init hashivault, %v", err)
 			}
 
+			impl.svc = tt.mockClient(t)
 			rs := newRetrieveStrategy(NewDefatultStrategy(), tt.conf)
-			rs.setImplementation(vs)
+			rs.setImplementation(impl)
 			got, err := rs.getTokenValue()
 			if err != nil {
 				if err.Error() != tt.expect {
