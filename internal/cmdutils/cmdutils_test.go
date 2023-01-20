@@ -88,7 +88,7 @@ func Test_generateStrOutFromInput(t *testing.T) {
 				t.Fatal(err)
 			}
 			if string(got) != string(want) {
-				t.Errorf(testutils.TestPhrase, string(want), string(got))
+				t.Errorf(testutils.TestPhrase, string(got), string(want))
 			}
 		})
 	}
@@ -137,7 +137,7 @@ func Test_generateFromStrOutOverwrite(t *testing.T) {
 				t.Fatal(err)
 			}
 			if string(got) != string(want) {
-				t.Errorf(testutils.TestPhrase, string(want), string(got))
+				t.Errorf(testutils.TestPhrase, string(got), string(want))
 			}
 		})
 	}

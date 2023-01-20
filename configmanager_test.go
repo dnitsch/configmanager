@@ -61,14 +61,14 @@ func Test_retrieve(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pm, err := retrieve(tt.tokens, tt.genvar)
 			if err != nil {
-				t.Errorf(testutils.TestPhrase, nil, err)
+				t.Errorf(testutils.TestPhrase, err, nil)
 			}
 			for k, v := range pm {
 				if k != tt.expectKey {
-					t.Errorf(testutils.TestPhrase, tt.expectKey, k)
+					t.Errorf(testutils.TestPhrase, k, tt.expectKey)
 				}
 				if v != tt.expectVal {
-					t.Errorf(testutils.TestPhrase, tt.expectVal, k)
+					t.Errorf(testutils.TestPhrase, v, tt.expectVal)
 				}
 			}
 		})
@@ -180,7 +180,7 @@ foo23 = val1
 				t.Errorf("failed with %v", err)
 			}
 			if got != tt.expect {
-				t.Errorf(testutils.TestPhrase, tt.expect, got)
+				t.Errorf(testutils.TestPhrase, got, tt.expect)
 			}
 		})
 	}
@@ -218,7 +218,7 @@ db:
 		t.Run(tt.name, func(t *testing.T) {
 			got := replaceString(tt.parsedMap, tt.inputStr)
 			if got != tt.expectStr {
-				t.Errorf(testutils.TestPhrase, tt.expectStr, got)
+				t.Errorf(testutils.TestPhrase, got, tt.expectStr)
 			}
 		})
 	}

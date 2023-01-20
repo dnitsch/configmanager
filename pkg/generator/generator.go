@@ -12,25 +12,32 @@ import (
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
+type ImplementationPrefix string
+
+const (
+	// AWS SecretsManager prefix
+	SecretMgrPrefix ImplementationPrefix = "AWSSECRETS"
+	// AWS Parameter Store prefix
+	ParamStorePrefix ImplementationPrefix = "AWSPARAMSTR"
+	// Azure Key Vault Secrets prefix
+	AzKeyVaultSecretsPrefix ImplementationPrefix = "AZKVSECRET"
+	// Hashicorp Vault prefix
+	HashicorpVaultPrefix ImplementationPrefix = "VAULT"
+)
+
 const (
 	// tokenSeparator used for identifying the end of a prefix and beginning of token
 	// see notes about special consideration for AZKVSECRET tokens
 	tokenSeparator = "#"
 	// keySeparator used for accessing nested objects within the retrieved map
 	keySeparator = "|"
-	// AWS SecretsManager prefix
-	SecretMgrPrefix = "AWSSECRETS"
-	// AWS Parameter Store prefix
-	ParamStorePrefix = "AWSPARAMSTR"
-	// Azure Key Vault Secrets prefix
-	AzKeyVaultSecretsPrefix = "AZKVSECRET"
 )
 
 var (
 	// default varPrefix used by the replacer function
-	// any token msut beging with one of these else
+	// any token must beging with one of these else
 	// it will be skipped as not a replaceable token
-	VarPrefix = map[string]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true}
+	VarPrefix = map[ImplementationPrefix]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true, HashicorpVaultPrefix: true}
 )
 
 // Generatoriface describes the exported methods
@@ -163,7 +170,7 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 	rawTokenPrefixMap := map[string]string{}
 	for _, token := range tokens {
 		prefix := strings.Split(token, c.config.tokenSeparator)[0]
-		if found := VarPrefix[prefix]; found {
+		if found := VarPrefix[ImplementationPrefix(prefix)]; found {
 			rawTokenPrefixMap[token] = prefix
 		}
 	}
@@ -200,11 +207,11 @@ func (c *GenVars) generate(rawMap map[string]string) (ParsedMap, error) {
 
 	wg.Add(initChanLen)
 	for token, prefix := range rawMap {
-		go func(a, p string) {
+		go func(a string, p ImplementationPrefix) {
 			defer wg.Done()
 			rs := newRetrieveStrategy(NewDefatultStrategy(), c.config)
 			outCh <- rs.retrieveSpecificCh(c.ctx, p, a)
-		}(token, prefix)
+		}(token, ImplementationPrefix(prefix))
 	}
 
 	go func() {

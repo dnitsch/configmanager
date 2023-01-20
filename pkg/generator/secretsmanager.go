@@ -55,10 +55,12 @@ func (imp *SecretsMgr) getTokenValue(v *retrieveStrategy) (string, error) {
 	defer cancel()
 
 	result, err := imp.svc.GetSecretValue(ctx, input)
+
 	if err != nil {
 		log.Errorf("SecretsMgr: %v", err)
 		return "", err
 	}
+
 	if result.SecretString != nil {
 		return *result.SecretString, nil
 	}

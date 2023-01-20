@@ -41,7 +41,7 @@ func (rs *retrieveStrategy) getTokenValue() (string, error) {
 
 // retrieveSpecificCh wraps around the specific strategy implementation
 // and publishes results to a provided channel
-func (rs *retrieveStrategy) retrieveSpecificCh(ctx context.Context, prefix string, in string) chanResp {
+func (rs *retrieveStrategy) retrieveSpecificCh(ctx context.Context, prefix ImplementationPrefix, in string) chanResp {
 	cr := chanResp{}
 	cr.err = nil
 	cr.key = in
@@ -56,7 +56,7 @@ func (rs *retrieveStrategy) retrieveSpecificCh(ctx context.Context, prefix strin
 
 // retrieveSpecific executes a specif retrieval strategy
 // based on the found token prefix
-func (rs *retrieveStrategy) retrieveSpecific(ctx context.Context, prefix, in string) (string, error) {
+func (rs *retrieveStrategy) retrieveSpecific(ctx context.Context, prefix ImplementationPrefix, in string) (string, error) {
 	switch prefix {
 	case SecretMgrPrefix:
 		// default strategy paramstore
@@ -85,6 +85,13 @@ func (rs *retrieveStrategy) retrieveSpecific(ctx context.Context, prefix, in str
 		// and sets the token on the implementation init via NewSrv
 		rs.setImplementation(azKv)
 		return rs.getTokenValue()
+	case HashicorpVaultPrefix:
+		vault, err := NewVaultStore(ctx, in, rs.config.tokenSeparator, rs.config.keySeparator)
+		if err != nil {
+			return "", err
+		}
+		rs.setImplementation(vault)
+		return rs.getTokenValue()
 	default:
 		return "", fmt.Errorf("implementation not found for input string: %s", in)
 	}
@@ -92,13 +99,13 @@ func (rs *retrieveStrategy) retrieveSpecific(ctx context.Context, prefix, in str
 
 // stripPrefix returns the token which the config/secret store
 // expects to find in a provided vault/paramstore
-func (rs *retrieveStrategy) stripPrefix(in, prefix string) string {
+func (rs *retrieveStrategy) stripPrefix(in string, prefix ImplementationPrefix) string {
 	return stripPrefix(in, prefix, rs.config.tokenSeparator, rs.config.keySeparator)
 }
 
 // stripPrefix
-func stripPrefix(in, prefix, tokenSeparator, keySeparator string) string {
+func stripPrefix(in string, prefix ImplementationPrefix, tokenSeparator, keySeparator string) string {
 	t := in
-	b := regexp.MustCompile(`[|].*`).ReplaceAll([]byte(t), []byte(""))
+	b := regexp.MustCompile(fmt.Sprintf(`[%s].*`, keySeparator)).ReplaceAll([]byte(t), []byte(""))
 	return strings.Replace(string(b), fmt.Sprintf("%s%s", prefix, tokenSeparator), "", 1)
 }

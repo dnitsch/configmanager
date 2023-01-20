@@ -42,7 +42,7 @@ func Test_GetSecretMgrVarHappy(t *testing.T) {
 						t.Errorf("incorrectly stripped token separator")
 					}
 
-					if strings.Contains(*params.SecretId, SecretMgrPrefix) {
+					if strings.Contains(*params.SecretId, string(SecretMgrPrefix)) {
 						t.Errorf("incorrectly stripped prefix")
 					}
 

@@ -1,5 +1,5 @@
 package testutils
 
 const (
-	TestPhrase string = "Want: %v\nGot: %v"
+	TestPhrase string = "got: %v want: %v\n"
 )
