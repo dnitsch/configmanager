@@ -19,7 +19,7 @@ type confMgrRetrieveWithInputReplacediface interface {
 }
 
 type CmdUtils struct {
-	cfgmgr    configmanager.CMRetrieveWithInputReplacediface
+	cfgmgr    confMgrRetrieveWithInputReplacediface
 	generator generator.GenVarsiface
 }
 

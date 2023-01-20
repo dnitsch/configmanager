@@ -27,7 +27,7 @@ func newFixture(t *testing.T) *fixture {
 	return f
 }
 
-func (f *fixture) goodGenVars(op, ts string) {
+func (f *fixture) configGenVars(op, ts string) {
 	conf := NewConfig().WithOutputPath(op).WithTokenSeparator(ts)
 	gv := NewGenerator().WithConfig(conf)
 	f.rs = newRetrieveStrategy(NewDefatultStrategy(), *conf)
@@ -38,40 +38,46 @@ func TestGenVarsWithConfig(t *testing.T) {
 
 	f := newFixture(t)
 
-	f.goodGenVars(customop, customts)
+	f.configGenVars(customop, customts)
 	if f.c.config.outpath != customop {
-		f.t.Errorf(testutils.TestPhrase, customop, f.c.config.outpath)
+		f.t.Errorf(testutils.TestPhrase, f.c.config.outpath, customop)
 	}
 	if f.c.config.tokenSeparator != customts {
-		f.t.Errorf(testutils.TestPhrase, customts, f.c.config.tokenSeparator)
+		f.t.Errorf(testutils.TestPhrase, f.c.config.tokenSeparator, customts)
 	}
 }
 
 func TestStripPrefixNormal(t *testing.T) {
-
-	want := "/normal/without/prefix"
-	prefix := SecretMgrPrefix
-	f := newFixture(t)
-	f.goodGenVars(standardop, standardts)
-
-	got := f.rs.stripPrefix(fmt.Sprintf("%s#%s", prefix, want), prefix)
-	if got != want {
-		f.t.Errorf(testutils.TestPhrase, want, got)
+	ttests := map[string]struct {
+		prefix         ImplementationPrefix
+		token          string
+		keySeparator   string
+		tokenSeparator string
+		f              *fixture
+		expect         string
+	}{
+		"standard azkv":               {AzKeyVaultSecretsPrefix, "AZKVSECRET://vault1/secret2", "|", "://", newFixture(t), "vault1/secret2"},
+		"standard hashivault":         {HashicorpVaultPrefix, "VAULT://vault1/secret2", "|", "://", newFixture(t), "vault1/secret2"},
+		"custom separator hashivault": {HashicorpVaultPrefix, "VAULT#vault1/secret2", "|", "#", newFixture(t), "vault1/secret2"},
 	}
-
-	gotNegative := f.rs.stripPrefix(fmt.Sprintf("%s___%s", prefix, want), prefix)
-	if gotNegative == want {
-		f.t.Errorf(testutils.TestPhrase, want, gotNegative)
+	for name, tt := range ttests {
+		t.Run(name, func(t *testing.T) {
+			tt.f.configGenVars(tt.keySeparator, tt.tokenSeparator)
+			got := tt.f.rs.stripPrefix(tt.token, tt.prefix)
+			if got != tt.expect {
+				t.Errorf(testutils.TestPhrase, got, tt.expect)
+			}
+		})
 	}
 }
 
 func Test_stripPrefix(t *testing.T) {
 	f := newFixture(t)
-	f.goodGenVars(standardop, standardts)
+	f.configGenVars(standardop, standardts)
 	tests := []struct {
 		name   string
 		token  string
-		prefix string
+		prefix ImplementationPrefix
 		expect string
 	}{
 		{
@@ -99,7 +105,7 @@ func Test_stripPrefix(t *testing.T) {
 
 func Test_NormaliseMap(t *testing.T) {
 	f := newFixture(t)
-	f.goodGenVars(standardop, standardts)
+	f.configGenVars(standardop, standardts)
 	tests := []struct {
 		name     string
 		gv       *GenVars
@@ -133,7 +139,7 @@ func Test_NormaliseMap(t *testing.T) {
 
 func Test_KeyLookup(t *testing.T) {
 	f := newFixture(t)
-	f.goodGenVars(standardop, standardts)
+	f.configGenVars(standardop, standardts)
 
 	tests := []struct {
 		name   string
@@ -206,7 +212,7 @@ func Test_ConvertToExportVars(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
-			f.goodGenVars(standardop, standardts)
+			f.configGenVars(standardop, standardts)
 			f.c.rawMap = tt.rawMap
 			f.c.ConvertToExportVar()
 			got := f.c.outString

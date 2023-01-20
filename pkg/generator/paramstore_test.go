@@ -44,7 +44,7 @@ func Test_GetParamStoreVarHappy(t *testing.T) {
 						t.Errorf("incorrectly stripped token separator")
 					}
 
-					if strings.Contains(*params.Name, ParamStorePrefix) {
+					if strings.Contains(*params.Name, string(ParamStorePrefix)) {
 						t.Errorf("incorrectly stripped prefix")
 					}
 
@@ -78,7 +78,7 @@ func Test_GetParamStoreVarHappy(t *testing.T) {
 						t.Errorf("incorrectly stripped key separator")
 					}
 
-					if strings.Contains(*params.Name, ParamStorePrefix) {
+					if strings.Contains(*params.Name, string(ParamStorePrefix)) {
 						t.Errorf("incorrectly stripped prefix")
 					}
 

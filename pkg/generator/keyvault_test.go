@@ -99,7 +99,7 @@ func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 						t.Errorf("incorrectly stripped token separator")
 					}
 
-					if strings.Contains(name, AzKeyVaultSecretsPrefix) {
+					if strings.Contains(name, string(AzKeyVaultSecretsPrefix)) {
 						t.Errorf("incorrectly stripped prefix")
 					}
 
@@ -131,7 +131,7 @@ func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 						t.Errorf("incorrectly stripped token separator")
 					}
 
-					if strings.Contains(name, AzKeyVaultSecretsPrefix) {
+					if strings.Contains(name, string(AzKeyVaultSecretsPrefix)) {
 						t.Errorf("incorrectly stripped prefix")
 					}
 
@@ -155,12 +155,12 @@ func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 			kvStr.svc = tt.mockClient(t)
 			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
 			rs.setImplementation(kvStr)
-			want, err := rs.getTokenValue()
+			got, err := rs.getTokenValue()
 			if err != nil {
-				t.Errorf("%v", err)
+				t.Errorf(testutils.TestPhrase, err, nil)
 			}
-			if want != tt.value {
-				t.Errorf(testutils.TestPhrase, want, tt.value)
+			if got != tt.value {
+				t.Errorf(testutils.TestPhrase, got, tt.value)
 			}
 		})
 	}
