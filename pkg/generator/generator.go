@@ -295,12 +295,12 @@ func (c *GenVars) keySeparatorLookup(key, val string) string {
 		case ajson.Object:
 			return fmt.Sprintf("%v", v)
 		default:
-			log.Infof("no value found")
-			return ""
+			return fmt.Sprintf("%v", v)
 		}
 	}
-	return ""
 
+	log.Infof("no value found")
+	return ""
 }
 
 // ConvertToExportVar assigns the k/v out
