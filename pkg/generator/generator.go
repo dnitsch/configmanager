@@ -290,7 +290,7 @@ func (c *GenVars) keySeparatorLookup(key, val string) string {
 			return ""
 		}
 	}
-	log.Infof("expression not yielded any results")
+	log.Infof("no value found")
 	return ""
 
 	// pm := ParsedMap{}
