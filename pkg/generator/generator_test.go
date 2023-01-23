@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -188,76 +189,53 @@ func Test_KeyLookup(t *testing.T) {
 }
 
 func Test_ConvertToExportVars(t *testing.T) {
-	tests := []struct {
-		name   string
-		rawMap ParsedMap
-		expect string
+	tests := map[string]struct {
+		rawMap       ParsedMap
+		expectStr    string
+		expectLength int
 	}{
-		{
-			name:   "number included",
-			rawMap: ParsedMap{"foo": "BAR", "num": 123},
-			expect: `export FOO='BAR'`,
-		},
-		{
-			name:   "strings only",
-			rawMap: ParsedMap{"foo": "BAR", "num": "a123"},
-			expect: `export FOO='BAR'`,
-		},
-		{
-			name:   "numbers only",
-			rawMap: ParsedMap{"foo": 123, "num": 456},
-			expect: `export FOO=123`,
-		},
+		"number included":     {ParsedMap{"foo": "BAR", "num": 123}, `export FOO='BAR'`, 2},
+		"strings only":        {ParsedMap{"foo": "BAR", "num": "a123"}, `export FOO='BAR'`, 2},
+		"numbers only":        {ParsedMap{"foo": 123, "num": 456}, `export FOO=123`, 2},
+		"map inside response": {ParsedMap{"map": `{"foo":"bar","baz":"qux"}`, "num": 123}, `export FOO='bar'`, 3},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			f := newFixture(t)
 			f.configGenVars(standardop, standardts)
 			f.c.rawMap = tt.rawMap
 			f.c.ConvertToExportVar()
 			got := f.c.outString
 			if got == nil {
-				t.Errorf(testutils.TestPhrase, "not nil", got)
+				t.Errorf(testutils.TestPhrase, got, "not nil")
 			}
-			if 2 != len(got) {
-				t.Errorf(testutils.TestPhrase, 2, len(got))
-
+			if len(got) != tt.expectLength {
+				t.Errorf(testutils.TestPhrase, len(got), tt.expectLength)
 			}
 			st := strings.Join(got, "\n")
-			if !strings.Contains(st, tt.expect) {
-				t.Errorf(testutils.TestPhrase, tt.expect, st)
+			if !strings.Contains(st, tt.expectStr) {
+				t.Errorf(testutils.TestPhrase, st, tt.expectStr)
 			}
 		})
 	}
 }
 
 func Test_listToString(t *testing.T) {
-	tests := []struct {
-		name   string
+	tests := map[string]struct {
 		in     []string
 		expect string
 	}{
-		{
-			name:   "1 item slice",
-			in:     []string{"export ONE=foo"},
-			expect: "export ONE=foo",
-		},
-		{
-			name:   "0 item slice",
-			in:     []string{},
-			expect: "",
-		},
-		{
-			name: "4 item slice",
-			in:   []string{"123", "123", "123", "123"},
-			expect: `123
+		"1 item slice": {[]string{"export ONE=foo"}, "export ONE=foo"},
+		"0 item slice": {[]string{}, ""},
+		"4 item slice": {[]string{"123", "123", "123", "123"}, `123
 123
 123
 123`,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			got := listToString(tt.in)
 			if got != tt.expect {
 				t.Errorf(testutils.TestPhrase, tt.expect, got)
@@ -265,3 +243,109 @@ func Test_listToString(t *testing.T) {
 		})
 	}
 }
+
+type mockRetrieve func(ctx context.Context, prefix ImplementationPrefix, in string) chanResp
+
+func (m mockRetrieve) retrieveSpecificCh(ctx context.Context, prefix ImplementationPrefix, in string) chanResp {
+	return m(ctx, prefix, in)
+}
+
+func Test_generate(t *testing.T) {
+	ttests := map[string]struct {
+		rawMap func(t *testing.T) map[string]string
+		rs     func(t *testing.T) retrieveIface
+		expect string
+	}{
+		"success": {
+			func(t *testing.T) map[string]string {
+				rm := make(map[string]string)
+				rm["foo"] = "bar"
+				return rm
+			},
+			func(t *testing.T) retrieveIface {
+				return mockRetrieve(func(ctx context.Context, prefix ImplementationPrefix, in string) chanResp {
+					return chanResp{
+						err:   nil,
+						value: "bar",
+					}
+				})
+			},
+			"",
+		},
+		// as the method swallows errors at the moment this is not very useful
+		"error": {
+			func(t *testing.T) map[string]string {
+				rm := make(map[string]string)
+				rm["foo"] = "bar"
+				return rm
+			},
+			func(t *testing.T) retrieveIface {
+				return mockRetrieve(func(ctx context.Context, prefix ImplementationPrefix, in string) chanResp {
+					return chanResp{
+						err: fmt.Errorf("unable to retrieve"),
+					}
+				})
+			},
+			"unable to retrieve",
+		},
+	}
+	for name, tt := range ttests {
+		t.Run(name, func(t *testing.T) {
+			generator := newGenVars()
+			pm, err := generator.generate(tt.rawMap(t), tt.rs(t))
+			if err != nil {
+				if err.Error() != tt.expect {
+					t.Errorf(testutils.TestPhrase, err, tt.expect)
+				}
+				return
+			}
+			if !(len(pm) > 0) {
+				t.Errorf(testutils.TestPhrase, len(pm), "1 or more keys")
+			}
+		})
+	}
+}
+
+func TestGenerate(t *testing.T) {
+	ttests := map[string]struct {
+		tokens       func(t *testing.T) []string
+		expectLength int
+	}{
+		"success without correct prefix": {
+			func(t *testing.T) []string {
+				return []string{"WRONGIMPL://bar-vault/token1", "AZKVNOTSECRET://bar-vault/token1"}
+			},
+			0,
+		},
+	}
+	for name, tt := range ttests {
+		t.Run(name, func(t *testing.T) {
+			generator := newGenVars()
+			pm, err := generator.Generate(tt.tokens(t))
+			if err != nil {
+				t.Errorf(testutils.TestPhrase, err.Error(), nil)
+			}
+			if len(pm) < tt.expectLength {
+				t.Errorf(testutils.TestPhrase, len(pm), tt.expectLength)
+			}
+		})
+	}
+}
+
+// func TestFlushtToFile(t *testing.T) {
+// 	ttests := map[string]struct {
+// 		objType	any
+
+// 	}{
+// 		"test1":
+// 		{
+// 			objType: nil,
+
+// 		},
+// 	}
+// 	for name, tt := range ttests {
+// 		t.Run(name, func(t *testing.T) {
+
+// 		})
+// 	}
+// }

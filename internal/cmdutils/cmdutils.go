@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/dnitsch/configmanager"
 	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
@@ -23,10 +22,9 @@ type CmdUtils struct {
 	generator generator.GenVarsiface
 }
 
-func New(gv generator.GenVarsiface) *CmdUtils {
-
+func New(gv generator.GenVarsiface, confManager confMgrRetrieveWithInputReplacediface) *CmdUtils {
 	return &CmdUtils{
-		cfgmgr:    &configmanager.ConfigManager{},
+		cfgmgr:    confManager,
 		generator: gv,
 	}
 }
@@ -43,15 +41,17 @@ func (c *CmdUtils) GenerateFromCmd(tokens []string, output string) error {
 
 // generateFromToken
 func (c *CmdUtils) generateFromToken(tokens []string, w io.Writer) error {
-	_, err := c.generator.Generate(tokens)
+	pm, err := c.generator.Generate(tokens)
 	if err != nil {
+		// return full error to terminal if no tokens were parsed
+		if len(pm) < 1 {
+			return err
+		}
+		// else log error only
 		log.Errorf("%e", err)
-		return err
 	}
-	// Conver to ExportVars
-	c.generator.ConvertToExportVar()
-
-	return c.generator.FlushToFile(w)
+	// Conver to ExportVars and flush to file
+	return c.generator.FlushToFile(w, c.generator.ConvertToExportVar())
 }
 
 // Generate a replaced string from string input command
@@ -90,14 +90,14 @@ func (c *CmdUtils) GenerateStrOut(input, output string) error {
 
 // generateFromStrOut
 func (c *CmdUtils) generateFromStrOut(input string, output io.Writer) error {
-	f, e := os.Open(input)
-	if e != nil {
-		if perr, ok := e.(*os.PathError); ok {
+	f, err := os.Open(input)
+	if err != nil {
+		if perr, ok := err.(*os.PathError); ok {
 			log.Debugf("input is not a valid file path: %v, falling back on using the string directly", perr)
 			// is actual string parse and write out to location
 			return c.generateStrOutFromInput(strings.NewReader(input), output)
 		}
-		return e
+		return err
 	}
 	defer f.Close()
 

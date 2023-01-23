@@ -47,7 +47,7 @@ var (
 type Generatoriface interface {
 	Generate(tokens []string) (ParsedMap, error)
 	ConvertToExportVar() []string
-	FlushToFile(w io.Writer) error
+	FlushToFile(w io.Writer, outString []string) error
 	StrToFile(w io.Writer, str string) error
 }
 
@@ -176,7 +176,9 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 			rawTokenPrefixMap[token] = prefix
 		}
 	}
-	pm, err := c.generate(rawTokenPrefixMap)
+	rs := newRetrieveStrategy(NewDefatultStrategy(), c.config)
+	// pass in default initialised retrieveStrategy
+	pm, err := c.generate(rawTokenPrefixMap, rs)
 	if err != nil {
 		return nil, err
 	}
@@ -190,15 +192,19 @@ type chanResp struct {
 	err   error
 }
 
+type retrieveIface interface {
+	retrieveSpecificCh(ctx context.Context, prefix ImplementationPrefix, in string) chanResp
+}
+
 // generate checks if any tokens found
 // initiates groutines with fixed size channel map
 // to capture responses and errors
 // generates ParsedMap which includes
-func (c *GenVars) generate(rawMap map[string]string) (ParsedMap, error) {
+func (c *GenVars) generate(rawMap map[string]string, rs retrieveIface) (ParsedMap, error) {
 	outMap := ParsedMap{}
 	if len(rawMap) < 1 {
 		log.Debug("no replaceable tokens found in input strings")
-		return map[string]any{}, nil
+		return outMap, nil
 	}
 
 	var errors []error
@@ -211,7 +217,6 @@ func (c *GenVars) generate(rawMap map[string]string) (ParsedMap, error) {
 	for token, prefix := range rawMap {
 		go func(a string, p ImplementationPrefix) {
 			defer wg.Done()
-			rs := newRetrieveStrategy(NewDefatultStrategy(), c.config)
 			outCh <- rs.retrieveSpecificCh(c.ctx, p, a)
 		}(token, ImplementationPrefix(prefix))
 	}
@@ -236,7 +241,7 @@ func (c *GenVars) generate(rawMap map[string]string) (ParsedMap, error) {
 	if len(errors) > 0 {
 		// crude ...
 		log.Debugf("found: %d errors", len(errors))
-		// return c.rawMap, fmt.Errorf("%+v", errors)
+		// return outMap, fmt.Errorf("%v", errors)
 	}
 	log.Debugf("complete outMap: %+v", outMap)
 	return outMap, nil
@@ -288,15 +293,14 @@ func (c *GenVars) ConvertToExportVar() []string {
 		rawKeyToken := strings.Split(k, "/") // assumes a path like token was used
 		topLevelKey := rawKeyToken[len(rawKeyToken)-1]
 		trm := &ParsedMap{}
-		isOk := isParsed(v, trm)
-		if isOk {
+		if parsedOk := isParsed(v, trm); parsedOk {
 			// if is a map
 			// try look up on key if separator defined
 			normMap := c.envVarNormalize(*trm)
 			c.exportVars(normMap)
-		} else {
-			c.exportVars(ParsedMap{topLevelKey: v})
+			continue
 		}
+		c.exportVars(ParsedMap{topLevelKey: v})
 	}
 	return c.outString
 }
@@ -337,7 +341,7 @@ func (c *GenVars) normalizeKey(k string) string {
 // FlushToFile saves contents to file provided
 // in the config input into the generator
 // default location is ./app.env
-func (c *GenVars) FlushToFile(w io.Writer) error {
+func (c *GenVars) FlushToFile(w io.Writer, out []string) error {
 	return c.flushToFile(w, listToString(c.outString))
 }
 

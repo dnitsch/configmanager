@@ -33,7 +33,7 @@ func (m *mockGenVars) ConvertToExportVar() []string {
 	return []string{}
 }
 
-func (m *mockGenVars) FlushToFile(w io.Writer) error {
+func (m *mockGenVars) FlushToFile(w io.Writer, str []string) error {
 	return nil
 }
 

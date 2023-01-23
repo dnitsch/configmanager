@@ -59,7 +59,6 @@ func (rs *retrieveStrategy) retrieveSpecificCh(ctx context.Context, prefix Imple
 func (rs *retrieveStrategy) retrieveSpecific(ctx context.Context, prefix ImplementationPrefix, in string) (string, error) {
 	switch prefix {
 	case SecretMgrPrefix:
-		// default strategy paramstore
 		scrtMgr, err := NewSecretsMgr(ctx)
 		if err != nil {
 			return "", err
