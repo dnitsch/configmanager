@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/dnitsch/configmanager/pkg/log"
+	"github.com/spyzhov/ajson"
 )
 
 type ImplementationPrefix string
@@ -268,17 +270,40 @@ func (c *GenVars) keySeparatorLookup(key, val string) string {
 		return val
 	}
 
-	pm := ParsedMap{}
+	keys, err := ajson.JSONPath([]byte(val), "$.."+kl[1])
+	if err != nil {
+		panic(err)
+	}
 
-	if ok := isParsed(val, &pm); ok {
-		log.Debugf("attempting to find by key: %v in value: %v", kl, val)
-		if foundVal, ok := pm[kl[1]]; ok {
-			log.Debugf("found by key: %v, in value: %v, of: %v", kl[1], val, foundVal)
-			return fmt.Sprintf("%v", foundVal)
+	for _, v := range keys {
+		switch v.Type() {
+		case ajson.String:
+			str, err := strconv.Unquote(fmt.Sprintf("%v", v))
+			if err != nil {
+				log.Debugf("unable to unquote value: %v returning as is", v)
+				return fmt.Sprintf("%v", v)
+			}
+			return str
+		case ajson.Numeric:
+			return fmt.Sprintf("%v", v)
+		default:
+			return ""
 		}
 	}
-	// returns the input value string as is
-	return val
+	log.Infof("expression not yielded any results")
+	return ""
+
+	// pm := ParsedMap{}
+
+	// if ok := isParsed(val, &pm); ok {
+	// 	log.Debugf("attempting to find by key: %v in value: %v", kl, val)
+	// 	if foundVal, ok := pm[kl[1]]; ok {
+	// 		log.Debugf("found by key: %v, in value: %v, of: %v", kl[1], val, foundVal)
+	// 		return fmt.Sprintf("%v", foundVal)
+	// 	}
+	// }
+	// // returns the input value string as is
+	// return val
 }
 
 // ConvertToExportVar assigns the k/v out

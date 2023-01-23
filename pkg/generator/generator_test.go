@@ -163,10 +163,24 @@ func Test_KeyLookup(t *testing.T) {
 			expect: "11235",
 		},
 		{
+			name:   "lowercase nested key found in numeric val",
+			gv:     f.c,
+			key:    `something|key.test`,
+			val:    `{"key":{"bar":"foo","test":12345}}`,
+			expect: "12345",
+		},
+		{
 			name:   "uppercase key found in val",
 			gv:     f.c,
 			key:    `something|KEY`,
 			val:    `{"KEY": "upposeres"}`,
+			expect: "upposeres",
+		},
+		{
+			name:   "uppercase nested key found in val",
+			gv:     f.c,
+			key:    `something|KEY.TEST`,
+			val:    `{"KEY":{"BAR":"FOO","TEST":"upposeres"}}`,
 			expect: "upposeres",
 		},
 		{
