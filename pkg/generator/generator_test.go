@@ -191,12 +191,47 @@ func Test_KeyLookup(t *testing.T) {
 			val:    `{"key": "notfound"}`,
 			expect: `{"key": "notfound"}`,
 		},
+		{
+			name:   "nested key not found",
+			gv:     f.c,
+			key:    `something|KEY.KEY`,
+			val:    `{"KEY":{"BAR":"FOO","TEST":"upposeres"}}`,
+			expect: "",
+		},
+		{
+			name:   "incorrect json",
+			gv:     f.c,
+			key:    "something|key",
+			val:    `"KEY":{"BAR":"FOO","TEST":"upposeres"}}`,
+			expect: `"KEY":{"BAR":"FOO","TEST":"upposeres"}}`,
+		},
+		{
+			name:   "no key provided",
+			gv:     f.c,
+			key:    "something",
+			val:    `{"KEY":{"BAR":"FOO","TEST":"upposeres"}}`,
+			expect: `{"KEY":{"BAR":"FOO","TEST":"upposeres"}}`,
+		},
+		{
+			name:   "return json object",
+			gv:     f.c,
+			key:    "something|key.test",
+			val:    `{"key":{"bar":"foo","test": {"key": "default"}}}`,
+			expect: `{"key": "default"}`,
+		},
+		{
+			name:   "unescapable string",
+			gv:     f.c,
+			key:    "something|key.test",
+			val:    `{"key":{"bar":"foo","test":"\\\"upposeres\\\""}}`,
+			expect: `\"upposeres\"`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := f.c.keySeparatorLookup(tt.key, tt.val)
 			if got != tt.expect {
-				t.Errorf(testutils.TestPhrase, tt.expect, got)
+				t.Errorf(testutils.TestPhrase, got, tt.expect)
 			}
 		})
 	}

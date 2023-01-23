@@ -275,13 +275,14 @@ func (c *GenVars) keySeparatorLookup(key, val string) string {
 		return val
 	}
 
-	keys, err := ajson.JSONPath([]byte(val), "$.."+kl[1])
+	keys, err := ajson.JSONPath([]byte(val), fmt.Sprintf("$..%s", kl[1]))
 	if err != nil {
-		panic(err)
+		log.Debugf("unable to parse as json object %v", err.Error())
+		return val
 	}
 
-	for _, v := range keys {
-		switch v.Type() {
+	if len(keys) == 1 {
+		switch v := keys[0]; v.Type() {
 		case ajson.String:
 			str, err := strconv.Unquote(fmt.Sprintf("%v", v))
 			if err != nil {
@@ -291,12 +292,15 @@ func (c *GenVars) keySeparatorLookup(key, val string) string {
 			return str
 		case ajson.Numeric:
 			return fmt.Sprintf("%v", v)
+		case ajson.Object:
+			return fmt.Sprintf("%v", v)
 		default:
+			log.Infof("no value found")
 			return ""
 		}
 	}
-	log.Infof("no value found")
 	return ""
+
 }
 
 // ConvertToExportVar assigns the k/v out
