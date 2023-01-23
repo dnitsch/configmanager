@@ -62,9 +62,26 @@ func Test_azSplitToken(t *testing.T) {
 	}
 }
 
-var (
-	tazkvsuccessObj map[string]string = map[string]string{fmt.Sprintf("%s#/token/1", AzKeyVaultSecretsPrefix): tsuccessParam}
-)
+func azKvCommonGetSecretChecker(t *testing.T, name, version, expectedName string) {
+	if name == "" {
+		t.Errorf("expect name to not be nil")
+	}
+	if name != expectedName {
+		t.Errorf(testutils.TestPhrase, name, expectedName)
+	}
+
+	if strings.Contains(name, "#") {
+		t.Errorf("incorrectly stripped token separator")
+	}
+
+	if strings.Contains(name, string(AzKeyVaultSecretsPrefix)) {
+		t.Errorf("incorrectly stripped prefix")
+	}
+
+	if version != "" {
+		t.Fatal("expect version to be \"\" an empty string ")
+	}
+}
 
 type mockAzKvSecretApi func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error)
 
@@ -74,93 +91,80 @@ func (m mockAzKvSecretApi) GetSecret(ctx context.Context, name string, version s
 
 func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 
-	tests := []struct {
-		name       string
-		token      string
-		value      string
-		mockClient func(t *testing.T) kvApi
-		config     *GenVarsConfig
+	tests := map[string]struct {
+		token          string
+		keySeparator   string
+		tokenSeparator string
+		expect         string
+		mockClient     func(t *testing.T) kvApi
+		config         *GenVarsConfig
 	}{
-		{
-			name:  "successVal",
-			token: "AZKVSECRET#/test-vault//token/1",
-			value: tsuccessParam,
-			mockClient: func(t *testing.T) kvApi {
-				return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
-					t.Helper()
-					if name == "" {
-						t.Errorf("expect name to not be nil")
-					}
-					if name != "/token/1" {
-						t.Errorf(testutils.TestPhrase, "/token/1", name)
-					}
-
-					if strings.Contains(name, "#") {
-						t.Errorf("incorrectly stripped token separator")
-					}
-
-					if strings.Contains(name, string(AzKeyVaultSecretsPrefix)) {
-						t.Errorf("incorrectly stripped prefix")
-					}
-
-					if version != "" {
-						t.Fatal("expect version to be \"\" an empty string ")
-					}
-
-					resp := azsecrets.GetSecretResponse{}
-					resp.Value = &tsuccessParam
-					return resp, nil
-				})
-			},
-			config: NewConfig(),
+		"successVal": {"AZKVSECRET#/test-vault//token/1", "|", "#", tsuccessParam, func(t *testing.T) kvApi {
+			return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
+				t.Helper()
+				azKvCommonGetSecretChecker(t, name, "", "/token/1")
+				resp := azsecrets.GetSecretResponse{}
+				resp.Value = &tsuccessParam
+				return resp, nil
+			})
+		}, NewConfig(),
 		},
-		{
-			name:  "successVal with keyseparator",
-			token: "AZKVSECRET#/test-vault/token/1|somekey",
-			value: tsuccessParam,
-			mockClient: func(t *testing.T) kvApi {
-				return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
-					t.Helper()
-					if name == "" {
-						t.Error("expect name to not be nil")
-					}
-					if name != "token/1" {
-						t.Errorf(testutils.TestPhrase, "token/1", name)
-					}
-					if strings.Contains(name, "#") {
-						t.Errorf("incorrectly stripped token separator")
-					}
+		"successVal with keyseparator": {"AZKVSECRET#/test-vault/token/1|somekey", "|", "#", tsuccessParam, func(t *testing.T) kvApi {
+			return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
+				t.Helper()
+				azKvCommonGetSecretChecker(t, name, "", "token/1")
 
-					if strings.Contains(name, string(AzKeyVaultSecretsPrefix)) {
-						t.Errorf("incorrectly stripped prefix")
-					}
+				resp := azsecrets.GetSecretResponse{}
+				resp.Value = &tsuccessParam
+				return resp, nil
+			})
+		},
+			NewConfig(),
+		},
+		"errored": {"AZKVSECRET#/test-vault/token/1|somekey", "|", "#", "unable to retrieve secret", func(t *testing.T) kvApi {
+			return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
+				t.Helper()
+				azKvCommonGetSecretChecker(t, name, "", "token/1")
 
-					if version != "" {
-						t.Fatal("expect version to be \"\" an empty string ")
-					}
-					resp := azsecrets.GetSecretResponse{}
-					resp.Value = &tsuccessParam
-					return resp, nil
-				})
-			},
-			config: NewConfig(),
+				resp := azsecrets.GetSecretResponse{}
+				return resp, fmt.Errorf("unable to retrieve secret")
+			})
+		},
+			NewConfig(),
+		},
+		"empty": {"AZKVSECRET#/test-vault/token/1|somekey", "|", "#", "", func(t *testing.T) kvApi {
+			return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
+				t.Helper()
+				azKvCommonGetSecretChecker(t, name, "", "token/1")
+
+				resp := azsecrets.GetSecretResponse{}
+				return resp, nil
+			})
+		},
+			NewConfig(),
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			kvStr, err := NewKvScrtStoreWithToken(context.TODO(), tt.token, "#", "|")
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			impl, err := NewKvScrtStore(context.TODO(), tt.token, tt.tokenSeparator, tt.keySeparator)
 			if err != nil {
 				t.Errorf("failed to init azkvstore")
 			}
-			kvStr.svc = tt.mockClient(t)
+			tt.config.WithKeySeparator(tt.keySeparator).WithTokenSeparator(tt.tokenSeparator)
+			impl.svc = tt.mockClient(t)
 			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
-			rs.setImplementation(kvStr)
+			rs.setImplementation(impl)
 			got, err := rs.getTokenValue()
 			if err != nil {
-				t.Errorf(testutils.TestPhrase, err, nil)
+				if err.Error() != tt.expect {
+					t.Errorf(testutils.TestPhrase, err.Error(), tt.expect)
+				}
+				return
 			}
-			if got != tt.value {
-				t.Errorf(testutils.TestPhrase, got, tt.value)
+
+			if got != tt.expect {
+				t.Errorf(testutils.TestPhrase, got, tt.expect)
 			}
 		})
 	}

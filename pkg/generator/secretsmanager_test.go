@@ -2,6 +2,7 @@ package generator
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -19,54 +20,86 @@ func (m mockSecretsApi) GetSecretValue(ctx context.Context, params *secretsmanag
 	return m(ctx, params, optFns...)
 }
 
-func Test_GetSecretMgrVarHappy(t *testing.T) {
-	tests := []struct {
-		name       string
-		token      string
-		value      string
-		mockClient func(t *testing.T) secretsMgrApi
-		config     *GenVarsConfig
+func awsSecretsMgrGetChecker(t *testing.T, params *secretsmanager.GetSecretValueInput) {
+	if params.VersionStage == nil {
+		t.Fatal("expect name to not be nil")
+	}
+
+	if strings.Contains(*params.SecretId, "#") {
+		t.Errorf("incorrectly stripped token separator")
+	}
+
+	if strings.Contains(*params.SecretId, string(SecretMgrPrefix)) {
+		t.Errorf("incorrectly stripped prefix")
+	}
+}
+
+func Test_GetSecretMgr(t *testing.T) {
+	tests := map[string]struct {
+		token          string
+		keySeparator   string
+		tokenSeparator string
+		expect         string
+		mockClient     func(t *testing.T) secretsMgrApi
+		config         *GenVarsConfig
 	}{
-		{
-			name:  "successVal",
-			token: "AWSSECRETS#/token/1",
-			value: tsuccessParam,
-			mockClient: func(t *testing.T) secretsMgrApi {
-				return mockSecretsApi(func(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error) {
-					t.Helper()
-					if params.VersionStage == nil {
-						t.Fatal("expect name to not be nil")
-					}
-
-					if strings.Contains(*params.SecretId, "#") {
-						t.Errorf("incorrectly stripped token separator")
-					}
-
-					if strings.Contains(*params.SecretId, string(SecretMgrPrefix)) {
-						t.Errorf("incorrectly stripped prefix")
-					}
-
-					return &secretsmanager.GetSecretValueOutput{
-						SecretString: &tsuccessSecret,
-					}, nil
-				})
-			},
-			config: NewConfig(),
+		"success": {"AWSSECRETS#/token/1", "|", "#", tsuccessParam, func(t *testing.T) secretsMgrApi {
+			return mockSecretsApi(func(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error) {
+				t.Helper()
+				awsSecretsMgrGetChecker(t, params)
+				return &secretsmanager.GetSecretValueOutput{
+					SecretString: &tsuccessSecret,
+				}, nil
+			})
+		}, NewConfig(),
+		},
+		"success with binary": {"AWSSECRETS#/token/1", "|", "#", tsuccessParam, func(t *testing.T) secretsMgrApi {
+			return mockSecretsApi(func(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error) {
+				t.Helper()
+				awsSecretsMgrGetChecker(t, params)
+				return &secretsmanager.GetSecretValueOutput{
+					SecretBinary: []byte(tsuccessParam),
+				}, nil
+			})
+		}, NewConfig(),
+		},
+		"errored": {"AWSSECRETS#/token/1", "|", "#", "unable to retrieve secret", func(t *testing.T) secretsMgrApi {
+			return mockSecretsApi(func(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error) {
+				t.Helper()
+				awsSecretsMgrGetChecker(t, params)
+				return nil, fmt.Errorf("unable to retrieve secret")
+			})
+		}, NewConfig(),
+		},
+		"ok but empty": {"AWSSECRETS#/token/1", "|", "#", "", func(t *testing.T) secretsMgrApi {
+			return mockSecretsApi(func(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error) {
+				t.Helper()
+				awsSecretsMgrGetChecker(t, params)
+				return &secretsmanager.GetSecretValueOutput{
+					SecretString: nil,
+				}, nil
+			})
+		}, NewConfig(),
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.config.WithTokenSeparator(tokenSeparator)
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			tt.config.WithTokenSeparator(tt.tokenSeparator).WithKeySeparator(tt.keySeparator)
+			impl, _ := NewSecretsMgr(context.TODO())
+			impl.svc = tt.mockClient(t)
 			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
 
-			rs.setImplementation(&SecretsMgr{svc: tt.mockClient(t), ctx: context.TODO()})
+			rs.setImplementation(impl)
 			rs.setToken(tt.token)
-			want, err := rs.getTokenValue()
+			got, err := rs.getTokenValue()
 			if err != nil {
-				t.Errorf("%v", err)
+				if err.Error() != tt.expect {
+					t.Errorf(testutils.TestPhrase, err.Error(), tt.expect)
+				}
+				return
 			}
-			if want != tt.value {
-				t.Errorf(testutils.TestPhrase, want, tt.value)
+			if got != tt.expect {
+				t.Errorf(testutils.TestPhrase, got, tt.expect)
 			}
 		})
 	}

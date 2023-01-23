@@ -32,17 +32,8 @@ type azVaultHelper struct {
 
 // NewKvScrtStore returns a KvScrtStore
 // requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfully work
-func NewKvScrtStore(ctx context.Context) (*KvScrtStore, error) {
-	return &KvScrtStore{
-		ctx: ctx,
-	}, nil
-}
+func NewKvScrtStore(ctx context.Context, token, tokenSeparator, keySeparator string) (*KvScrtStore, error) {
 
-// NewKvScrtStoreWithToken returns a KvScrtStore
-// requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfully work
-func NewKvScrtStoreWithToken(ctx context.Context, token, tokenSeparator, keySeparator string) (*KvScrtStore, error) {
-
-	//
 	vc := azSplitToken(stripPrefix(token, AzKeyVaultSecretsPrefix, tokenSeparator, keySeparator))
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)

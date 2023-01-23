@@ -76,7 +76,7 @@ func (rs *retrieveStrategy) retrieveSpecific(ctx context.Context, prefix Impleme
 		rs.setToken(in)
 		return rs.getTokenValue()
 	case AzKeyVaultSecretsPrefix:
-		azKv, err := NewKvScrtStoreWithToken(ctx, in, rs.config.tokenSeparator, rs.config.keySeparator)
+		azKv, err := NewKvScrtStore(ctx, in, rs.config.tokenSeparator, rs.config.keySeparator)
 		if err != nil {
 			return "", err
 		}
