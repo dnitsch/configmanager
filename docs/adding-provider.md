@@ -1,36 +1,39 @@
 # adding provider
 
-Add Token 
-
-`VarPrefix = map[string]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true, GcpSecretMgrPrefix: true}` // <-- ADD here
+Add Token Prefix
 
 ```go
 const (
-	// tokenSeparator used for identifying the end of a prefix and beginning of token
-	// see notes about special consideration for AZKVSECRET tokens
-	tokenSeparator = "#"
-	// keySeparator used for accessing nested objects within the retrieved map
-	keySeparator = "|"
 	// AWS SecretsManager prefix
-	SecretMgrPrefix = "AWSSECRETS"
+	SecretMgrPrefix ImplementationPrefix = "AWSSECRETS"
 	// AWS Parameter Store prefix
-	ParamStorePrefix = "AWSPARAMSTR"
+	ParamStorePrefix ImplementationPrefix = "AWSPARAMSTR"
 	// Azure Key Vault Secrets prefix
-	AzKeyVaultSecretsPrefix = "AZKVSECRET"
-	// GCP SecretsManager prefix
-	GcpSecretMgrPrefix = "GCPSECRETS" // <-- ADD here
+	AzKeyVaultSecretsPrefix ImplementationPrefix = "AZKVSECRET"
+	// Hashicorp Vault prefix
+	HashicorpVaultPrefix ImplementationPrefix = "VAULT"
+	// GcpSecrets
+	GcpSecretsPrefix ImplementationPrefix = "GCPSECRETS"
 )
 ```
 
-inside 
+```go
+var (
+	// default varPrefix used by the replacer function
+	// any token must beging with one of these else
+	// it will be skipped as not a replaceable token
+	VarPrefix = map[ImplementationPrefix]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true, GcpSecretsPrefix: true, HashicorpVaultPrefix: true} // <-- ADD here
+)
+```
+
+ensure your implementation satisfy the `genVarsStrategy` interface
 
 ```go
-func (imp *GcpSecrets) getTokenValue(v *retrieveStrategy) (string, error) {
-
-	log.Infof("%s", "Concrete implementation GcpSecrets")
-	log.Infof("Getting Secret: %s", imp.token)
-
-	input := &gcpsecretspb.AccessSecretVersionRequest{
-		Name: fmt.Sprintf("%s/versions/latest", v.stripPrefix(imp.token, GcpSecretsPrefix)), // <-- Ensure this is set correctly
-	}
+type genVarsStrategy interface {
+	getTokenValue(rs *retrieveStrategy) (s string, e error)
+	setToken(s string)
+	setValue(s string)
+}
 ```
+
+Even if the native type is K/V return a marshalled version of the JSON as the rest of the flow will decide how to present it back to the final consumer.
