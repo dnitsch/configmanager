@@ -295,7 +295,7 @@ func (c *GenVars) keySeparatorLookup(key, val string) string {
 		return fmt.Sprintf("%v", v)
 	}
 
-	log.Infof("no value found")
+	log.Infof("no value found in json using path expression")
 	return ""
 }
 
