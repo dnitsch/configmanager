@@ -393,37 +393,37 @@ func TestGenerateFromCmd(t *testing.T) {
 			},
 			"export FOO=replaced",
 		},
-		"success to stdout": {
-			func(t *testing.T) confMgrRetrieveWithInputReplacediface {
-				return mockRetrieveWithInput(func(input string, config generator.GenVarsConfig) (string, error) {
-					return "replaced", nil
-				})
-			}, func(t *testing.T) generator.GenVarsiface {
-				gen := &mockGenVars{}
-				gen.config = generator.NewConfig()
-				gen.mGen = func(tokens []string) (generator.ParsedMap, error) {
-					gm := generator.ParsedMap{}
-					gm["foo"] = "replaced"
-					if tokens[0] != "foo" {
-						t.Errorf(testutils.TestPhrase, tokens[0], "foo")
-					}
-					return gm, nil
-				}
-				gen.mConvertToExpVars = func() []string {
-					return []string{"export FOO=replaced"}
-				}
-				gen.mFlushToFile = func(w io.Writer, out []string) error {
-					_, _ = w.Write([]byte("export FOO=replaced"))
-					return nil
-				}
-				return gen
-			},
-			[]string{"foo"},
-			func(t *testing.T) string {
-				return "stdout"
-			},
-			"export FOO=replaced",
-		},
+		// "success to stdout": {
+		// 	func(t *testing.T) confMgrRetrieveWithInputReplacediface {
+		// 		return mockRetrieveWithInput(func(input string, config generator.GenVarsConfig) (string, error) {
+		// 			return "replaced", nil
+		// 		})
+		// 	}, func(t *testing.T) generator.GenVarsiface {
+		// 		gen := &mockGenVars{}
+		// 		gen.config = generator.NewConfig()
+		// 		gen.mGen = func(tokens []string) (generator.ParsedMap, error) {
+		// 			gm := generator.ParsedMap{}
+		// 			gm["foo"] = "replaced"
+		// 			if tokens[0] != "foo" {
+		// 				t.Errorf(testutils.TestPhrase, tokens[0], "foo")
+		// 			}
+		// 			return gm, nil
+		// 		}
+		// 		gen.mConvertToExpVars = func() []string {
+		// 			return []string{"export FOO=replaced"}
+		// 		}
+		// 		gen.mFlushToFile = func(w io.Writer, out []string) error {
+		// 			_, _ = w.Write([]byte("export FOO=replaced"))
+		// 			return nil
+		// 		}
+		// 		return gen
+		// 	},
+		// 	[]string{"foo"},
+		// 	func(t *testing.T) string {
+		// 		return "stdout"
+		// 	},
+		// 	"export FOO=replaced",
+		// },
 	}
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {

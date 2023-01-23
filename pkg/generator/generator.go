@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/dnitsch/configmanager/pkg/log"
+	"github.com/spyzhov/ajson"
 )
 
 type ImplementationPrefix string
@@ -273,17 +275,28 @@ func (c *GenVars) keySeparatorLookup(key, val string) string {
 		return val
 	}
 
-	pm := ParsedMap{}
-
-	if ok := isParsed(val, &pm); ok {
-		log.Debugf("attempting to find by key: %v in value: %v", kl, val)
-		if foundVal, ok := pm[kl[1]]; ok {
-			log.Debugf("found by key: %v, in value: %v, of: %v", kl[1], val, foundVal)
-			return fmt.Sprintf("%v", foundVal)
-		}
+	keys, err := ajson.JSONPath([]byte(val), fmt.Sprintf("$..%s", kl[1]))
+	if err != nil {
+		log.Debugf("unable to parse as json object %v", err.Error())
+		return val
 	}
-	// returns the input value string as is
-	return val
+
+	if len(keys) == 1 {
+		v := keys[0]
+		if v.Type() == ajson.String {
+			str, err := strconv.Unquote(fmt.Sprintf("%v", v))
+			if err != nil {
+				log.Debugf("unable to unquote value: %v returning as is", v)
+				return fmt.Sprintf("%v", v)
+			}
+			return str
+		}
+
+		return fmt.Sprintf("%v", v)
+	}
+
+	log.Infof("no value found in json using path expression")
+	return ""
 }
 
 // ConvertToExportVar assigns the k/v out
