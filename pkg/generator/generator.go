@@ -297,18 +297,6 @@ func (c *GenVars) keySeparatorLookup(key, val string) string {
 	}
 	log.Infof("no value found")
 	return ""
-
-	// pm := ParsedMap{}
-
-	// if ok := isParsed(val, &pm); ok {
-	// 	log.Debugf("attempting to find by key: %v in value: %v", kl, val)
-	// 	if foundVal, ok := pm[kl[1]]; ok {
-	// 		log.Debugf("found by key: %v, in value: %v, of: %v", kl[1], val, foundVal)
-	// 		return fmt.Sprintf("%v", foundVal)
-	// 	}
-	// }
-	// // returns the input value string as is
-	// return val
 }
 
 // ConvertToExportVar assigns the k/v out
