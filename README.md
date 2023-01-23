@@ -6,12 +6,14 @@ Package used for retrieving application settings from various sources.
 
 Currently supported variable and secrets implementations:
 
-- AWS SecretsManager
-- AWS ParameterStore
-- AzureKeyvault Secrets
-- TODO:
-  - GCP
-  - Hashicorp  
+- [AWS SecretsManager](https://aws.amazon.com/secrets-manager/)
+- [AWS ParameterStore](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html)
+- [AzureKeyvault Secrets](https://azure.microsoft.com/en-gb/products/key-vault/)
+	- see [Special consideration for AZKVSECRET](#special-consideration-for-azkvsecret) around how to structure the token in this case.
+- [GCP Secrets](https://cloud.google.com/secret-manager)
+- [Hashicorp Vault](https://developer.hashicorp.com/vault/docs/secrets/kv)
+	- using the V2 endpoint
+	- see 
 
 The main driver is to use component level configuration objects, if stored in a `"namespaced"` manner e.g. in AWS ParamStore as `/nonprod/component-service-a/configVar`, however this is not a requirement and the param name can be whatever. Though whilst using some sort of a organised manner it will be more straight forward to allow other services to consume certain secrets/params based on resource/access policies. 
 
@@ -137,6 +139,15 @@ For Azure KeyVault the first part of the token needs to be the name of the vault
 
 > The preceeding slash to the vault name is optional - `AZKVSECRET#/test-vault/no-slash-token-1` and `AZKVSECRET#test-vault/no-slash-token-1` will both identify the vault of name `test-vault`
 
+### Special consideration for HashicorpVault
+
+For HashicorpVault the first part of the token needs to be the name of the mountpath. In Dev Vaults this is `"secret"`,
+ e.g.:
+
+`VAULT://secret/demo/configmanager|test`
+
+The Hashicorp Vault functions in the same exact way as the other implementations. It will retrieve the JSON object and can be looked up within it by using a key separator.
+
 ## Go API
 
 latest api [here](https://pkg.go.dev/github.com/dnitsch/configmanager)
@@ -240,6 +251,6 @@ func credentialString(ctx context.Context, pwdToken, hostToken string) (string, 
 ## Help
 
 - More implementations should be easily added with a specific implementation under the strategy interface
-    - e.g. GCP equivalent
+    - see [add additional providers](docs/adding-provider.md)
 
 - maybe run as cron in the background to perform a periodic sync in case values change?
