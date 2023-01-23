@@ -282,21 +282,17 @@ func (c *GenVars) keySeparatorLookup(key, val string) string {
 	}
 
 	if len(keys) == 1 {
-		switch v := keys[0]; v.Type() {
-		case ajson.String:
+		v := keys[0]
+		if v.Type() == ajson.String {
 			str, err := strconv.Unquote(fmt.Sprintf("%v", v))
 			if err != nil {
 				log.Debugf("unable to unquote value: %v returning as is", v)
 				return fmt.Sprintf("%v", v)
 			}
 			return str
-		case ajson.Numeric:
-			return fmt.Sprintf("%v", v)
-		case ajson.Object:
-			return fmt.Sprintf("%v", v)
-		default:
-			return fmt.Sprintf("%v", v)
 		}
+
+		return fmt.Sprintf("%v", v)
 	}
 
 	log.Infof("no value found")
