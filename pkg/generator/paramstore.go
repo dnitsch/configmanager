@@ -53,7 +53,7 @@ func (imp *ParamStore) getTokenValue(v *retrieveStrategy) (string, error) {
 
 	result, err := imp.svc.GetParameter(ctx, input)
 	if err != nil {
-		log.Errorf("ParamStore: %v", err)
+		log.Errorf(implementationNetworkErr, ParamStorePrefix, err, imp.token)
 		return "", err
 	}
 

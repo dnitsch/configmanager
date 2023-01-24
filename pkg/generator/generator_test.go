@@ -341,15 +341,16 @@ func Test_generate(t *testing.T) {
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
 			generator := newGenVars()
-			pm, err := generator.generate(tt.rawMap(t), tt.rs(t))
+			err := generator.generate(tt.rawMap(t), tt.rs(t))
 			if err != nil {
 				if err.Error() != tt.expect {
 					t.Errorf(testutils.TestPhrase, err, tt.expect)
 				}
 				return
 			}
-			if !(len(pm) > 0) {
-				t.Errorf(testutils.TestPhrase, len(pm), "1 or more keys")
+			got := generator.RawMap()
+			if !(len(got) > 0) {
+				t.Errorf(testutils.TestPhrase, len(got), "1 or more keys")
 			}
 		})
 	}

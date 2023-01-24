@@ -69,7 +69,7 @@ func (imp *VaultStore) getTokenValue(v *retrieveStrategy) (string, error) {
 
 	secret, err := imp.svc.Get(ctx, v.stripPrefix(imp.token, HashicorpVaultPrefix))
 	if err != nil {
-		log.Errorf("unable to read secret: %v", err)
+		log.Errorf(implementationNetworkErr, HashicorpVaultPrefix, err, imp.token)
 		return "", err
 	}
 

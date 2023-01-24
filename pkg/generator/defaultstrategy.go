@@ -5,6 +5,8 @@ import "fmt"
 type DefaultStrategy struct {
 }
 
+const implementationNetworkErr string = "implementation %s error: %v for token: %s"
+
 func NewDefatultStrategy() *DefaultStrategy {
 	return &DefaultStrategy{}
 }

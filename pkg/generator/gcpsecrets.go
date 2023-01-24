@@ -44,6 +44,7 @@ func (imp *GcpSecrets) setValue(val string) {
 }
 
 func (imp *GcpSecrets) getTokenValue(v *retrieveStrategy) (string, error) {
+	defer imp.close()
 
 	log.Infof("%s", "Concrete implementation GcpSecrets")
 	log.Infof("Getting Secret: %s", imp.token)
@@ -51,12 +52,13 @@ func (imp *GcpSecrets) getTokenValue(v *retrieveStrategy) (string, error) {
 	input := &gcpsecretspb.AccessSecretVersionRequest{
 		Name: fmt.Sprintf("%s/versions/latest", v.stripPrefix(imp.token, GcpSecretsPrefix)),
 	}
+	ctx, cancel := context.WithCancel(imp.ctx)
+	defer cancel()
 
-	result, err := imp.svc.AccessSecretVersion(imp.ctx, input)
-	defer imp.close()
+	result, err := imp.svc.AccessSecretVersion(ctx, input)
 
 	if err != nil {
-		log.Errorf("GcpSecrets: %v", err)
+		log.Errorf(implementationNetworkErr, GcpSecretsPrefix, err, imp.token)
 		return "", err
 	}
 	if result.Payload != nil {

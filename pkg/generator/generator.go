@@ -73,6 +73,7 @@ type GenVars struct {
 	outString []string
 	// rawMap is the internal object that holds the values of original token => retrieved value - decrypted in plain text
 	rawMap ParsedMap
+	mu     sync.RWMutex
 }
 
 // setValue implements GenVarsiface
@@ -93,7 +94,7 @@ func NewGenerator() *GenVars {
 }
 
 func newGenVars() *GenVars {
-	m := ParsedMap{}
+	m := make(ParsedMap)
 	defaultConf := GenVarsConfig{
 		tokenSeparator: tokenSeparator,
 		keySeparator:   keySeparator,
@@ -130,6 +131,23 @@ func (c *GenVars) Config() *GenVarsConfig {
 // withconfig or default value
 func (c *GenVars) ConfigOutputPath() string {
 	return c.config.outpath
+}
+
+func (c *GenVars) RawMap() ParsedMap {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	// make a copy of the map
+	m := make(ParsedMap)
+	for k, v := range c.rawMap {
+		m[k] = v
+	}
+	return m
+}
+
+func (c *GenVars) AddRawMap(key, val string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.rawMap[key] = c.keySeparatorLookup(key, val)
 }
 
 // GenVarsConfig defines the input config object to be passed
@@ -171,7 +189,7 @@ func (c *GenVarsConfig) WithKeySeparator(keySeparator string) *GenVarsConfig {
 // the standard pattern of a token should follow a path like
 func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 
-	rawTokenPrefixMap := map[string]string{}
+	rawTokenPrefixMap := make(map[string]string)
 	for _, token := range tokens {
 		prefix := strings.Split(token, c.config.tokenSeparator)[0]
 		if found := VarPrefix[ImplementationPrefix(prefix)]; found {
@@ -180,12 +198,10 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 	}
 	rs := newRetrieveStrategy(NewDefatultStrategy(), c.config)
 	// pass in default initialised retrieveStrategy
-	pm, err := c.generate(rawTokenPrefixMap, rs)
-	if err != nil {
+	if err := c.generate(rawTokenPrefixMap, rs); err != nil {
 		return nil, err
 	}
-	c.rawMap = pm
-	return pm, nil
+	return c.RawMap(), nil
 }
 
 type chanResp struct {
@@ -202,11 +218,10 @@ type retrieveIface interface {
 // initiates groutines with fixed size channel map
 // to capture responses and errors
 // generates ParsedMap which includes
-func (c *GenVars) generate(rawMap map[string]string, rs retrieveIface) (ParsedMap, error) {
-	outMap := ParsedMap{}
+func (c *GenVars) generate(rawMap map[string]string, rs retrieveIface) error {
 	if len(rawMap) < 1 {
 		log.Debug("no replaceable tokens found in input strings")
-		return outMap, nil
+		return nil
 	}
 
 	var errors []error
@@ -229,15 +244,13 @@ func (c *GenVars) generate(rawMap map[string]string, rs retrieveIface) (ParsedMa
 	}()
 
 	for cro := range outCh {
-		log.Debugf("cro: %+v", cro)
 		cr := cro
+		log.Debugf("cro: %+v", cr)
 		if cr.err != nil {
 			log.Debugf("cr.err %v, for token: %s", cr.err, cr.key)
 			errors = append(errors, cr.err)
 		}
-		outMap[cr.key] = c.keySeparatorLookup(cr.key, cr.value)
-		log.Debugf("outMap iter: %+v", outMap)
-
+		c.AddRawMap(cr.key, cr.value)
 	}
 
 	if len(errors) > 0 {
@@ -245,8 +258,7 @@ func (c *GenVars) generate(rawMap map[string]string, rs retrieveIface) (ParsedMa
 		log.Debugf("found: %d errors", len(errors))
 		// return outMap, fmt.Errorf("%v", errors)
 	}
-	log.Debugf("complete outMap: %+v", outMap)
-	return outMap, nil
+	return nil
 }
 
 // isParsed will try to parse the return found string into
@@ -302,7 +314,7 @@ func (c *GenVars) keySeparatorLookup(key, val string) string {
 // ConvertToExportVar assigns the k/v out
 // as unix style export key=val pairs separated by `\n`
 func (c *GenVars) ConvertToExportVar() []string {
-	for k, v := range c.rawMap {
+	for k, v := range c.RawMap() {
 		rawKeyToken := strings.Split(k, "/") // assumes a path like token was used
 		topLevelKey := rawKeyToken[len(rawKeyToken)-1]
 		trm := &ParsedMap{}
