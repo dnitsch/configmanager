@@ -171,5 +171,5 @@ func RetrieveUnmarshalledFromYaml[T any](input []byte, output *T, cm CMRetrieveW
 
 // Insert will update
 func (c *ConfigManager) Insert(force bool) error {
-	return fmt.Errorf("%s", "NotYetImplemented")
+	return fmt.Errorf("not yet implemented")
 }

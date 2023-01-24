@@ -40,6 +40,11 @@ cross-build:
 		GOOS=$$os CGO_ENABLED=0 go build -a -tags netgo -installsuffix netgo $(LDFLAGS) -o dist/$(NAME)-$$os ./cmd; \
 	done
 
+build-mac:
+	for os in darwin; do \
+		GOOS=$$os CGO_ENABLED=0 go build -a -tags netgo -installsuffix netgo $(LDFLAGS) -o dist/$(NAME)-$$os ./cmd; \
+	done
+
 release:
 	OWNER=$(OWNER) NAME=$(NAME) PAT=$(PAT) VERSION=$(VERSION) . hack/release.sh 
 

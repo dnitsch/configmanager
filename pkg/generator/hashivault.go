@@ -74,7 +74,13 @@ func (imp *VaultStore) getTokenValue(v *retrieveStrategy) (string, error) {
 	}
 
 	if secret.Data != nil {
-		return marshall(secret.Data)
+		resp, err := marshall(secret.Data)
+		if err != nil {
+			log.Errorf("marshalling error: %s", err.Error())
+			return "", err
+		}
+		log.Debugf("marhalled kvv2: %s", resp)
+		return resp, nil
 	}
 
 	log.Errorf("value retrieved but empty for token: %v", imp.token)

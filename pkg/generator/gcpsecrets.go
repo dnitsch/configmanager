@@ -34,7 +34,6 @@ func NewGcpSecrets(ctx context.Context) (*GcpSecrets, error) {
 		ctx:   ctx,
 		close: c.Close,
 	}, nil
-
 }
 
 func (imp *GcpSecrets) setToken(token string) {

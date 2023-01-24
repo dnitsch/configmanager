@@ -264,6 +264,10 @@ type testNestedStruct struct {
 	Lol testLol `json:"lol,omitempty" yaml:"lol"`
 }
 
+const (
+	testTokenAWS = "AWSSECRETS:///bar/foo"
+)
+
 func Test_KubeControllerSpecHelper(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -274,7 +278,7 @@ func Test_KubeControllerSpecHelper(t *testing.T) {
 		{
 			name: "happy path simple struct",
 			testType: testSimpleStruct{
-				Foo: "AWSSECRETS:///bar/foo",
+				Foo: testTokenAWS,
 				Bar: "quz",
 			},
 			expect: testSimpleStruct{
@@ -314,7 +318,7 @@ func Test_KubeControllerSpecHelper(t *testing.T) {
 			config := generator.NewConfig()
 			resp, err := KubeControllerSpecHelper(tt.testType, tt.cfmgr(t), *config)
 			if err != nil {
-				t.Errorf("expected error to be <nil>, got: %v", err)
+				t.Errorf(testutils.TestPhrase, err.Error(), nil)
 			}
 			if !reflect.DeepEqual(resp, &tt.expect) {
 				t.Error("")
@@ -333,7 +337,7 @@ func Test_KubeControllerComplex(t *testing.T) {
 		{
 			name: "happy path complex struct",
 			testType: testNestedStruct{
-				Foo: "AWSSECRETS:///bar/foo",
+				Foo: testTokenAWS,
 				Bar: "quz",
 				Lol: testLol{
 					Bla: "booo",
@@ -366,12 +370,12 @@ func Test_KubeControllerComplex(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := generator.NewConfig().WithTokenSeparator("://")
-			resp, err := KubeControllerSpecHelper(tt.testType, tt.cfmgr(t), *config)
+			got, err := KubeControllerSpecHelper(tt.testType, tt.cfmgr(t), *config)
 			if err != nil {
-				t.Errorf("expected error to be <nil>, got: %v", err)
+				t.Errorf(testutils.TestPhrase, err.Error(), nil)
 			}
-			if !reflect.DeepEqual(resp, &tt.expect) {
-				t.Error("returned type does not deep equal to expected")
+			if !reflect.DeepEqual(got, &tt.expect) {
+				t.Errorf(testutils.TestPhraseWithContext, "returned types do not deep equal", got, tt.expect)
 			}
 		})
 	}
@@ -387,7 +391,7 @@ func Test_YamlRetrieveMarshalled(t *testing.T) {
 		{
 			name: "complex struct - complete",
 			testType: &testNestedStruct{
-				Foo: "AWSSECRETS:///bar/foo",
+				Foo: testTokenAWS,
 				Bar: "quz",
 				Lol: testLol{
 					Bla: "booo",
@@ -419,7 +423,7 @@ func Test_YamlRetrieveMarshalled(t *testing.T) {
 		{
 			name: "complex struct - missing fields",
 			testType: &testNestedStruct{
-				Foo: "AWSSECRETS:///bar/foo",
+				Foo: testTokenAWS,
 				Bar: "quz",
 			},
 			expect: testNestedStruct{
@@ -442,10 +446,10 @@ func Test_YamlRetrieveMarshalled(t *testing.T) {
 
 			got, err := RetrieveMarshalledYaml(tt.testType, tt.cfmgr(t), *config)
 			if err != nil {
-				t.Errorf("expected error to be <nil>, got: %v", err)
+				t.Errorf(testutils.TestPhrase, err.Error(), nil)
 			}
 			if !reflect.DeepEqual(got, &tt.expect) {
-				t.Error("returned type does not deep equal to expected")
+				t.Errorf(testutils.TestPhraseWithContext, "returned types do not deep equal", got, tt.expect)
 			}
 		})
 	}
@@ -461,7 +465,7 @@ func Test_RetrieveMarshalledJson(t *testing.T) {
 		{
 			name: "happy path complex struct complete",
 			testType: &testNestedStruct{
-				Foo: "AWSSECRETS:///bar/foo",
+				Foo: testTokenAWS,
 				Bar: "quz",
 				Lol: testLol{
 					Bla: "booo",
@@ -493,7 +497,7 @@ func Test_RetrieveMarshalledJson(t *testing.T) {
 		{
 			name: "complex struct - missing fields",
 			testType: &testNestedStruct{
-				Foo: "AWSSECRETS:///bar/foo",
+				Foo: testTokenAWS,
 				Bar: "quz",
 			},
 			expect: testNestedStruct{
@@ -515,10 +519,10 @@ func Test_RetrieveMarshalledJson(t *testing.T) {
 			config := generator.NewConfig().WithTokenSeparator("://")
 			got, err := RetrieveMarshalledJson(tt.testType, tt.cfmgr(t), *config)
 			if err != nil {
-				t.Errorf("expected error to be <nil>, got: %v", err)
+				t.Errorf(testutils.TestPhrase, err.Error(), nil)
 			}
 			if !reflect.DeepEqual(got, &tt.expect) {
-				t.Error("returned type does not deep equal to expected")
+				t.Errorf(testutils.TestPhraseWithContext, "returned types do not deep equal", got, tt.expect)
 			}
 		})
 	}
