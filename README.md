@@ -13,7 +13,7 @@ Currently supported variable and secrets implementations:
 - [GCP Secrets](https://cloud.google.com/secret-manager)
 - [Hashicorp Vault](https://developer.hashicorp.com/vault/docs/secrets/kv)
 	- using the V2 endpoint
-	- see 
+	- see [special consideration hashivault](#special-consideration-for-hashicorpvault)
 
 The main driver is to use component level configuration objects, if stored in a `"namespaced"` manner e.g. in AWS ParamStore as `/nonprod/component-service-a/configVar`, however this is not a requirement and the param name can be whatever. Though whilst using some sort of a organised manner it will be more straight forward to allow other services to consume certain secrets/params based on resource/access policies. 
 
