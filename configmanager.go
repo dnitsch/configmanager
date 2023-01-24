@@ -25,7 +25,11 @@ func (c *ConfigManager) Retrieve(tokens []string, config generator.GenVarsConfig
 	return retrieve(tokens, gv)
 }
 
-func retrieve(tokens []string, gv generator.Generatoriface) (generator.ParsedMap, error) {
+type GenerateAPI interface {
+	Generate(tokens []string) (generator.ParsedMap, error)
+}
+
+func retrieve(tokens []string, gv GenerateAPI) (generator.ParsedMap, error) {
 	return gv.Generate(tokens)
 }
 
@@ -36,7 +40,7 @@ func (c *ConfigManager) RetrieveWithInputReplaced(input string, config generator
 	return retrieveWithInputReplaced(input, gv)
 }
 
-func retrieveWithInputReplaced(input string, gv generator.Generatoriface) (string, error) {
+func retrieveWithInputReplaced(input string, gv GenerateAPI) (string, error) {
 	tokens := []string{}
 	for k := range generator.VarPrefix {
 		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(string(k))+`.(`+TERMINATING_CHAR+`+)`).FindAllString(input, -1)
@@ -171,5 +175,5 @@ func RetrieveUnmarshalledFromYaml[T any](input []byte, output *T, cm CMRetrieveW
 
 // Insert will update
 func (c *ConfigManager) Insert(force bool) error {
-	return fmt.Errorf("%s", "NotYetImplemented")
+	return fmt.Errorf("not yet implemented")
 }

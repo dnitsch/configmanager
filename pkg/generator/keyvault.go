@@ -73,7 +73,7 @@ func (imp *KvScrtStore) getTokenValue(v *retrieveStrategy) (string, error) {
 	// secretVersion as "" => latest
 	s, err := imp.svc.GetSecret(ctx, imp.token, "", nil)
 	if err != nil {
-		log.Errorf("AzKeyVault: %v", err)
+		log.Errorf(implementationNetworkErr, AzKeyVaultSecretsPrefix, err, imp.token)
 		return "", err
 	}
 	if s.Value != nil {

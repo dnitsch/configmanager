@@ -1,8 +1,8 @@
 
 OWNER := dnitsch
 NAME := configmanager
-GIT_TAG := "1.16.0"
-VERSION := "v1.16.0"
+GIT_TAG := "1.17.0-pre"
+VERSION := "v$(GIT_TAG)"
 # VERSION := "$(shell git describe --tags --abbrev=0)"
 REVISION := $(shell git rev-parse --short HEAD)
 
@@ -37,6 +37,11 @@ clean:
 
 cross-build:
 	for os in darwin linux windows; do \
+		GOOS=$$os CGO_ENABLED=0 go build -a -tags netgo -installsuffix netgo $(LDFLAGS) -o dist/$(NAME)-$$os ./cmd; \
+	done
+
+build-mac:
+	for os in darwin; do \
 		GOOS=$$os CGO_ENABLED=0 go build -a -tags netgo -installsuffix netgo $(LDFLAGS) -o dist/$(NAME)-$$os ./cmd; \
 	done
 

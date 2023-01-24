@@ -31,14 +31,13 @@ func NewParamStore(ctx context.Context) (*ParamStore, error) {
 		svc: c,
 		ctx: ctx,
 	}, nil
-
 }
 
-func (paramStr *ParamStore) setToken(token string) {
-	paramStr.token = token
+func (imp *ParamStore) setToken(token string) {
+	imp.token = token
 }
 
-func (implmt *ParamStore) setValue(val string) {
+func (impl *ParamStore) setValue(val string) {
 }
 
 func (imp *ParamStore) getTokenValue(v *retrieveStrategy) (string, error) {
@@ -54,7 +53,7 @@ func (imp *ParamStore) getTokenValue(v *retrieveStrategy) (string, error) {
 
 	result, err := imp.svc.GetParameter(ctx, input)
 	if err != nil {
-		log.Errorf("ParamStore: %v", err)
+		log.Errorf(implementationNetworkErr, ParamStorePrefix, err, imp.token)
 		return "", err
 	}
 

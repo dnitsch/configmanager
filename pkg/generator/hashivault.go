@@ -69,12 +69,18 @@ func (imp *VaultStore) getTokenValue(v *retrieveStrategy) (string, error) {
 
 	secret, err := imp.svc.Get(ctx, v.stripPrefix(imp.token, HashicorpVaultPrefix))
 	if err != nil {
-		log.Errorf("unable to read secret: %v", err)
+		log.Errorf(implementationNetworkErr, HashicorpVaultPrefix, err, imp.token)
 		return "", err
 	}
 
 	if secret.Data != nil {
-		return marshall(secret.Data)
+		resp, err := marshall(secret.Data)
+		if err != nil {
+			log.Errorf("marshalling error: %s", err.Error())
+			return "", err
+		}
+		log.Debugf("marhalled kvv2: %s", resp)
+		return resp, nil
 	}
 
 	log.Errorf("value retrieved but empty for token: %v", imp.token)
