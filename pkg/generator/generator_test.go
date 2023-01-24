@@ -253,7 +253,7 @@ func Test_ConvertToExportVars(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			f := newFixture(t)
 			f.configGenVars(standardop, standardts)
-			f.c.rawMap = tt.rawMap
+			f.c.rawMap = muRawMap{tokenMap: tt.rawMap}
 			f.c.ConvertToExportVar()
 			got := f.c.outString
 			if got == nil {

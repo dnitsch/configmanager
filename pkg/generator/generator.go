@@ -60,6 +60,11 @@ type GenVarsiface interface {
 	ConfigOutputPath() string
 }
 
+type muRawMap struct {
+	sync.RWMutex
+	tokenMap ParsedMap
+}
+
 // GenVars is the main struct holding the
 // strategy patterns iface
 // any initialised config if overridded with withers
@@ -72,8 +77,7 @@ type GenVars struct {
 	config    GenVarsConfig
 	outString []string
 	// rawMap is the internal object that holds the values of original token => retrieved value - decrypted in plain text
-	rawMap ParsedMap
-	mu     sync.RWMutex
+	rawMap muRawMap //ParsedMap
 }
 
 // setValue implements GenVarsiface
@@ -100,7 +104,7 @@ func newGenVars() *GenVars {
 		keySeparator:   keySeparator,
 	}
 	return &GenVars{
-		rawMap: m,
+		rawMap: muRawMap{tokenMap: m},
 		ctx:    context.TODO(),
 		// return using default config
 		config: defaultConf,
@@ -134,20 +138,20 @@ func (c *GenVars) ConfigOutputPath() string {
 }
 
 func (c *GenVars) RawMap() ParsedMap {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.rawMap.RLock()
+	defer c.rawMap.RUnlock()
 	// make a copy of the map
 	m := make(ParsedMap)
-	for k, v := range c.rawMap {
+	for k, v := range c.rawMap.tokenMap {
 		m[k] = v
 	}
 	return m
 }
 
 func (c *GenVars) AddRawMap(key, val string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.rawMap[key] = c.keySeparatorLookup(key, val)
+	c.rawMap.Lock()
+	defer c.rawMap.Unlock()
+	c.rawMap.tokenMap[key] = c.keySeparatorLookup(key, val)
 }
 
 // GenVarsConfig defines the input config object to be passed
@@ -317,11 +321,11 @@ func (c *GenVars) ConvertToExportVar() []string {
 	for k, v := range c.RawMap() {
 		rawKeyToken := strings.Split(k, "/") // assumes a path like token was used
 		topLevelKey := rawKeyToken[len(rawKeyToken)-1]
-		trm := &ParsedMap{}
-		if parsedOk := isParsed(v, trm); parsedOk {
+		trm := make(ParsedMap)
+		if parsedOk := isParsed(v, &trm); parsedOk {
 			// if is a map
 			// try look up on key if separator defined
-			normMap := c.envVarNormalize(*trm)
+			normMap := c.envVarNormalize(trm)
 			c.exportVars(normMap)
 			continue
 		}
@@ -332,7 +336,7 @@ func (c *GenVars) ConvertToExportVar() []string {
 
 // envVarNormalize
 func (c *GenVars) envVarNormalize(pmap ParsedMap) ParsedMap {
-	normalizedMap := ParsedMap{}
+	normalizedMap := make(ParsedMap)
 	for k, v := range pmap {
 		normalizedMap[c.normalizeKey(k)] = v
 	}
