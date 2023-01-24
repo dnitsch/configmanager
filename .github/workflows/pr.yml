@@ -1,11 +1,11 @@
-name: CI
+name: PR
 
 on:
-  push:
-    branches: [ master ]
+  pull_request:
+    branches: [ master, main ]
 
 jobs:
-  build:
+  pr:
     runs-on: ubuntu-latest
     container:
       image: golang:1.19-bullseye
