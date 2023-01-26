@@ -37,9 +37,6 @@ func (imp *ParamStore) setToken(token string) {
 	imp.token = token
 }
 
-func (impl *ParamStore) setValue(val string) {
-}
-
 func (imp *ParamStore) getTokenValue(v *retrieveStrategy) (string, error) {
 	log.Infof("%s", "Concrete implementation ParameterStore")
 	log.Infof("ParamStore Token: %s", imp.token)

@@ -63,9 +63,9 @@ func replaceString(inputMap generator.ParsedMap, inputString string) string {
 		mkeys = append(mkeys, k)
 	}
 
-	// order map by keys length so that when passed to the 
-	// replacer it will replace the longest first 
-	// removing the possibility of partially overwriting 
+	// order map by keys length so that when passed to the
+	// replacer it will replace the longest first
+	// removing the possibility of partially overwriting
 	// another token with same prefix
 	sort.Slice(mkeys, func(i, j int) bool {
 		l1, l2 := len(mkeys[i]), len(mkeys[j])
@@ -176,9 +176,4 @@ func RetrieveUnmarshalledFromYaml[T any](input []byte, output *T, cm CMRetrieveW
 		return output, err
 	}
 	return output, nil
-}
-
-// Insert will update
-func (c *ConfigManager) Insert(force bool) error {
-	return fmt.Errorf("not yet implemented")
 }

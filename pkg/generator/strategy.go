@@ -20,7 +20,6 @@ func newRetrieveStrategy(s genVarsStrategy, config GenVarsConfig) *retrieveStrat
 type genVarsStrategy interface {
 	getTokenValue(rs *retrieveStrategy) (s string, e error)
 	setToken(s string)
-	setValue(s string)
 }
 
 func (rs *retrieveStrategy) setImplementation(strategy genVarsStrategy) {
@@ -29,10 +28,6 @@ func (rs *retrieveStrategy) setImplementation(strategy genVarsStrategy) {
 
 func (rs *retrieveStrategy) setToken(s string) {
 	rs.implementation.setToken(s)
-}
-
-func (rs *retrieveStrategy) setVaule(s string) {
-	rs.implementation.setValue(s)
 }
 
 func (rs *retrieveStrategy) getTokenValue() (string, error) {

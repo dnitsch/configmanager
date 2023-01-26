@@ -54,9 +54,6 @@ func NewVaultStore(ctx context.Context, token, tokenSeparator, keySeparator stri
 func (implmt *VaultStore) setToken(token string) {
 }
 
-func (implmt *VaultStore) setValue(val string) {
-}
-
 // getTokenValue implements the underlying techonology
 // token retrieval and returns a stringified version
 // of the secret

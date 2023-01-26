@@ -76,13 +76,10 @@ type GenVars struct {
 	ctx       context.Context
 	config    GenVarsConfig
 	outString []string
-	// rawMap is the internal object that holds the values of original token => retrieved value - decrypted in plain text
+	// rawMap is the internal object that holds the values
+	// of original token => retrieved value - decrypted in plain text
+	// with a mutex RW locker
 	rawMap muRawMap //ParsedMap
-}
-
-// setValue implements GenVarsiface
-func (*GenVars) setValue(s string) {
-	panic("unimplemented")
 }
 
 // ParsedMap is the internal working object definition and
