@@ -63,7 +63,10 @@ func replaceString(inputMap generator.ParsedMap, inputString string) string {
 		mkeys = append(mkeys, k)
 	}
 
-	// order map by keys length
+	// order map by keys length so that when passed to the 
+	// replacer it will replace the longest first 
+	// removing the possibility of partially overwriting 
+	// another token with same prefix
 	sort.Slice(mkeys, func(i, j int) bool {
 		l1, l2 := len(mkeys[i]), len(mkeys[j])
 		if l1 != l2 {
@@ -72,11 +75,13 @@ func replaceString(inputMap generator.ParsedMap, inputString string) string {
 		return mkeys[i] > mkeys[j]
 	})
 
+	oldNew := []string(nil)
 	// ordered values by index
-	for _, oval := range mkeys {
-		inputString = strings.ReplaceAll(inputString, oval, fmt.Sprint(inputMap[oval]))
+	for _, ov := range mkeys {
+		oldNew = append(oldNew, ov, fmt.Sprint(inputMap[ov]))
 	}
-	return inputString
+	replacer := strings.NewReplacer(oldNew...)
+	return replacer.Replace(inputString)
 }
 
 type CMRetrieveWithInputReplacediface interface {
