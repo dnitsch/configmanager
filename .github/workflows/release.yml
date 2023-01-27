@@ -7,6 +7,32 @@ on:
       - completed
 
 jobs:
+  set-deps-dotnet-poop-here:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/dotnet/sdk:6.0 
+      env:
+        FOO: Bar
+        REVISION: $GITHUB_SHA
+    needs: build
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.15
+        with:
+          versionSpec: '5.x'
+      - name: Set SemVer Version
+        uses: gittools/actions/gitversion/execute@v0.9.15
+        id: gitversion
+
+      - name: echo VERSIONS
+        run: | 
+          echo "REVISION  -> $GITHUB_SHA"
+          echo "VERSION -> $GITVERSION_SEMVER"
   release:
     runs-on: ubuntu-latest
     container:
@@ -19,6 +45,9 @@ jobs:
       # volumes:
       #   - my_docker_volume:/volume_mount
       # options: --cpus 1
+    needs: set-deps-dotnet-poop-here
+    env:
+      SEMVER: ${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
     steps:
       - uses: actions/checkout@v3
       - name: install deps
@@ -26,8 +55,8 @@ jobs:
           apt update && apt install jq -y
           make REVISION=$GITHUB_SHA install
       - name: release library
-        run: make REVISION=$GITHUB_SHA tag
+        run: make GIT_TAG=${SEMVER} REVISION=$GITHUB_SHA tag
       - name: release binary
         run: |
-          make REVISION=$GITHUB_SHA PAT=${{ secrets.GITHUB_TOKEN }} cross-build
-          make REVISION=$GITHUB_SHA PAT=${{ secrets.GITHUB_TOKEN }} release
+          make REVISION=$GITHUB_SHA GIT_TAG=${SEMVER} PAT=${{ secrets.GITHUB_TOKEN }} cross-build
+          make REVISION=$GITHUB_SHA GIT_TAG=${SEMVER} PAT=${{ secrets.GITHUB_TOKEN }} release
