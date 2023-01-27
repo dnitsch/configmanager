@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.18.8
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.18.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.35.0
+	github.com/go-test/deep v1.0.2
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/cobra v1.6.1
 )

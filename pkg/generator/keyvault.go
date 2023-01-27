@@ -60,9 +60,6 @@ func NewKvScrtStore(ctx context.Context, token, tokenSeparator, keySeparator str
 func (implmt *KvScrtStore) setToken(token string) {
 }
 
-func (implmt *KvScrtStore) setValue(val string) {
-}
-
 func (imp *KvScrtStore) getTokenValue(v *retrieveStrategy) (string, error) {
 	log.Infof("%s", "Concrete implementation AzKeyVault Secret")
 	log.Infof("AzKeyVault Token: %s", imp.token)

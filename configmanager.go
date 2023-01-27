@@ -58,25 +58,34 @@ func retrieveWithInputReplaced(input string, gv GenerateAPI) (string, error) {
 
 // replaceString fills tokens in a provided input with their actual secret/config values
 func replaceString(inputMap generator.ParsedMap, inputString string) string {
+
+	oldNew := []string(nil)
+	// ordered values by index
+	for _, ov := range orderedKeysList(inputMap) {
+		oldNew = append(oldNew, ov, fmt.Sprint(inputMap[ov]))
+	}
+	replacer := strings.NewReplacer(oldNew...)
+	return replacer.Replace(inputString)
+}
+
+func orderedKeysList(inputMap generator.ParsedMap) []string {
 	mkeys := make([]string, 0, len(inputMap))
 	for k := range inputMap {
 		mkeys = append(mkeys, k)
 	}
 
-	// order map by keys length
-	sort.Slice(mkeys, func(i, j int) bool {
+	// order map by keys length so that when passed to the
+	// replacer it will replace the longest first
+	// removing the possibility of partially overwriting
+	// another token with same prefix
+	sort.SliceStable(mkeys, func(i, j int) bool {
 		l1, l2 := len(mkeys[i]), len(mkeys[j])
 		if l1 != l2 {
 			return l1 > l2
 		}
 		return mkeys[i] > mkeys[j]
 	})
-
-	// ordered values by index
-	for _, oval := range mkeys {
-		inputString = strings.ReplaceAll(inputString, oval, fmt.Sprint(inputMap[oval]))
-	}
-	return inputString
+	return mkeys
 }
 
 type CMRetrieveWithInputReplacediface interface {
@@ -171,9 +180,4 @@ func RetrieveUnmarshalledFromYaml[T any](input []byte, output *T, cm CMRetrieveW
 		return output, err
 	}
 	return output, nil
-}
-
-// Insert will update
-func (c *ConfigManager) Insert(force bool) error {
-	return fmt.Errorf("not yet implemented")
 }

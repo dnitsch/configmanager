@@ -1,7 +1,7 @@
 
 OWNER := dnitsch
 NAME := configmanager
-GIT_TAG := "1.17.3"
+GIT_TAG := "1.18.0"
 VERSION := "v$(GIT_TAG)"
 # VERSION := "$(shell git describe --tags --abbrev=0)"
 REVISION := $(shell git rev-parse --short HEAD)
@@ -57,5 +57,5 @@ echo:
 
 tagbuildrelease: tag cross-build release
 
-coverage_interactive: test
+show_coverage: test
 	go tool cover -html=.coverage/out

@@ -293,10 +293,29 @@ func Test_listToString(t *testing.T) {
 	}
 }
 
-type mockRetrieve func(ctx context.Context, prefix ImplementationPrefix, in string) chanResp
+type mockRetrieve struct //func(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp
+{
+	r func(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp
+	s func(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error)
+}
 
-func (m mockRetrieve) retrieveSpecificCh(ctx context.Context, prefix ImplementationPrefix, in string) chanResp {
-	return m(ctx, prefix, in)
+func (m mockRetrieve) RetrieveByToken(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp {
+	return m.r(ctx, impl, prefix, in)
+}
+func (m mockRetrieve) SelectImplementation(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error) {
+	return m.s(ctx, prefix, in, config)
+}
+
+type mockImpl struct {
+	token, value string
+	err          error
+}
+
+func (m *mockImpl) getTokenValue(rs *retrieveStrategy) (s string, e error) {
+	return m.value, m.err
+}
+func (m *mockImpl) setToken(s string) {
+	m.token = s
 }
 
 func Test_generate(t *testing.T) {
@@ -312,30 +331,57 @@ func Test_generate(t *testing.T) {
 				return rm
 			},
 			func(t *testing.T) retrieveIface {
-				return mockRetrieve(func(ctx context.Context, prefix ImplementationPrefix, in string) chanResp {
-					return chanResp{
-						err:   nil,
-						value: "bar",
-					}
-				})
+				return mockRetrieve{
+					r: func(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp {
+						return chanResp{
+							err:   nil,
+							value: "bar",
+						}
+					},
+					s: func(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error) {
+						return &mockImpl{"foo", "bar", nil}, nil
+					}}
 			},
 			"",
 		},
 		// as the method swallows errors at the moment this is not very useful
-		"error": {
+		"error in implementation": {
 			func(t *testing.T) map[string]string {
 				rm := make(map[string]string)
 				rm["foo"] = "bar"
 				return rm
 			},
 			func(t *testing.T) retrieveIface {
-				return mockRetrieve(func(ctx context.Context, prefix ImplementationPrefix, in string) chanResp {
-					return chanResp{
-						err: fmt.Errorf("unable to retrieve"),
-					}
-				})
+				return mockRetrieve{
+					r: func(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp {
+						return chanResp{
+							err: fmt.Errorf("unable to retrieve"),
+						}
+					},
+					s: func(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error) {
+						return &mockImpl{"foo", "bar", nil}, nil
+					}}
 			},
 			"unable to retrieve",
+		},
+		"error in imp selection": {
+			func(t *testing.T) map[string]string {
+				rm := make(map[string]string)
+				rm["foo"] = "bar"
+				return rm
+			},
+			func(t *testing.T) retrieveIface {
+				return mockRetrieve{
+					r: func(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp {
+						return chanResp{
+							err: fmt.Errorf("unable to retrieve"),
+						}
+					},
+					s: func(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error) {
+						return nil, fmt.Errorf("implementation not found for input string: %s", in)
+					}}
+			},
+			"implementation not found for input string: foo",
 		},
 	}
 	for name, tt := range ttests {

@@ -38,9 +38,6 @@ func (imp *SecretsMgr) setToken(token string) {
 	imp.token = token
 }
 
-func (imp *SecretsMgr) setValue(val string) {
-}
-
 func (imp *SecretsMgr) getTokenValue(v *retrieveStrategy) (string, error) {
 
 	log.Infof("%s", "Concrete implementation SecretsManager")

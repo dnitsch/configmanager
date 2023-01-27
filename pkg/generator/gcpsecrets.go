@@ -40,9 +40,6 @@ func (imp *GcpSecrets) setToken(token string) {
 	imp.token = token
 }
 
-func (imp *GcpSecrets) setValue(val string) {
-}
-
 func (imp *GcpSecrets) getTokenValue(v *retrieveStrategy) (string, error) {
 	defer imp.close()
 

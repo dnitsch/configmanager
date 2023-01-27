@@ -57,7 +57,6 @@ type Generatoriface interface {
 type GenVarsiface interface {
 	Generatoriface
 	Config() *GenVarsConfig
-	ConfigOutputPath() string
 }
 
 type muRawMap struct {
@@ -76,13 +75,10 @@ type GenVars struct {
 	ctx       context.Context
 	config    GenVarsConfig
 	outString []string
-	// rawMap is the internal object that holds the values of original token => retrieved value - decrypted in plain text
+	// rawMap is the internal object that holds the values
+	// of original token => retrieved value - decrypted in plain text
+	// with a mutex RW locker
 	rawMap muRawMap //ParsedMap
-}
-
-// setValue implements GenVarsiface
-func (*GenVars) setValue(s string) {
-	panic("unimplemented")
 }
 
 // ParsedMap is the internal working object definition and
@@ -131,12 +127,6 @@ func (c *GenVars) Config() *GenVarsConfig {
 	return &c.config
 }
 
-// ConfigOutputPath returns the output path set on GenVars create
-// withconfig or default value
-func (c *GenVars) ConfigOutputPath() string {
-	return c.config.outpath
-}
-
 func (c *GenVars) RawMap() ParsedMap {
 	c.rawMap.RLock()
 	defer c.rawMap.RUnlock()
@@ -152,41 +142,6 @@ func (c *GenVars) AddRawMap(key, val string) {
 	c.rawMap.Lock()
 	defer c.rawMap.Unlock()
 	c.rawMap.tokenMap[key] = c.keySeparatorLookup(key, val)
-}
-
-// GenVarsConfig defines the input config object to be passed
-type GenVarsConfig struct {
-	outpath        string
-	tokenSeparator string
-	keySeparator   string
-}
-
-// NewConfig
-func NewConfig() *GenVarsConfig {
-	return &GenVarsConfig{
-		tokenSeparator: tokenSeparator,
-		keySeparator:   keySeparator,
-	}
-}
-
-// WithOutputPath
-func (c *GenVarsConfig) WithOutputPath(out string) *GenVarsConfig {
-	c.outpath = out
-	return c
-}
-
-// WithTokenSeparator adds a custom token separator
-// token is the actual value of the parameter/secret in the
-// provider store
-func (c *GenVarsConfig) WithTokenSeparator(tokenSeparator string) *GenVarsConfig {
-	c.tokenSeparator = tokenSeparator
-	return c
-}
-
-// WithKeySeparator adds a custom key separotor
-func (c *GenVarsConfig) WithKeySeparator(keySeparator string) *GenVarsConfig {
-	c.keySeparator = keySeparator
-	return c
 }
 
 // Generate generates a k/v map of the tokens with their corresponding secret/paramstore values
@@ -215,7 +170,8 @@ type chanResp struct {
 }
 
 type retrieveIface interface {
-	retrieveSpecificCh(ctx context.Context, prefix ImplementationPrefix, in string) chanResp
+	RetrieveByToken(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp
+	SelectImplementation(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error)
 }
 
 // generate checks if any tokens found
@@ -238,7 +194,12 @@ func (c *GenVars) generate(rawMap map[string]string, rs retrieveIface) error {
 	for token, prefix := range rawMap {
 		go func(a string, p ImplementationPrefix) {
 			defer wg.Done()
-			outCh <- rs.retrieveSpecificCh(c.ctx, p, a)
+			strategy, err := rs.SelectImplementation(c.ctx, p, a, c.Config())
+			if err != nil {
+				outCh <- chanResp{err: err}
+				return
+			}
+			outCh <- rs.RetrieveByToken(c.ctx, strategy, p, a)
 		}(token, ImplementationPrefix(prefix))
 	}
 

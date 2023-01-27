@@ -51,10 +51,7 @@ func NewVaultStore(ctx context.Context, token, tokenSeparator, keySeparator stri
 
 // setToken already happens in Vault constructor
 // no need to re-set it here
-func (implmt *VaultStore) setToken(token string) {
-}
-
-func (implmt *VaultStore) setValue(val string) {
+func (imp *VaultStore) setToken(token string) {
 }
 
 // getTokenValue implements the underlying techonology

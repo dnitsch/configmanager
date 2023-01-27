@@ -20,7 +20,6 @@ func newRetrieveStrategy(s genVarsStrategy, config GenVarsConfig) *retrieveStrat
 type genVarsStrategy interface {
 	getTokenValue(rs *retrieveStrategy) (s string, e error)
 	setToken(s string)
-	setValue(s string)
 }
 
 func (rs *retrieveStrategy) setImplementation(strategy genVarsStrategy) {
@@ -31,21 +30,19 @@ func (rs *retrieveStrategy) setToken(s string) {
 	rs.implementation.setToken(s)
 }
 
-func (rs *retrieveStrategy) setVaule(s string) {
-	rs.implementation.setValue(s)
-}
-
 func (rs *retrieveStrategy) getTokenValue() (string, error) {
 	return rs.implementation.getTokenValue(rs)
 }
 
 // retrieveSpecificCh wraps around the specific strategy implementation
-// and publishes results to a provided channel
-func (rs *retrieveStrategy) retrieveSpecificCh(ctx context.Context, prefix ImplementationPrefix, in string) chanResp {
+// and publishes results to a channel
+func (rs *retrieveStrategy) RetrieveByToken(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp {
 	cr := chanResp{}
 	cr.err = nil
 	cr.key = in
-	s, err := rs.retrieveSpecific(ctx, prefix, in)
+	rs.setImplementation(impl)
+	rs.setToken(in)
+	s, err := rs.getTokenValue()
 	if err != nil {
 		cr.err = err
 		return cr
@@ -54,53 +51,20 @@ func (rs *retrieveStrategy) retrieveSpecificCh(ctx context.Context, prefix Imple
 	return cr
 }
 
-// retrieveSpecific executes a specif retrieval strategy
-// based on the found token prefix
-func (rs *retrieveStrategy) retrieveSpecific(ctx context.Context, prefix ImplementationPrefix, in string) (string, error) {
+func (rs *retrieveStrategy) SelectImplementation(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error) {
 	switch prefix {
 	case SecretMgrPrefix:
-		scrtMgr, err := NewSecretsMgr(ctx)
-		if err != nil {
-			return "", err
-		}
-		rs.setImplementation(scrtMgr)
-		rs.setToken(in)
-		return rs.getTokenValue()
+		return NewSecretsMgr(ctx)
 	case ParamStorePrefix:
-		paramStr, err := NewParamStore(ctx)
-		if err != nil {
-			return "", err
-		}
-		rs.setImplementation(paramStr)
-		rs.setToken(in)
-		return rs.getTokenValue()
+		return NewParamStore(ctx)
 	case AzKeyVaultSecretsPrefix:
-		azKv, err := NewKvScrtStore(ctx, in, rs.config.tokenSeparator, rs.config.keySeparator)
-		if err != nil {
-			return "", err
-		}
-		// Need to swap this around for AzKV as the
-		// client is initialised via vaultURI
-		// and sets the token on the implementation init via NewSrv
-		rs.setImplementation(azKv)
-		return rs.getTokenValue()
+		return NewKvScrtStore(ctx, in, config.TokenSeparator(), config.KeySeparator())
 	case GcpSecretsPrefix:
-		gcpSecret, err := NewGcpSecrets(ctx)
-		if err != nil {
-			return "", err
-		}
-		rs.setImplementation(gcpSecret)
-		rs.setToken(in)
-		return rs.getTokenValue()
+		return NewGcpSecrets(ctx)
 	case HashicorpVaultPrefix:
-		vault, err := NewVaultStore(ctx, in, rs.config.tokenSeparator, rs.config.keySeparator)
-		if err != nil {
-			return "", err
-		}
-		rs.setImplementation(vault)
-		return rs.getTokenValue()
+		return NewVaultStore(ctx, in, config.TokenSeparator(), config.KeySeparator())
 	default:
-		return "", fmt.Errorf("implementation not found for input string: %s", in)
+		return nil, fmt.Errorf("implementation not found for input string: %s", in)
 	}
 }
 
