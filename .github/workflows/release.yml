@@ -11,10 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/dotnet/sdk:6.0 
-      env:
-        FOO: Bar
-        REVISION: $GITHUB_SHA
-    needs: build
     outputs:
       semVer: ${{ steps.gitversion.outputs.semVer }}
     steps:
@@ -39,12 +35,6 @@ jobs:
       image: golang:1.19-bullseye
       env:
         FOO: Bar
-        REVISION: $GITHUB_SHA
-      # ports:
-      #   - 80
-      # volumes:
-      #   - my_docker_volume:/volume_mount
-      # options: --cpus 1
     needs: set-deps-dotnet-poop-here
     env:
       SEMVER: ${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}

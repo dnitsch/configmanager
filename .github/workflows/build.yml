@@ -9,14 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: golang:1.19-bullseye
-      env:
-        FOO: Bar
-        REVISION: $GITHUB_SHA
-      # ports:
-      #   - 80
-      # volumes:
-      #   - my_docker_volume:/volume_mount
-      # options: --cpus 1
     steps:
       - uses: actions/checkout@v3
       - name: install deps
