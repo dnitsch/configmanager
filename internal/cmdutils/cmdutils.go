@@ -126,7 +126,7 @@ func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string, outtmp io.
 	}
 
 	// move temp file to output path
-	return os.WriteFile(c.generator.ConfigOutputPath(), tr, 0644)
+	return os.WriteFile(c.generator.Config().OutputPath(), tr, 0644)
 }
 
 // generateStrOutFromInput takes a reader and writer as input

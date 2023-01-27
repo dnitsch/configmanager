@@ -58,6 +58,17 @@ func retrieveWithInputReplaced(input string, gv GenerateAPI) (string, error) {
 
 // replaceString fills tokens in a provided input with their actual secret/config values
 func replaceString(inputMap generator.ParsedMap, inputString string) string {
+
+	oldNew := []string(nil)
+	// ordered values by index
+	for _, ov := range orderedKeysList(inputMap) {
+		oldNew = append(oldNew, ov, fmt.Sprint(inputMap[ov]))
+	}
+	replacer := strings.NewReplacer(oldNew...)
+	return replacer.Replace(inputString)
+}
+
+func orderedKeysList(inputMap generator.ParsedMap) []string {
 	mkeys := make([]string, 0, len(inputMap))
 	for k := range inputMap {
 		mkeys = append(mkeys, k)
@@ -67,21 +78,14 @@ func replaceString(inputMap generator.ParsedMap, inputString string) string {
 	// replacer it will replace the longest first
 	// removing the possibility of partially overwriting
 	// another token with same prefix
-	sort.Slice(mkeys, func(i, j int) bool {
+	sort.SliceStable(mkeys, func(i, j int) bool {
 		l1, l2 := len(mkeys[i]), len(mkeys[j])
 		if l1 != l2 {
 			return l1 > l2
 		}
 		return mkeys[i] > mkeys[j]
 	})
-
-	oldNew := []string(nil)
-	// ordered values by index
-	for _, ov := range mkeys {
-		oldNew = append(oldNew, ov, fmt.Sprint(inputMap[ov]))
-	}
-	replacer := strings.NewReplacer(oldNew...)
-	return replacer.Replace(inputString)
+	return mkeys
 }
 
 type CMRetrieveWithInputReplacediface interface {

@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.18.8
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.18.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.35.0
+	github.com/go-test/deep v1.0.2
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/cobra v1.6.1
 )
@@ -90,7 +91,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.18.0 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/axw/gocov v1.1.0
-	github.com/dnitsch/simplelog v1.5.1
 	github.com/googleapis/gax-go/v2 v2.7.0
 	github.com/hashicorp/vault/api v1.8.2
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

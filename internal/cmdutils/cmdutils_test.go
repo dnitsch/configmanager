@@ -116,9 +116,7 @@ func Test_generateFromStrOutOverwrite(t *testing.T) {
 			},
 			genMock: func(t *testing.T, out string) generator.GenVarsiface {
 				gen := &mockGenVars{}
-				gen.confOutputPath = out
-				gen.config = generator.NewConfig()
-
+				gen.config = generator.NewConfig().WithOutputPath(out)
 				return gen
 			},
 			in:     "pass=FOO#/test",
