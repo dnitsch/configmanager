@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	TERMINATING_CHAR string = `[^\'\"\s\n]`
+	TERMINATING_CHAR string = `[^\'\"\s\n\\]`
 )
 
 type ConfigManager struct{}
@@ -41,19 +41,25 @@ func (c *ConfigManager) RetrieveWithInputReplaced(input string, config generator
 }
 
 func retrieveWithInputReplaced(input string, gv GenerateAPI) (string, error) {
-	tokens := []string{}
-	for k := range generator.VarPrefix {
-		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(string(k))+`.(`+TERMINATING_CHAR+`+)`).FindAllString(input, -1)
-		tokens = append(tokens, matches...)
-	}
 
-	m, err := retrieve(tokens, gv)
+	m, err := retrieve(FindTokens(input), gv)
 
 	if err != nil {
 		return "", err
 	}
 
 	return replaceString(m, input), nil
+}
+
+// FindTokens extracts all replaceable tokens
+// from a given input string
+func FindTokens(input string) []string {
+	tokens := []string{}
+	for k := range generator.VarPrefix {
+		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(string(k))+`.(`+TERMINATING_CHAR+`+)`).FindAllString(input, -1)
+		tokens = append(tokens, matches...)
+	}
+	return tokens
 }
 
 // replaceString fills tokens in a provided input with their actual secret/config values
