@@ -76,29 +76,6 @@ func Test_retrieve(t *testing.T) {
 }
 
 var (
-	strT1 = `
-space: preserved
-	indents: preserved
-	arr: [ "FOO#/test" ]
-	// comments preserved
-	arr:
-		- "FOO#/test"
-`
-	strT2 = `
-// TOML
-[[somestuff]]
-key = "FOO#/test" 
-`
-
-	strT3 = `
-// TOML
-[[somestuff]]
-key = FOO#/test
-key2 = FOO#/test
-key3 = FOO#/test
-key4 = FOO#/test
-`
-
 	strT4 = `
 export FOO='FOO#/test'
 export FOO1=FOO#/test
@@ -113,15 +90,21 @@ foo23 = FOO#/test
 )
 
 func Test_retrieveWithInputReplaced(t *testing.T) {
-	tests := []struct {
+	tests := map[string]struct {
 		name   string
 		input  string
 		genvar generator.Generatoriface
 		expect string
 	}{
-		{
-			name:   "strYaml",
-			input:  strT1,
+		"strYaml": {
+			input: `
+space: preserved
+	indents: preserved
+	arr: [ "FOO#/test" ]
+	// comments preserved
+	arr:
+		- "FOO#/test"
+`,
 			genvar: &mockGenVars{},
 			expect: `
 space: preserved
@@ -132,9 +115,12 @@ space: preserved
 		- "val1"
 `,
 		},
-		{
-			name:   "strToml",
-			input:  strT2,
+		"strToml": {
+			input: `
+// TOML
+[[somestuff]]
+key = "FOO#/test" 
+`,
 			genvar: &mockGenVars{},
 			expect: `
 // TOML
@@ -142,9 +128,15 @@ space: preserved
 key = "val1" 
 `,
 		},
-		{
-			name:   "strTomlWithoutQuotes",
-			input:  strT3,
+		"strTomlWithoutQuotes": {
+			input: `
+// TOML
+[[somestuff]]
+key = FOO#/test
+key2 = FOO#/test
+key3 = FOO#/test
+key4 = FOO#/test
+`,
 			genvar: &mockGenVars{},
 			expect: `
 // TOML
@@ -155,9 +147,18 @@ key3 = val1
 key4 = val1
 `,
 		},
-		{
-			name:   "strTomlWithoutMultiline",
-			input:  strT4,
+		"strTomlWithoutMultiline": {
+			input: `
+export FOO='FOO#/test'
+export FOO1=FOO#/test
+export FOO2='FOO#/test'
+export FOO3=FOO#/test
+export FOO4=FOO#/test
+
+[[section]]
+
+foo23 = FOO#/test
+`,
 			genvar: &mockGenVars{},
 			expect: `
 export FOO='val1'
@@ -170,6 +171,11 @@ export FOO4=val1
 
 foo23 = val1
 `,
+		},
+		"escaped input": {
+			input:  `"{\"patchPayloadTemplate\":\"{\\\"password\\\":\\\"FOO#/test\\\",\\\"passwordConfirm\\\":\\\"FOO#/test\\\"}\\n\"}"`,
+			genvar: &mockGenVars{},
+			expect: `"{\"patchPayloadTemplate\":\"{\\\"password\\\":\\\"val1\\\",\\\"passwordConfirm\\\":\\\"val1\\\"}\\n\"}"`,
 		},
 	}
 
