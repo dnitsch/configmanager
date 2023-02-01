@@ -27,7 +27,7 @@ jobs:
         run: | 
           echo "REVISION  -> $GITHUB_SHA"
           echo "VERSION -> $GITVERSION_SEMVER"
-  build:
+  test:
     runs-on: ubuntu-latest
     container:
       image: golang:1.19-bullseye
