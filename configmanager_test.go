@@ -75,20 +75,6 @@ func Test_retrieve(t *testing.T) {
 	}
 }
 
-var (
-	strT4 = `
-export FOO='FOO#/test'
-export FOO1=FOO#/test
-export FOO2='FOO#/test'
-export FOO3=FOO#/test
-export FOO4=FOO#/test
-
-[[section]]
-
-foo23 = FOO#/test
-`
-)
-
 func Test_retrieveWithInputReplaced(t *testing.T) {
 	tests := map[string]struct {
 		name   string
