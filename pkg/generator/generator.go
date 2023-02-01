@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -308,8 +307,8 @@ func (c *GenVars) exportVars(exportMap ParsedMap) {
 
 	for k, v := range exportMap {
 		// NOTE: \n line ending is not totally cross platform
-		_type := fmt.Sprintf("%T", v)
-		switch _type {
+		t := fmt.Sprintf("%T", v)
+		switch t {
 		case "string":
 			c.outString = append(c.outString, fmt.Sprintf("export %s='%s'", c.normalizeKey(k), v))
 		default:
@@ -320,12 +319,10 @@ func (c *GenVars) exportVars(exportMap ParsedMap) {
 
 // normalizeKeys returns env var compatible key
 func (c *GenVars) normalizeKey(k string) string {
-	// TODO: include a more complete regex of vaues to replace
-	r := regexp.MustCompile(`[\s\@\!]`).ReplaceAll([]byte(k), []byte(""))
-	r = regexp.MustCompile(`[\-]`).ReplaceAll(r, []byte("_"))
-	// Double underscore replace key separator
-	r = regexp.MustCompile(`[`+c.config.keySeparator+`]`).ReplaceAll(r, []byte("__"))
-	return strings.ToUpper(string(r))
+	// the order of replacer pairs matters less
+	// as the Replace builds a node tree without overlapping matches
+	replacer := strings.NewReplacer([]string{" ", "", "@", "", "!", "", "-", "_", c.config.keySeparator, "__"}...)
+	return strings.ToUpper(replacer.Replace(k))
 }
 
 // FlushToFile saves contents to file provided
