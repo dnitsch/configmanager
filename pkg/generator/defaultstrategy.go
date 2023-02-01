@@ -12,9 +12,11 @@ func NewDefatultStrategy() *DefaultStrategy {
 }
 
 func (implmt *DefaultStrategy) setToken(token string) {
+	// this should never be used
 }
 
 func (implmt *DefaultStrategy) setValue(val string) {
+	// this should never be used
 }
 
 func (implmt *DefaultStrategy) getTokenValue(v *retrieveStrategy) (string, error) {

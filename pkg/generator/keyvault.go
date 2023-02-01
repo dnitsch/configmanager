@@ -55,9 +55,9 @@ func NewKvScrtStore(ctx context.Context, token, tokenSeparator, keySeparator str
 	}, nil
 }
 
-// setToken already happens in AzureKVClient in the constructor
-// no need to re-set it here
 func (implmt *KvScrtStore) setToken(token string) {
+	// setToken already happens in AzureKVClient in the constructor
+	// no need to re-set it here
 }
 
 func (imp *KvScrtStore) getTokenValue(v *retrieveStrategy) (string, error) {

@@ -52,6 +52,10 @@ func NewVaultStore(ctx context.Context, token, tokenSeparator, keySeparator stri
 // setToken already happens in Vault constructor
 // no need to re-set it here
 func (imp *VaultStore) setToken(token string) {
+	// this happens inside the New func call
+	// due to the way the client needs to be
+	// initialised with a mountpath
+	// and mountpath is part of the token so it is set then
 }
 
 // getTokenValue implements the underlying techonology
