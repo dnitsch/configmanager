@@ -34,6 +34,7 @@ jobs:
     needs: set-deps-dotnet-poop-here
     env:
       SEMVER: ${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
+      GOVCS: false
     steps:
       - uses: actions/checkout@v3
         with:
