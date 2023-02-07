@@ -22,11 +22,6 @@ jobs:
       - name: Set SemVer Version
         uses: gittools/actions/gitversion/execute@v0.9.15
         id: gitversion
-
-      - name: echo VERSIONS
-        run: | 
-          echo "REVISION  -> $GITHUB_SHA"
-          echo "VERSION -> $GITVERSION_SEMVER"
   pr:
     runs-on: ubuntu-latest
     container:
@@ -39,8 +34,10 @@ jobs:
       - uses: actions/checkout@v3
       - name: install deps
         run: |
-          apt update && apt install jq -y
-          make REVISION=$GITHUB_SHA install
+          apt-get update && apt-get install -y jq git
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.email ${{ github.actor }}-ci@gha.org
+          git config user.name ${{ github.actor }}
       - name: make test 
         run: |
           make REVISION=$GITHUB_SHA test
@@ -60,5 +57,6 @@ jobs:
           args:             
             # Unique keys of your project and organization. You can find them in SonarCloud > Information (bottom-left menu)
             # mandatory
-            -Dsonar.projectVersion=$SEMVER
+            -Dsonar.projectVersion=${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
             -Dsonar.go.coverage.reportPaths=/github/workspace/.coverage/out
+            -Dsonar.go.tests.reportPaths=/github/workspace/.coverage/report-junit.xml

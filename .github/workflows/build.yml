@@ -68,4 +68,3 @@ jobs:
             -Dsonar.projectVersion=${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
             -Dsonar.go.coverage.reportPaths=/github/workspace/.coverage/out
             -Dsonar.go.tests.reportPaths=/github/workspace/.coverage/report-junit.xml
-            -X
