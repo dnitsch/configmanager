@@ -49,6 +49,8 @@ jobs:
           make REVISION=$GITHUB_SHA install
       - name: release library
         run: |
+          echo $PWD 
+          ls -lat
           git config user.email ${{ github.actor }}-ci@gha.org
           git config user.name ${{ github.actor }}
           make GIT_TAG=${SEMVER} REVISION=$GITHUB_SHA tag
