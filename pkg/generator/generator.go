@@ -332,7 +332,7 @@ func (c *GenVars) FlushToFile(w io.Writer, out []string) error {
 	return c.flushToFile(w, listToString(c.outString))
 }
 
-// StrToFile
+// StrToFile writes a provided string to the writer
 func (c *GenVars) StrToFile(w io.Writer, str string) error {
 	return c.flushToFile(w, str)
 }

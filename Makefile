@@ -3,7 +3,6 @@ OWNER := dnitsch
 NAME := configmanager
 GIT_TAG := "1.18.0"
 VERSION := "v$(GIT_TAG)"
-# VERSION := "$(shell git describe --tags --abbrev=0)"
 REVISION := $(shell git rev-parse --short HEAD)
 
 LDFLAGS := -ldflags="-s -w -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Version=$(VERSION)\" -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Revision=$(REVISION)\" -extldflags -static"
@@ -37,12 +36,12 @@ clean:
 
 cross-build:
 	for os in darwin linux windows; do \
-		GOOS=$$os CGO_ENABLED=0 go build -a -tags netgo -installsuffix netgo $(LDFLAGS) -o dist/$(NAME)-$$os ./cmd; \
+		GOOS=$$os CGO_ENABLED=0 go build -mod=readonly -buildvcs=false $(LDFLAGS) -o dist/$(NAME)-$$os ./cmd; \
 	done
 
 build-mac:
 	for os in darwin; do \
-		GOOS=$$os CGO_ENABLED=0 go build -a -tags netgo -installsuffix netgo $(LDFLAGS) -o dist/$(NAME)-$$os ./cmd; \
+		GOOS=$$os CGO_ENABLED=0 go build -mod=readonly -buildvcs=false $(LDFLAGS) -o dist/$(NAME)-$$os ./cmd; \
 	done
 
 release:

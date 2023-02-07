@@ -62,4 +62,3 @@ jobs:
             # mandatory
             -Dsonar.projectVersion=$SEMVER
             -Dsonar.go.coverage.reportPaths=/github/workspace/.coverage/out
-            -X
