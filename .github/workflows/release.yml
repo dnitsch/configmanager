@@ -46,7 +46,10 @@ jobs:
           apt update && apt install jq -y
           make REVISION=$GITHUB_SHA install
       - name: release library
-        run: make GIT_TAG=${SEMVER} REVISION=$GITHUB_SHA tag
+        run: |
+          git config user.email ${{ github.actor }}-ci@gha.org
+          git config user.name ${{ github.actor }}
+          make GIT_TAG=${SEMVER} REVISION=$GITHUB_SHA tag
       - name: release binary
         run: |
           make REVISION=$GITHUB_SHA GIT_TAG=${SEMVER} PAT=${{ secrets.GITHUB_TOKEN }} cross-build
