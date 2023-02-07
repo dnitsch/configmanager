@@ -34,6 +34,7 @@ jobs:
     needs: set-deps-dotnet-poop-here
     env:
       SEMVER: ${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
+      GIT_TAG: ${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
       GOVCS: false
     steps:
       - uses: actions/checkout@v3
@@ -41,15 +42,15 @@ jobs:
           fetch-depth: 0
       - name: install deps
         run: |
-          apt update && apt install jq -y
+          apt update && apt install -y jq git
           make REVISION=$GITHUB_SHA install
       - name: make test 
         run: |
-          echo $PWD 
+          echo $PWD
           ls -lat
           git config user.email ${{ github.actor }}-ci@gha.org
           git config user.name ${{ github.actor }}
-          make GIT_TAG=$SEMVER REVISION=$GITHUB_SHA test
+          make REVISION=$GITHUB_SHA test
       - name: Publish Junit style Test Report
         uses: mikepenz/action-junit-report@v3
         if: always() # always run even if the previous step fails
@@ -59,13 +60,14 @@ jobs:
         # You can pin the exact commit or the version.
         uses: SonarSource/sonarcloud-github-action@master
         env:
+          SEMVER: $SEMVER
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # Generate a token on Sonarcloud.io, add it to the secrets of this repo with the name SONAR_TOKEN (Settings > Secrets > Actions > add new repository secret)
         with:
           # Additional arguments for the sonarcloud scanner
           args:             
             # mandatory
-            -Dsonar.projectVersion=$SEMVER
+            -Dsonar.projectVersion=${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
             -Dsonar.go.coverage.reportPaths=/github/workspace/.coverage/out
             -Dsonar.go.tests.reportPaths=/github/workspace/.coverage/report-junit.xml
             -X
