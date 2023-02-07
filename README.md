@@ -10,6 +10,8 @@
 
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
 
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=coverage)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
+
 Package used for retrieving application settings from various sources.
 
 Currently supported variable and secrets implementations:
