@@ -2,6 +2,14 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/dnitsch/configmanager)](https://goreportcard.com/report/github.com/dnitsch/configmanager)
 
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=bugs)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
+
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
+
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
+
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
+
 Package used for retrieving application settings from various sources.
 
 Currently supported variable and secrets implementations:
