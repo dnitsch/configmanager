@@ -63,3 +63,4 @@ jobs:
             -Dsonar.projectVersion=$SEMVER
             -Dsonar.go.coverage.reportPaths=/github/workspace/.coverage/out
             -Dsonar.go.tests.reportPaths=/github/workspace/.coverage/report-junit.xml
+            -X
