@@ -3,14 +3,14 @@ OWNER := dnitsch
 NAME := configmanager
 GIT_TAG := "1.18.0"
 VERSION := "v$(GIT_TAG)"
-REVISION := $(shell git rev-parse --short HEAD)
+REVISION := "aaaabbbbb1234"
 
 LDFLAGS := -ldflags="-s -w -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Version=$(VERSION)\" -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Revision=$(REVISION)\" -extldflags -static"
 
 .PHONY: test test_ci tidy install cross-build 
 
 test: test_prereq
-	go test `go list ./... | grep -v */generated/` -v -mod=readonly -coverprofile=.coverage/out | go-junit-report > .coverage/report-junit.xml && \
+	go test `go list ./... | grep -v */generated/` -v -buildvcs=false -mod=readonly -coverprofile=.coverage/out | go-junit-report > .coverage/report-junit.xml && \
 	gocov convert .coverage/out | gocov-xml > .coverage/report-cobertura.xml
 
 test_ci:
@@ -48,11 +48,8 @@ release:
 	OWNER=$(OWNER) NAME=$(NAME) PAT=$(PAT) VERSION=$(VERSION) . hack/release.sh 
 
 tag: 
-	git tag "v$(GIT_TAG)"
-	git push origin "v$(GIT_TAG)"
-
-echo:
-	echo $(REVISION)
+	git tag -a $(VERSION) -m "ci tag release uistrategy" $(REVISION)
+	git push origin $(VERSION)
 
 tagbuildrelease: tag cross-build release
 

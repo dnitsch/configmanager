@@ -41,14 +41,16 @@ jobs:
       SEMVER: ${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
       - name: install deps
         run: |
-          apt update && apt install jq -y
-          make REVISION=$GITHUB_SHA install
-      - name: release library
-        run: |
+          apt-get update && apt-get install jq git -y
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.email ${{ github.actor }}-ci@gha.org
           git config user.name ${{ github.actor }}
+      - name: release library
+        run: |
           make GIT_TAG=${SEMVER} REVISION=$GITHUB_SHA tag
       - name: release binary
         run: |
