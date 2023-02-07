@@ -3,7 +3,7 @@ OWNER := dnitsch
 NAME := configmanager
 GIT_TAG := "1.18.0"
 VERSION := "v$(GIT_TAG)"
-REVISION := $(shell git rev-parse --short HEAD)
+REVISION := "aaaabbbbb1234"
 
 LDFLAGS := -ldflags="-s -w -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Version=$(VERSION)\" -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Revision=$(REVISION)\" -extldflags -static"
 
