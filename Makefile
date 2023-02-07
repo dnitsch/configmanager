@@ -48,11 +48,8 @@ release:
 	OWNER=$(OWNER) NAME=$(NAME) PAT=$(PAT) VERSION=$(VERSION) . hack/release.sh 
 
 tag: 
-	git tag "v$(GIT_TAG)"
-	git push origin "v$(GIT_TAG)"
-
-echo:
-	echo $(REVISION)
+	git tag -a $(VERSION) -m "ci tag release uistrategy" $(REVISION)
+	git push origin $(VERSION)
 
 tagbuildrelease: tag cross-build release
 
