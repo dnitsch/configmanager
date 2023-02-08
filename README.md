@@ -1,15 +1,10 @@
 # Config Manager
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/dnitsch/configmanager)](https://goreportcard.com/report/github.com/dnitsch/configmanager)
-
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=bugs)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
-
 [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
-
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
-
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
-
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=coverage)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
 
 Package used for retrieving application settings from various sources.
@@ -154,7 +149,10 @@ For Azure KeyVault the first part of the token needs to be the name of the vault
 For HashicorpVault the first part of the token needs to be the name of the mountpath. In Dev Vaults this is `"secret"`,
  e.g.:
 
-`VAULT://secret/demo/configmanager|test`
+`VAULT://secret___demo/configmanager|test`
+
+The hardcoded separator cannot be modified and you must separate your `mountPath` with `___` (3x `_`) followed by the key to the secret.
+
 
 The Hashicorp Vault functions in the same exact way as the other implementations. It will retrieve the JSON object and can be looked up within it by using a key separator.
 
