@@ -10,17 +10,32 @@
 Package used for retrieving application settings from various sources.
 
 Currently supported variable and secrets implementations:
+<!-- 
+"AWSSECRETS"
+	// AWS Parameter Store prefix
+	ParamStorePrefix ImplementationPrefix = "AWSPARAMSTR"
+	// Azure Key Vault Secrets prefix
+	AzKeyVaultSecretsPrefix ImplementationPrefix = "AZKVSECRET"
+	// Hashicorp Vault prefix
+	HashicorpVaultPrefix ImplementationPrefix = "VAULT"
+	// GcpSecrets
+	GcpSecretsPrefix ImplementationPrefix = "GCPSECRETS" -->
 
 - [AWS SecretsManager](https://aws.amazon.com/secrets-manager/)
+	- Implementation Indicator: `AWSSECRETS`
 - [AWS ParameterStore](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html)
+	- Implementation Indicator: `AWSPARAMSTR`
 - [AzureKeyvault Secrets](https://azure.microsoft.com/en-gb/products/key-vault/)
+	- Implementation Indicator: `AZKVSECRET`
 	- see [Special consideration for AZKVSECRET](#special-consideration-for-azkvsecret) around how to structure the token in this case.
 - [GCP Secrets](https://cloud.google.com/secret-manager)
+	- Implementation Indicator: `GCPSECRETS`
 - [Hashicorp Vault](https://developer.hashicorp.com/vault/docs/secrets/kv)
-	- using the V2 endpoint
+	- Implementation Indicator: `VAULT`
+	- using the KvV2 engine endpoint
 	- see [special consideration hashivault](#special-consideration-for-hashicorpvault)
 
-The main driver is to use component level configuration objects, if stored in a `"namespaced"` manner e.g. in AWS ParamStore as `/nonprod/component-service-a/configVar`, however this is not a requirement and the param name can be whatever. Though whilst using some sort of a organised manner it will be more straight forward to allow other services to consume certain secrets/params based on resource/access policies. 
+The main driver is to use component level configuration objects, if stored in a `"namespaced"` manner e.g. in AWS ParamStore as `/nonprod/component-service-a/configVar`, however this is not a requirement and the param name can be whatever. Though whilst using some sort of a organised manner it will be more straight forward to allow other services to consume certain secrets/params based on resource/access policies.
 
 > Beware size limitation with certain config/vault implementations. In which case it's best to split certain items up e.g. TLS certs `/nonprod/component-service-a/pub-cert`, `/nonprod/component-service-a/private-cert`, `/nonprod/component-service-a/chain1-cert`, etc... 
 
@@ -46,13 +61,17 @@ ConfigManager comes packaged as a CLI for all major platforms, to see [download/
 
 For more detailed usage you can run -h with each subcommand and additional info can be found [here](./docs/commands.md)
 
-## Config Tokens
+## __Config Tokens__
 
 The token is made up of 3 parts:
 
-- `AWSSECRETS` the strategy identifier to choose at runtime
+### Implementation indicator
 
-- `#` separator - used for separating the implementation indicator and the look up value.
+e.g. `AWSSECRETS` the strategy identifier to choose at runtime
+
+### __Token Separator__
+
+e.g. `#` - used for separating the implementation indicator and the look up value.
 
 > The default is currently `#` - it will change to `://` to allow for a more natural reading of the "token". you can achieve this behaviour now by either specifying the `-s` to the CLI or ConfigManager public methods, like below.
 
@@ -72,11 +91,12 @@ Alternatively you can use the helper methods for Yaml or Json tagged structs - s
 
 If contents of the `AWSSECRETS#/appxyz/service1-password` are a string then `service1-password` will be the key and converted to UPPERCASE e.g. `SERVICE1_PASSWORD=som3V4lue`
 
-### KeySeparator
+### __Key Separator__
 
 Specifying a key seperator on token items that can be parsed as a K/V map will result in only retrieving the specific key from the map. 
 
 e.g. if contents of the `AWSSECRETS#/appxyz/service1-db-config` are parseable into the below object
+
 ```json
 {
   "host": "db.internal",
@@ -113,7 +133,6 @@ db:
 
 If your config parameter matches the config interface, you can also leave the entire token to point to the `db` key
 
-
 ```yaml
 app:
   name: xyz
@@ -132,6 +151,20 @@ db: {
 }
 ```
 
+### Additional Token Config
+
+Suffixed `[]` with `role:` or `version:` specified inside the brackets and comma separated
+
+order is not important, but the `role:` keyword must be followed by the role string
+
+e.g. `VAULT://baz/bar/123|d88[role:arn:aws:iam::1111111:role/i-orchestration,version:1082313]`
+
+Currently only supporting version and role but may be extended in the future.
+
+- role is used with `VAULT` `aws_iam` auth type. Specifying it on a token level as opposed to globally will ensure that multiple roles can be used provided that the caller has the ability to assume them.
+
+- version can be used within all implementations that support versioned config items e.g. `VAULT`, `GCPSECRETS` , `AWSSECRETS`, `AZKVSECRET`. If omitted it will default to the `LATEST`.
+
 ### Special consideration for AZKVSECRET
 
 For Azure KeyVault the first part of the token needs to be the name of the vault.
@@ -147,12 +180,15 @@ For Azure KeyVault the first part of the token needs to be the name of the vault
 ### Special consideration for HashicorpVault
 
 For HashicorpVault the first part of the token needs to be the name of the mountpath. In Dev Vaults this is `"secret"`,
- e.g.:
+ e.g.: `VAULT://secret___demo/configmanager|test`
 
-`VAULT://secret___demo/configmanager|test`
+or if the secrets are at another location: `VAULT://another/mount/path__config/app1/db`
 
 The hardcoded separator cannot be modified and you must separate your `mountPath` with `___` (3x `_`) followed by the key to the secret.
 
+#### AWS IAM auth to vault
+
+when using Vault in AWS - you can set the value of the `VAULT_TOKEN=aws_iam` this will trigger the AWS Auth login as opposed to using the local token.
 
 The Hashicorp Vault functions in the same exact way as the other implementations. It will retrieve the JSON object and can be looked up within it by using a key separator.
 
