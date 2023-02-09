@@ -6,5 +6,6 @@ upload_url=https://uploads.github.com/repos/$OWNER/$NAME/releases/$id/assets
 
 for asset in dist/*; do \
     name=$(echo $asset | cut -c 6-)
+    echo "pkg name: $name"
     curl -u $OWNER:$PAT -H "Content-Type: application/x-binary" -X POST --data-binary "@$asset" "$upload_url?name=$name"
 done

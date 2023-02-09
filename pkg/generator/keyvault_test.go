@@ -92,14 +92,12 @@ func (m mockAzKvSecretApi) GetSecret(ctx context.Context, name string, version s
 func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 
 	tests := map[string]struct {
-		token          string
-		keySeparator   string
-		tokenSeparator string
-		expect         string
-		mockClient     func(t *testing.T) kvApi
-		config         *GenVarsConfig
+		token      string
+		expect     string
+		mockClient func(t *testing.T) kvApi
+		config     *GenVarsConfig
 	}{
-		"successVal": {"AZKVSECRET#/test-vault//token/1", "|", "#", tsuccessParam, func(t *testing.T) kvApi {
+		"successVal": {"AZKVSECRET#/test-vault//token/1", tsuccessParam, func(t *testing.T) kvApi {
 			return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
 				t.Helper()
 				azKvCommonGetSecretChecker(t, name, "", "/token/1")
@@ -107,9 +105,9 @@ func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 				resp.Value = &tsuccessParam
 				return resp, nil
 			})
-		}, NewConfig(),
+		}, NewConfig().WithKeySeparator("|").WithTokenSeparator("#"),
 		},
-		"successVal with keyseparator": {"AZKVSECRET#/test-vault/token/1|somekey", "|", "#", tsuccessParam, func(t *testing.T) kvApi {
+		"successVal with keyseparator": {"AZKVSECRET#/test-vault/token/1|somekey", tsuccessParam, func(t *testing.T) kvApi {
 			return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
 				t.Helper()
 				azKvCommonGetSecretChecker(t, name, "", "token/1")
@@ -119,9 +117,9 @@ func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 				return resp, nil
 			})
 		},
-			NewConfig(),
+			NewConfig().WithKeySeparator("|").WithTokenSeparator("#"),
 		},
-		"errored": {"AZKVSECRET#/test-vault/token/1|somekey", "|", "#", "unable to retrieve secret", func(t *testing.T) kvApi {
+		"errored": {"AZKVSECRET#/test-vault/token/1|somekey", "unable to retrieve secret", func(t *testing.T) kvApi {
 			return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
 				t.Helper()
 				azKvCommonGetSecretChecker(t, name, "", "token/1")
@@ -130,9 +128,9 @@ func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 				return resp, fmt.Errorf("unable to retrieve secret")
 			})
 		},
-			NewConfig(),
+			NewConfig().WithKeySeparator("|").WithTokenSeparator("#"),
 		},
-		"empty": {"AZKVSECRET#/test-vault/token/1|somekey", "|", "#", "", func(t *testing.T) kvApi {
+		"empty": {"AZKVSECRET#/test-vault/token/1|somekey", "", func(t *testing.T) kvApi {
 			return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
 				t.Helper()
 				azKvCommonGetSecretChecker(t, name, "", "token/1")
@@ -141,17 +139,17 @@ func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 				return resp, nil
 			})
 		},
-			NewConfig(),
+			NewConfig().WithKeySeparator("|").WithTokenSeparator("#"),
 		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			impl, err := NewKvScrtStore(context.TODO(), tt.token, tt.tokenSeparator, tt.keySeparator)
+			impl, err := NewKvScrtStore(context.TODO(), tt.token, *tt.config)
 			if err != nil {
 				t.Errorf("failed to init azkvstore")
 			}
-			tt.config.WithKeySeparator(tt.keySeparator).WithTokenSeparator(tt.tokenSeparator)
+
 			impl.svc = tt.mockClient(t)
 			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
 			rs.setImplementation(impl)

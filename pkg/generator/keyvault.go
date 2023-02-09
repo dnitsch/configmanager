@@ -19,9 +19,10 @@ type kvApi interface {
 }
 
 type KvScrtStore struct {
-	svc   kvApi
-	ctx   context.Context
-	token string
+	svc    kvApi
+	ctx    context.Context
+	token  string
+	config TokenConfigVars
 }
 
 // azVaultHelper provides a broken up string
@@ -32,9 +33,17 @@ type azVaultHelper struct {
 
 // NewKvScrtStore returns a KvScrtStore
 // requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfully work
-func NewKvScrtStore(ctx context.Context, token, tokenSeparator, keySeparator string) (*KvScrtStore, error) {
+func NewKvScrtStore(ctx context.Context, token string, conf GenVarsConfig) (*KvScrtStore, error) {
 
-	vc := azSplitToken(stripPrefix(token, AzKeyVaultSecretsPrefix, tokenSeparator, keySeparator))
+	ct := conf.ParseTokenVars(token)
+
+	kv := &KvScrtStore{
+		ctx:    ctx,
+		config: ct,
+	}
+
+	vc := azSplitToken(stripPrefix(ct.Token, AzKeyVaultSecretsPrefix, conf.TokenSeparator(), conf.KeySeparator()))
+	kv.token = vc.token
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
@@ -48,11 +57,9 @@ func NewKvScrtStore(ctx context.Context, token, tokenSeparator, keySeparator str
 		return nil, err
 	}
 
-	return &KvScrtStore{
-		svc:   c,
-		ctx:   ctx,
-		token: vc.token,
-	}, nil
+	kv.svc = c
+	return kv, nil
+
 }
 
 func (implmt *KvScrtStore) setToken(token string) {

@@ -88,7 +88,7 @@ func TestSelectImpl(t *testing.T) {
 		prefix        ImplementationPrefix
 		in            string
 		config        *GenVarsConfig
-		expect        func(t *testing.T, ctx context.Context) genVarsStrategy
+		expect        func(t *testing.T, ctx context.Context, conf GenVarsConfig) genVarsStrategy
 	}{
 		"success AWSSEcretsMgr": {
 			func() func() {
@@ -99,8 +99,8 @@ func TestSelectImpl(t *testing.T) {
 			},
 			context.TODO(),
 			SecretMgrPrefix, "AWSSECRETS://foo/bar", (&GenVarsConfig{}).WithKeySeparator("|").WithTokenSeparator("://"),
-			func(t *testing.T, ctx context.Context) genVarsStrategy {
-				imp, err := NewSecretsMgr(ctx)
+			func(t *testing.T, ctx context.Context, conf GenVarsConfig) genVarsStrategy {
+				imp, err := NewSecretsMgr(ctx, conf)
 				if err != nil {
 					t.Errorf(testutils.TestPhraseWithContext, "aws secrets init impl error", err.Error(), nil)
 				}
@@ -116,7 +116,7 @@ func TestSelectImpl(t *testing.T) {
 			},
 			context.TODO(),
 			ParamStorePrefix, "AWSPARAMSTR://foo/bar", (&GenVarsConfig{}).WithKeySeparator("|").WithTokenSeparator("://"),
-			func(t *testing.T, ctx context.Context) genVarsStrategy {
+			func(t *testing.T, ctx context.Context, conf GenVarsConfig) genVarsStrategy {
 				imp, err := NewParamStore(ctx)
 				if err != nil {
 					t.Errorf(testutils.TestPhraseWithContext, "paramstore init impl error", err.Error(), nil)
@@ -136,7 +136,7 @@ func TestSelectImpl(t *testing.T) {
 			},
 			context.TODO(),
 			GcpSecretsPrefix, "GCPSECRETS://foo/bar", (&GenVarsConfig{}).WithKeySeparator("|").WithTokenSeparator("://"),
-			func(t *testing.T, ctx context.Context) genVarsStrategy {
+			func(t *testing.T, ctx context.Context, conf GenVarsConfig) genVarsStrategy {
 				imp, err := NewGcpSecrets(ctx)
 				if err != nil {
 					t.Errorf(testutils.TestPhraseWithContext, "gcp secrets init impl error", err.Error(), nil)
@@ -153,8 +153,8 @@ func TestSelectImpl(t *testing.T) {
 			},
 			context.TODO(),
 			AzKeyVaultSecretsPrefix, "AZKVSECRET://foo/bar", (&GenVarsConfig{}).WithKeySeparator("|").WithTokenSeparator("://"),
-			func(t *testing.T, ctx context.Context) genVarsStrategy {
-				imp, err := NewKvScrtStore(ctx, "AZKVSECRET://foo/bar", "://", "|")
+			func(t *testing.T, ctx context.Context, conf GenVarsConfig) genVarsStrategy {
+				imp, err := NewKvScrtStore(ctx, "AZKVSECRET://foo/bar", conf)
 				if err != nil {
 					t.Errorf(testutils.TestPhraseWithContext, "azkv init impl error", err.Error(), nil)
 				}
@@ -171,8 +171,8 @@ func TestSelectImpl(t *testing.T) {
 			},
 			context.TODO(),
 			HashicorpVaultPrefix, "VAULT://foo/bar", (&GenVarsConfig{}).WithKeySeparator("|").WithTokenSeparator("://"),
-			func(t *testing.T, ctx context.Context) genVarsStrategy {
-				imp, err := NewVaultStore(ctx, "VAULT://foo/bar", "://", "|")
+			func(t *testing.T, ctx context.Context, conf GenVarsConfig) genVarsStrategy {
+				imp, err := NewVaultStore(ctx, "VAULT://foo/bar", conf)
 				if err != nil {
 					t.Errorf(testutils.TestPhraseWithContext, "vault init impl error", err.Error(), nil)
 				}
@@ -188,7 +188,7 @@ func TestSelectImpl(t *testing.T) {
 			},
 			context.TODO(),
 			UnknownPrefix, "AWSPARAMSTR://foo/bar", (&GenVarsConfig{}).WithKeySeparator("|").WithTokenSeparator("://"),
-			func(t *testing.T, ctx context.Context) genVarsStrategy {
+			func(t *testing.T, ctx context.Context, conf GenVarsConfig) genVarsStrategy {
 				imp, err := NewParamStore(ctx)
 				if err != nil {
 					t.Errorf(testutils.TestPhraseWithContext, "init impl error", err.Error(), nil)
@@ -202,8 +202,8 @@ func TestSelectImpl(t *testing.T) {
 			tearDown := tt.setUpTearDown()
 			defer tearDown()
 			rs := &retrieveStrategy{}
-			want := tt.expect(t, tt.ctx)
-			got, err := rs.SelectImplementation(tt.ctx, tt.prefix, tt.in, tt.config)
+			want := tt.expect(t, tt.ctx, *tt.config)
+			got, err := rs.SelectImplementation(tt.ctx, tt.prefix, tt.in, *tt.config)
 			if err != nil {
 				if err.Error() != fmt.Sprintf("implementation not found for input string: %s", tt.in) {
 					t.Errorf(testutils.TestPhraseWithContext, "uncaught error", err.Error(), fmt.Sprintf("implementation not found for input string: %s", tt.in))

@@ -296,13 +296,13 @@ func Test_listToString(t *testing.T) {
 type mockRetrieve struct //func(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp
 {
 	r func(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp
-	s func(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error)
+	s func(ctx context.Context, prefix ImplementationPrefix, in string, config GenVarsConfig) (genVarsStrategy, error)
 }
 
 func (m mockRetrieve) RetrieveByToken(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp {
 	return m.r(ctx, impl, prefix, in)
 }
-func (m mockRetrieve) SelectImplementation(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error) {
+func (m mockRetrieve) SelectImplementation(ctx context.Context, prefix ImplementationPrefix, in string, config GenVarsConfig) (genVarsStrategy, error) {
 	return m.s(ctx, prefix, in, config)
 }
 
@@ -338,7 +338,7 @@ func Test_generate(t *testing.T) {
 							value: "bar",
 						}
 					},
-					s: func(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error) {
+					s: func(ctx context.Context, prefix ImplementationPrefix, in string, config GenVarsConfig) (genVarsStrategy, error) {
 						return &mockImpl{"foo", "bar", nil}, nil
 					}}
 			},
@@ -358,7 +358,7 @@ func Test_generate(t *testing.T) {
 							err: fmt.Errorf("unable to retrieve"),
 						}
 					},
-					s: func(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error) {
+					s: func(ctx context.Context, prefix ImplementationPrefix, in string, config GenVarsConfig) (genVarsStrategy, error) {
 						return &mockImpl{"foo", "bar", nil}, nil
 					}}
 			},
@@ -377,7 +377,7 @@ func Test_generate(t *testing.T) {
 							err: fmt.Errorf("unable to retrieve"),
 						}
 					},
-					s: func(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error) {
+					s: func(ctx context.Context, prefix ImplementationPrefix, in string, config GenVarsConfig) (genVarsStrategy, error) {
 						return nil, fmt.Errorf("implementation not found for input string: %s", in)
 					}}
 			},
