@@ -71,7 +71,7 @@ func (c *GenVarsConfig) KeySeparator() string {
 func (c GenVarsConfig) ParseTokenVars(token string) TokenConfigVars {
 	tc := TokenConfigVars{}
 	// strip anything in []
-	vars := regexp.MustCompile(`\[.+\]`)
+	vars := regexp.MustCompile(`\[.*\]`)
 	rawVars := vars.FindString(token)
 	// extract [role:,version:]
 	if rawVars != "" {

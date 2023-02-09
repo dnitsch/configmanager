@@ -34,10 +34,17 @@ func TestMountPathExtract(t *testing.T) {
 	}
 }
 
-type mockVaultApi func(ctx context.Context, secretPath string) (*vault.KVSecret, error)
+type mockVaultApi struct {
+	g  func(ctx context.Context, secretPath string) (*vault.KVSecret, error)
+	gv func(ctx context.Context, secretPath string, version int) (*vault.KVSecret, error)
+}
 
 func (m mockVaultApi) Get(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
-	return m(ctx, secretPath)
+	return m.g(ctx, secretPath)
+}
+
+func (m mockVaultApi) GetVersion(ctx context.Context, secretPath string, version int) (*vault.KVSecret, error) {
+	return m.gv(ctx, secretPath, version)
 }
 
 func TestVaultScenarios(t *testing.T) {
@@ -50,7 +57,8 @@ func TestVaultScenarios(t *testing.T) {
 	}{
 		"happy return": {"VAULT://secret___/foo", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `{"foo":"test2130-9sd-0ds"}`,
 			func(t *testing.T) hashiVaultApi {
-				return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+				mv := mockVaultApi{}
+				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
 					t.Helper()
 					if secretPath != "foo" {
 						t.Errorf("got %v; want %s", secretPath, `foo`)
@@ -58,7 +66,8 @@ func TestVaultScenarios(t *testing.T) {
 					m := make(map[string]interface{})
 					m["foo"] = "test2130-9sd-0ds"
 					return &vault.KVSecret{Data: m}, nil
-				})
+				}
+				return mv
 			},
 			func() func() {
 				os.Setenv("VAULT_TOKEN", "129378y1231283")
@@ -69,7 +78,8 @@ func TestVaultScenarios(t *testing.T) {
 		},
 		"incorrect json": {"VAULT://secret___/foo", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `json: unsupported type: func() error`,
 			func(t *testing.T) hashiVaultApi {
-				return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+				mv := mockVaultApi{}
+				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
 					t.Helper()
 					if secretPath != "foo" {
 						t.Errorf("got %v; want %s", secretPath, `foo`)
@@ -77,7 +87,8 @@ func TestVaultScenarios(t *testing.T) {
 					m := make(map[string]interface{})
 					m["error"] = func() error { return fmt.Errorf("ddodod") }
 					return &vault.KVSecret{Data: m}, nil
-				})
+				}
+				return mv
 			},
 			func() func() {
 				os.Setenv("VAULT_TOKEN", "129378y1231283")
@@ -91,7 +102,8 @@ func TestVaultScenarios(t *testing.T) {
 			GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
 			`{"foo1":"test2130-9sd-0ds","foo2":"dsfsdf3454456"}`,
 			func(t *testing.T) hashiVaultApi {
-				return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+				mv := mockVaultApi{}
+				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
 					t.Helper()
 					if secretPath != "some/other/foo2" {
 						t.Errorf("got %v; want %s", secretPath, `some/other/foo2`)
@@ -100,7 +112,8 @@ func TestVaultScenarios(t *testing.T) {
 					m["foo1"] = "test2130-9sd-0ds"
 					m["foo2"] = "dsfsdf3454456"
 					return &vault.KVSecret{Data: m}, nil
-				})
+				}
+				return mv
 			},
 			func() func() {
 				os.Setenv("VAULT_TOKEN", "129378y1231283")
@@ -111,13 +124,15 @@ func TestVaultScenarios(t *testing.T) {
 		},
 		"not found": {"VAULT://secret___/foo", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `secret not found`,
 			func(t *testing.T) hashiVaultApi {
-				return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+				mv := mockVaultApi{}
+				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
 					t.Helper()
 					if secretPath != "foo" {
 						t.Errorf("got %v; want %s", secretPath, `foo`)
 					}
 					return nil, fmt.Errorf("secret not found")
-				})
+				}
+				return mv
 			},
 			func() func() {
 				os.Setenv("VAULT_TOKEN", "129378y1231283")
@@ -128,13 +143,15 @@ func TestVaultScenarios(t *testing.T) {
 		},
 		"403": {"VAULT://secret___/some/other/foo2", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `client 403`,
 			func(t *testing.T) hashiVaultApi {
-				return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+				mv := mockVaultApi{}
+				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
 					t.Helper()
 					if secretPath != "some/other/foo2" {
 						t.Errorf("got %v; want %s", secretPath, `some/other/foo2`)
 					}
 					return nil, fmt.Errorf("client 403")
-				})
+				}
+				return mv
 			},
 			func() func() {
 				os.Setenv("VAULT_TOKEN", "129378y1231283")
@@ -144,14 +161,16 @@ func TestVaultScenarios(t *testing.T) {
 			},
 		},
 		"found but empty": {"VAULT://secret___/some/other/foo2", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `{}`, func(t *testing.T) hashiVaultApi {
-			return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+			mv := mockVaultApi{}
+			mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
 				t.Helper()
 				if secretPath != "some/other/foo2" {
 					t.Errorf("got %v; want %s", secretPath, `some/other/foo2`)
 				}
 				m := make(map[string]interface{})
 				return &vault.KVSecret{Data: m}, nil
-			})
+			}
+			return mv
 		},
 			func() func() {
 				os.Setenv("VAULT_TOKEN", "129378y1231283")
@@ -161,13 +180,53 @@ func TestVaultScenarios(t *testing.T) {
 			},
 		},
 		"found but nil returned": {"VAULT://secret___/some/other/foo2", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, "", func(t *testing.T) hashiVaultApi {
-			return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+			mv := mockVaultApi{}
+			mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
 				t.Helper()
 				if secretPath != "some/other/foo2" {
 					t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
 				}
 				return &vault.KVSecret{Data: nil}, nil
-			})
+			}
+			return mv
+		},
+			func() func() {
+				os.Setenv("VAULT_TOKEN", "129378y1231283")
+				return func() {
+					os.Clearenv()
+				}
+			},
+		},
+		"version provided correctly": {"VAULT://secret___/some/other/foo2[version:1]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `{"foo2":"dsfsdf3454456"}`, func(t *testing.T) hashiVaultApi {
+			mv := mockVaultApi{}
+			mv.gv = func(ctx context.Context, secretPath string, version int) (*vault.KVSecret, error) {
+				t.Helper()
+				if secretPath != "some/other/foo2" {
+					t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
+				}
+				m := make(map[string]interface{})
+				m["foo2"] = "dsfsdf3454456"
+				return &vault.KVSecret{Data: m}, nil
+			}
+			return mv
+		},
+			func() func() {
+				os.Setenv("VAULT_TOKEN", "129378y1231283")
+				return func() {
+					os.Clearenv()
+				}
+			},
+		},
+		"version provided but unable to parse": {"VAULT://secret___/some/other/foo2[version:1a]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, "unable to parse version into an integer: strconv.Atoi: parsing \"1a\": invalid syntax", func(t *testing.T) hashiVaultApi {
+			mv := mockVaultApi{}
+			mv.gv = func(ctx context.Context, secretPath string, version int) (*vault.KVSecret, error) {
+				t.Helper()
+				if secretPath != "some/other/foo2" {
+					t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
+				}
+				return nil, nil
+			}
+			return mv
 		},
 			func() func() {
 				os.Setenv("VAULT_TOKEN", "129378y1231283")
@@ -177,13 +236,15 @@ func TestVaultScenarios(t *testing.T) {
 			},
 		},
 		"vault rate limit incorrect": {"VAULT://secret___/some/other/foo2", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, "unable to initialize Vault client: error encountered setting up default configuration: VAULT_RATE_LIMIT was provided but incorrectly formatted", func(t *testing.T) hashiVaultApi {
-			return mockVaultApi(func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+			mv := mockVaultApi{}
+			mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
 				t.Helper()
 				if secretPath != "some/other/foo2" {
 					t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
 				}
 				return &vault.KVSecret{Data: nil}, nil
-			})
+			}
+			return mv
 		},
 			func() func() {
 				os.Setenv("VAULT_TOKEN_INCORRECT", "")

@@ -60,7 +60,7 @@ func TestParseTokens(t *testing.T) {
 		},
 		"additional config specified but empty": {
 			*generator.NewConfig(),
-			`FOO://basjh/dskjuds/123`,
+			`FOO://basjh/dskjuds/123[]`,
 			generator.TokenConfigVars{
 				Token:   `FOO://basjh/dskjuds/123`,
 				Role:    ``,

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/dnitsch/configmanager/pkg/log"
@@ -21,6 +22,7 @@ type vaultHelper struct {
 
 type hashiVaultApi interface {
 	Get(ctx context.Context, secretPath string) (*vault.KVSecret, error)
+	GetVersion(ctx context.Context, secretPath string, version int) (*vault.KVSecret, error)
 }
 
 type VaultStore struct {
@@ -106,7 +108,7 @@ func (imp *VaultStore) getTokenValue(v *retrieveStrategy) (string, error) {
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
 
-	secret, err := imp.svc.Get(ctx, v.stripPrefix(imp.token, HashicorpVaultPrefix))
+	secret, err := imp.getSecret(ctx, v.stripPrefix(imp.token, HashicorpVaultPrefix), imp.config.Version)
 	if err != nil {
 		log.Errorf(implementationNetworkErr, HashicorpVaultPrefix, err, imp.token)
 		return "", err
@@ -124,6 +126,17 @@ func (imp *VaultStore) getTokenValue(v *retrieveStrategy) (string, error) {
 
 	log.Errorf("value retrieved but empty for token: %v", imp.token)
 	return "", nil
+}
+
+func (imp *VaultStore) getSecret(ctx context.Context, token string, version string) (*vault.KVSecret, error) {
+	if version != "" {
+		v, err := strconv.Atoi(version)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse version into an integer: %s", err.Error())
+		}
+		return imp.svc.GetVersion(ctx, token, v)
+	}
+	return imp.svc.Get(ctx, token)
 }
 
 func splitToken(token string) vaultHelper {
