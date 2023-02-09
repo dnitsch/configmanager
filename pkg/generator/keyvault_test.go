@@ -89,7 +89,7 @@ func (m mockAzKvSecretApi) GetSecret(ctx context.Context, name string, version s
 	return m(ctx, name, version, options)
 }
 
-func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
+func TestAzKeyVault(t *testing.T) {
 
 	tests := map[string]struct {
 		token      string
@@ -98,6 +98,16 @@ func Test_GetAzKeyVaultSecretVarHappy(t *testing.T) {
 		config     *GenVarsConfig
 	}{
 		"successVal": {"AZKVSECRET#/test-vault//token/1", tsuccessParam, func(t *testing.T) kvApi {
+			return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
+				t.Helper()
+				azKvCommonGetSecretChecker(t, name, "", "/token/1")
+				resp := azsecrets.GetSecretResponse{}
+				resp.Value = &tsuccessParam
+				return resp, nil
+			})
+		}, NewConfig().WithKeySeparator("|").WithTokenSeparator("#"),
+		},
+		"successVal with version": {"AZKVSECRET#/test-vault//token/1[version:123]", tsuccessParam, func(t *testing.T) kvApi {
 			return mockAzKvSecretApi(func(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
 				t.Helper()
 				azKvCommonGetSecretChecker(t, name, "", "/token/1")

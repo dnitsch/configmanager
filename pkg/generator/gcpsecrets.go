@@ -52,7 +52,7 @@ func (imp *GcpSecrets) getTokenValue(v *retrieveStrategy) (string, error) {
 		version = imp.config.Version
 	}
 
-	log.Infof("Getting Secret: %s @version: ", imp.token, version)
+	log.Infof("Getting Secret: %s @version: %s", imp.token, version)
 
 	input := &gcpsecretspb.AccessSecretVersionRequest{
 		Name: fmt.Sprintf("%s/versions/%s", v.stripPrefix(imp.token, GcpSecretsPrefix), version),
