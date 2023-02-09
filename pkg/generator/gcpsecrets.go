@@ -15,10 +15,11 @@ type gcpSecretsApi interface {
 }
 
 type GcpSecrets struct {
-	svc   gcpSecretsApi
-	ctx   context.Context
-	close func() error
-	token string
+	svc    gcpSecretsApi
+	ctx    context.Context
+	config TokenConfigVars
+	close  func() error
+	token  string
 }
 
 func NewGcpSecrets(ctx context.Context) (*GcpSecrets, error) {
@@ -37,18 +38,26 @@ func NewGcpSecrets(ctx context.Context) (*GcpSecrets, error) {
 }
 
 func (imp *GcpSecrets) setToken(token string) {
-	imp.token = token
+	ct := (GenVarsConfig{}).ParseTokenVars(token)
+	imp.config = ct
+	imp.token = ct.Token
 }
 
 func (imp *GcpSecrets) getTokenValue(v *retrieveStrategy) (string, error) {
 	defer imp.close()
-
 	log.Infof("%s", "Concrete implementation GcpSecrets")
-	log.Infof("Getting Secret: %s", imp.token)
+
+	version := "latest"
+	if imp.config.Version != "" {
+		version = imp.config.Version
+	}
+
+	log.Infof("Getting Secret: %s @version: %s", imp.token, version)
 
 	input := &gcpsecretspb.AccessSecretVersionRequest{
-		Name: fmt.Sprintf("%s/versions/latest", v.stripPrefix(imp.token, GcpSecretsPrefix)),
+		Name: fmt.Sprintf("%s/versions/%s", v.stripPrefix(imp.token, GcpSecretsPrefix), version),
 	}
+
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
 

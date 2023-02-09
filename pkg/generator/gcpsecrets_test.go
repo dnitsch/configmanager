@@ -79,6 +79,16 @@ func Test_GetGcpSecretVarHappy(t *testing.T) {
 			})
 		}, NewConfig().WithTokenSeparator("#").WithKeySeparator("|"),
 		},
+		"success with version": {"GCPSECRETS#/token/1[version:123]", "someValue", func(t *testing.T) gcpSecretsApi {
+			return mockGcpSecretsApi(func(ctx context.Context, req *gcpsecretspb.AccessSecretVersionRequest, opts ...gax.CallOption) (*gcpsecretspb.AccessSecretVersionResponse, error) {
+				t.Helper()
+				gcpSecretsGetChecker(t, req)
+				return &gcpsecretspb.AccessSecretVersionResponse{
+					Payload: &gcpsecretspb.SecretPayload{Data: []byte("someValue")},
+				}, nil
+			})
+		}, NewConfig().WithTokenSeparator("#").WithKeySeparator("|"),
+		},
 		"error": {"GCPSECRETS#/token/1", "unable to retrieve secret", func(t *testing.T) gcpSecretsApi {
 			return mockGcpSecretsApi(func(ctx context.Context, req *gcpsecretspb.AccessSecretVersionRequest, opts ...gax.CallOption) (*gcpsecretspb.AccessSecretVersionResponse, error) {
 				t.Helper()

@@ -14,13 +14,13 @@ type secretsMgrApi interface {
 }
 
 type SecretsMgr struct {
-	svc         secretsMgrApi
-	ctx         context.Context
-	tokenConfig TokenConfigVars
-	token       string
+	svc    secretsMgrApi
+	ctx    context.Context
+	config TokenConfigVars
+	token  string
 }
 
-func NewSecretsMgr(ctx context.Context, conf GenVarsConfig) (*SecretsMgr, error) {
+func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Errorf("unable to load SDK config, %v", err)
@@ -40,17 +40,25 @@ func NewSecretsMgr(ctx context.Context, conf GenVarsConfig) (*SecretsMgr, error)
 // }
 
 func (imp *SecretsMgr) setToken(token string) {
-	imp.token = token
+	ct := (GenVarsConfig{}).ParseTokenVars(token)
+	imp.config = ct
+	imp.token = ct.Token
 }
 
 func (imp *SecretsMgr) getTokenValue(v *retrieveStrategy) (string, error) {
 
 	log.Infof("%s", "Concrete implementation SecretsManager")
-	log.Infof("Getting Secret: %s", imp.token)
+
+	version := "AWSCURRENT"
+	if imp.config.Version != "" {
+		version = imp.config.Version
+	}
+
+	log.Infof("Getting Secret: %s @version: %s", imp.token, version)
 
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId:     aws.String(v.stripPrefix(imp.token, SecretMgrPrefix)),
-		VersionStage: aws.String("AWSCURRENT"),
+		VersionStage: aws.String(version),
 	}
 
 	ctx, cancel := context.WithCancel(imp.ctx)

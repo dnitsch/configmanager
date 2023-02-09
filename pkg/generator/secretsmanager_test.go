@@ -53,6 +53,16 @@ func Test_GetSecretMgr(t *testing.T) {
 			})
 		}, NewConfig(),
 		},
+		"success with version": {"AWSSECRETS#/token/1[version:123]", "|", "#", tsuccessParam, func(t *testing.T) secretsMgrApi {
+			return mockSecretsApi(func(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error) {
+				t.Helper()
+				awsSecretsMgrGetChecker(t, params)
+				return &secretsmanager.GetSecretValueOutput{
+					SecretString: &tsuccessSecret,
+				}, nil
+			})
+		}, NewConfig(),
+		},
 		"success with binary": {"AWSSECRETS#/token/1", "|", "#", tsuccessParam, func(t *testing.T) secretsMgrApi {
 			return mockSecretsApi(func(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error) {
 				t.Helper()
@@ -85,7 +95,7 @@ func Test_GetSecretMgr(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			tt.config.WithTokenSeparator(tt.tokenSeparator).WithKeySeparator(tt.keySeparator)
-			impl, _ := NewSecretsMgr(context.TODO(), *tt.config)
+			impl, _ := NewSecretsMgr(context.TODO())
 			impl.svc = tt.mockClient(t)
 			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
 
