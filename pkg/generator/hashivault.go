@@ -54,7 +54,7 @@ func NewVaultStore(ctx context.Context, token string, conf GenVarsConfig) (*Vaul
 	}
 
 	if strings.HasPrefix(os.Getenv("VAULT_TOKEN"), "aws_iam") {
-		awsclient, err := newVaultStoreWithAWSAuthIAM(client, conf.ParseTokenVars(token).Role)
+		awsclient, err := newVaultStoreWithAWSAuthIAM(client, tc.Role)
 		if err != nil {
 			return nil, err
 		}

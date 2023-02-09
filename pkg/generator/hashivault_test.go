@@ -3,7 +3,10 @@ package generator
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/dnitsch/configmanager/internal/testutils"
@@ -247,13 +250,8 @@ func TestVaultScenarios(t *testing.T) {
 			return mv
 		},
 			func() func() {
-				os.Setenv("VAULT_TOKEN_INCORRECT", "")
-				os.Setenv("VAULT_ADDR", "wrong://addr")
+				os.Setenv("VAULT_TOKEN", "")
 				os.Setenv("VAULT_RATE_LIMIT", "wrong")
-				// os.Setenv("AWS_ACCESS_KEY_ID", "1280qwed9u9nsc9fdsbv9gsfrd")
-				// os.Setenv("AWS_SECRET_ACCESS_KEY", "SED)SDVfdv0jfds08sdfgu09sd943tj4fELH/")
-				// os.Setenv("AWS_SESSION_TOKEN", "IQoJb3JpZ2luX2VjELH//////////wEaCWV1LXdlc3QtMiJIMEYCIQDPU6UGJ0...df.fdgdfg.dfg.gdf.dgf")
-				// os.Setenv("AWS_REGION", "eu-west-1")
 				return func() {
 					os.Clearenv()
 				}
@@ -292,19 +290,187 @@ func TestVaultScenarios(t *testing.T) {
 
 func TestAwsIamAuth(t *testing.T) {
 	ttests := map[string]struct {
-		token      string
-		conf       GenVarsConfig
-		expect     string
-		mockClient func(t *testing.T) hashiVaultApi
-		setupEnv   func() func()
+		token       string
+		conf        GenVarsConfig
+		expect      string
+		mockClient  func(t *testing.T) hashiVaultApi
+		mockHanlder func(t *testing.T) http.Handler
+		setupEnv    func(addr string) func()
 	}{
-		"test1": {
-			// objType: nil,
+		"aws_iam auth no role specified": {
+			"VAULT://secret___/some/other/foo2[version:1]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
+			"role provided is empty, EC2 auth not supported",
+			func(t *testing.T) hashiVaultApi {
+				mv := mockVaultApi{}
+				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+					t.Helper()
+					if secretPath != "some/other/foo2" {
+						t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
+					}
+					return &vault.KVSecret{Data: nil}, nil
+				}
+				return mv
+			},
+			func(t *testing.T) http.Handler {
+				return nil
+			},
+			func(_ string) func() {
+				os.Setenv("VAULT_TOKEN", "aws_iam")
+				os.Setenv("AWS_ACCESS_KEY_ID", "1280qwed9u9nsc9fdsbv9gsfrd")
+				os.Setenv("AWS_SECRET_ACCESS_KEY", "SED)SDVfdv0jfds08sdfgu09sd943tj4fELH/")
+				os.Setenv("AWS_SESSION_TOKEN", "IQoJb3JpZ2luX2VjELH//////////wEaCWV1LXdlc3QtMiJIMEYCIQDPU6UGJ0...df.fdgdfg.dfg.gdf.dgf")
+				os.Setenv("AWS_REGION", "eu-west-1")
+				return func() {
+					os.Clearenv()
+				}
+			},
+		},
+		"aws_iam auth incorrectly formatted request": {
+			"VAULT://secret___/some/other/foo2[version:1,role:not_a_role]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
+			`unable to login to AWS auth method: unable to log in to auth method: unable to log in with AWS auth: Error making API request.
+
+URL: PUT %s/v1/auth/aws/login
+Code: 400. Raw Message:
+
+incorrect values supplied`,
+			func(t *testing.T) hashiVaultApi {
+				mv := mockVaultApi{}
+				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+					t.Helper()
+					if secretPath != "some/other/foo2" {
+						t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
+					}
+					return &vault.KVSecret{Data: nil}, nil
+				}
+				return mv
+			},
+			func(t *testing.T) http.Handler {
+				mux := http.NewServeMux()
+				mux.HandleFunc("/v1/auth/aws/login", func(w http.ResponseWriter, r *http.Request) {
+
+					w.Header().Set("Content-Type", "application/json; charset=utf-8")
+					w.WriteHeader(400)
+					w.Write([]byte(`incorrect values supplied`))
+				})
+				return mux
+			},
+			func(addr string) func() {
+				os.Setenv("VAULT_TOKEN", "aws_iam")
+				os.Setenv("VAULT_ADDR", addr)
+				os.Setenv("AWS_ACCESS_KEY_ID", "1280qwed9u9nsc9fdsbv9gsfrd")
+				os.Setenv("AWS_SECRET_ACCESS_KEY", "SED)SDVfdv0jfds08sdfgu09sd943tj4fELH/")
+				os.Setenv("AWS_SESSION_TOKEN", "IQoJb3JpZ2luX2VjELH//////////wEaCWV1LXdlc3QtMiJIMEYCIQDPU6UGJ0...df.fdgdfg.dfg.gdf.dgf")
+				os.Setenv("AWS_REGION", "eu-west-1")
+				return func() {
+					os.Clearenv()
+				}
+			},
+		},
+		"aws_iam auth success": {
+			"VAULT://secret___/some/other/foo2[role:arn:aws:iam::1111111:role/i-orchestration]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
+			`{"foo2":"dsfsdf3454456"}`,
+			func(t *testing.T) hashiVaultApi {
+				mv := mockVaultApi{}
+				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+					t.Helper()
+					if secretPath != "some/other/foo2" {
+						t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
+					}
+					m := make(map[string]interface{})
+					m["foo2"] = "dsfsdf3454456"
+					return &vault.KVSecret{Data: m}, nil
+				}
+				return mv
+			},
+			func(t *testing.T) http.Handler {
+				mux := http.NewServeMux()
+				mux.HandleFunc("/v1/auth/aws/login", func(w http.ResponseWriter, r *http.Request) {
+
+					w.Header().Set("Content-Type", "application/json; charset=utf-8")
+					w.Write([]byte(`{"auth":{"client_token": "fooresddfasdsasad"}}`))
+				})
+				return mux
+			},
+			func(addr string) func() {
+				os.Setenv("VAULT_TOKEN", "aws_iam")
+				os.Setenv("VAULT_ADDR", addr)
+				os.Setenv("AWS_ACCESS_KEY_ID", "1280qwed9u9nsc9fdsbv9gsfrd")
+				os.Setenv("AWS_SECRET_ACCESS_KEY", "SED)SDVfdv0jfds08sdfgu09sd943tj4fELH/")
+				os.Setenv("AWS_SESSION_TOKEN", "IQoJb3JpZ2luX2VjELH//////////wEaCWV1LXdlc3QtMiJIMEYCIQDPU6UGJ0...df.fdgdfg.dfg.gdf.dgf")
+				os.Setenv("AWS_REGION", "eu-west-1")
+				return func() {
+					os.Clearenv()
+				}
+			},
+		},
+		"aws_iam auth no token returned": {
+			"VAULT://secret___/some/other/foo2[role:arn:aws:iam::1111111:role/i-orchestration]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
+			`unable to login to AWS auth method: response did not return ClientToken, client token not set`,
+			func(t *testing.T) hashiVaultApi {
+				mv := mockVaultApi{}
+				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+					t.Helper()
+					if secretPath != "some/other/foo2" {
+						t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
+					}
+					m := make(map[string]interface{})
+					m["foo2"] = "dsfsdf3454456"
+					return &vault.KVSecret{Data: m}, nil
+				}
+				return mv
+			},
+			func(t *testing.T) http.Handler {
+				mux := http.NewServeMux()
+				mux.HandleFunc("/v1/auth/aws/login", func(w http.ResponseWriter, r *http.Request) {
+
+					w.Header().Set("Content-Type", "application/json; charset=utf-8")
+					w.Write([]byte(`{"auth":{}}`))
+				})
+				return mux
+			},
+			func(addr string) func() {
+				os.Setenv("VAULT_TOKEN", "aws_iam")
+				os.Setenv("VAULT_ADDR", addr)
+				os.Setenv("AWS_ACCESS_KEY_ID", "1280qwed9u9nsc9fdsbv9gsfrd")
+				os.Setenv("AWS_SECRET_ACCESS_KEY", "SED)SDVfdv0jfds08sdfgu09sd943tj4fELH/")
+				os.Setenv("AWS_SESSION_TOKEN", "IQoJb3JpZ2luX2VjELH//////////wEaCWV1LXdlc3QtMiJIMEYCIQDPU6UGJ0...df.fdgdfg.dfg.gdf.dgf")
+				os.Setenv("AWS_REGION", "eu-west-1")
+				return func() {
+					os.Clearenv()
+				}
+			},
 		},
 	}
+
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
-			_ = tt
+			//
+			ts := httptest.NewServer(tt.mockHanlder(t))
+			tearDown := tt.setupEnv(ts.URL)
+			defer tearDown()
+			impl, err := NewVaultStore(context.TODO(), tt.token, tt.conf)
+			if err != nil {
+				// WHAT A CRAP way to do this...
+				if err.Error() != strings.Split(fmt.Sprintf(tt.expect, ts.URL), `%!`)[0] {
+					t.Errorf(testutils.TestPhraseWithContext, "aws iam auth", err.Error(), strings.Split(fmt.Sprintf(tt.expect, ts.URL), `%!`)[0])
+					t.Fatalf("failed to init hashivault, %v", err.Error())
+				}
+				return
+			}
+
+			impl.svc = tt.mockClient(t)
+			rs := newRetrieveStrategy(NewDefatultStrategy(), tt.conf)
+			rs.setImplementation(impl)
+			got, err := rs.getTokenValue()
+			if err != nil {
+				if err.Error() != tt.expect {
+					t.Errorf(testutils.TestPhrase, err.Error(), tt.expect)
+				}
+				return
+			}
+			if got != tt.expect {
+				t.Errorf(testutils.TestPhrase, got, tt.expect)
+			}
 		})
 	}
 }
