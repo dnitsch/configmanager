@@ -14,12 +14,13 @@ type secretsMgrApi interface {
 }
 
 type SecretsMgr struct {
-	svc   secretsMgrApi
-	ctx   context.Context
-	token string
+	svc         secretsMgrApi
+	ctx         context.Context
+	tokenConfig TokenConfigVars
+	token       string
 }
 
-func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
+func NewSecretsMgr(ctx context.Context, conf GenVarsConfig) (*SecretsMgr, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Errorf("unable to load SDK config, %v", err)
@@ -33,6 +34,10 @@ func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
 	}, nil
 
 }
+
+// func(imp *SecretsMgr) getTokenConfig() AdditionalVars {
+// 	return
+// }
 
 func (imp *SecretsMgr) setToken(token string) {
 	imp.token = token

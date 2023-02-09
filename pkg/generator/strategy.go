@@ -18,6 +18,8 @@ func newRetrieveStrategy(s genVarsStrategy, config GenVarsConfig) *retrieveStrat
 }
 
 type genVarsStrategy interface {
+	// getTokenConfig() AdditionalVars
+	// setTokenConfig(AdditionalVars)
 	getTokenValue(rs *retrieveStrategy) (s string, e error)
 	setToken(s string)
 }
@@ -51,18 +53,18 @@ func (rs *retrieveStrategy) RetrieveByToken(ctx context.Context, impl genVarsStr
 	return cr
 }
 
-func (rs *retrieveStrategy) SelectImplementation(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error) {
+func (rs *retrieveStrategy) SelectImplementation(ctx context.Context, prefix ImplementationPrefix, in string, config GenVarsConfig) (genVarsStrategy, error) {
 	switch prefix {
 	case SecretMgrPrefix:
-		return NewSecretsMgr(ctx)
+		return NewSecretsMgr(ctx, config)
 	case ParamStorePrefix:
 		return NewParamStore(ctx)
 	case AzKeyVaultSecretsPrefix:
-		return NewKvScrtStore(ctx, in, config.TokenSeparator(), config.KeySeparator())
+		return NewKvScrtStore(ctx, in, config)
 	case GcpSecretsPrefix:
 		return NewGcpSecrets(ctx)
 	case HashicorpVaultPrefix:
-		return NewVaultStore(ctx, in, config.TokenSeparator(), config.KeySeparator())
+		return NewVaultStore(ctx, in, config)
 	default:
 		return nil, fmt.Errorf("implementation not found for input string: %s", in)
 	}

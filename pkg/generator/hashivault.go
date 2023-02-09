@@ -24,42 +24,52 @@ type hashiVaultApi interface {
 }
 
 type VaultStore struct {
-	svc   hashiVaultApi
-	ctx   context.Context
-	token string
+	svc    hashiVaultApi
+	ctx    context.Context
+	config TokenConfigVars
+	token  string
 }
 
-func NewVaultStore(ctx context.Context, token, tokenSeparator, keySeparator string) (*VaultStore, error) {
+func NewVaultStore(ctx context.Context, token string, conf GenVarsConfig) (*VaultStore, error) {
 	var client *vault.Client
+
+	tc := conf.ParseTokenVars(token)
+
+	imp := &VaultStore{
+		ctx:    ctx,
+		config: tc,
+	}
+
 	config := vault.DefaultConfig()
-	vt := splitToken(stripPrefix(token, HashicorpVaultPrefix, tokenSeparator, keySeparator))
+
+	vt := splitToken(stripPrefix(tc.Token, HashicorpVaultPrefix, conf.TokenSeparator(), conf.KeySeparator()))
+
+	imp.token = vt.token
+
 	client, err := vault.NewClient(config)
 	if err != nil {
-		log.Errorf("unable to initialize Vault client: %v", err)
+		return nil, fmt.Errorf("unable to initialize Vault client: %v", err)
 	}
 
 	if strings.HasPrefix(os.Getenv("VAULT_TOKEN"), "aws_iam") {
-		awsclient, err := newVaultStoreWithAWSAuthIAM(client, "todo_get_from_token_or_other")
+		awsclient, err := newVaultStoreWithAWSAuthIAM(client, conf.ParseTokenVars(token).Role)
 		if err != nil {
 			return nil, err
 		}
 		client = awsclient
 	}
-
-	return &VaultStore{
-		svc:   client.KVv2(vt.path),
-		ctx:   ctx,
-		token: vt.token,
-	}, nil
+	imp.svc = client.KVv2(vt.path)
+	return imp, nil
 }
 
 // newVaultStoreWithAWSAuthIAM returns an initialised client with AWSIAMAuth
+// EC2 auth type is not supported currently
 func newVaultStoreWithAWSAuthIAM(client *vault.Client, role string) (*vault.Client, error) {
 	if len(role) < 1 {
 		return nil, fmt.Errorf("role provided is empty, EC2 auth not supported")
 	}
 	awsAuth, err := auth.NewAWSAuth(
-		auth.WithRole(role), // if not provided, Vault will fall back on looking for a role with the IAM role name if you're using the iam auth type, or the EC2 instance's AMI id if using the ec2 auth type
+		auth.WithRole(role),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize AWS auth method: %w", err)
@@ -118,8 +128,11 @@ func (imp *VaultStore) getTokenValue(v *retrieveStrategy) (string, error) {
 
 func splitToken(token string) vaultHelper {
 	vh := vaultHelper{}
-	s := strings.Split(strings.TrimPrefix(token, "/"), "/")
-	vh.token = strings.Join(s[1:], "/")
+	// split token to extract the mount path
+	s := strings.Split(strings.TrimPrefix(token, "/"), "___")
+	// grab token and trim prefix if slash
+	vh.token = strings.TrimPrefix(strings.Join(s[1:], ""), "/")
+	// assign mount path as extracted from input token
 	vh.path = s[0]
 	return vh
 }

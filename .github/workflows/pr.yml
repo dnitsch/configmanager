@@ -5,7 +5,7 @@ on:
     branches: [ master, main ]
 
 jobs:
-  set-deps-dotnet-poop-here:
+  set-version:
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/dotnet/sdk:6.0 
@@ -26,10 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: golang:1.19-bullseye
-    needs: set-deps-dotnet-poop-here
+    needs: set-version
     env:
       REVISION: $GITHUB_SHA
-      SEMVER: ${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
+      SEMVER: ${{ needs.set-version.outputs.semVer }}
     steps:
       - uses: actions/checkout@v3
       - name: install deps
@@ -54,6 +54,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # Generate a token on Sonarcloud.io, add it to the secrets of this repo with the name SONAR_TOKEN (Settings > Secrets > Actions > add new repository secret)
         with:
           args:             
-            -Dsonar.projectVersion=${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
+            -Dsonar.projectVersion=${{ needs.set-version.outputs.semVer }}
             -Dsonar.go.coverage.reportPaths=/github/workspace/.coverage/out
             -Dsonar.go.tests.reportPaths=/github/workspace/.coverage/report-junit.xml

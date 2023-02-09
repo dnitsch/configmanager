@@ -5,7 +5,7 @@ on:
     branches: [ master, main ]
 
 jobs:
-  set-deps-dotnet-poop-here:
+  set-version:
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/dotnet/sdk:6.0 
@@ -31,10 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: golang:1.19-bullseye
-    needs: set-deps-dotnet-poop-here
+    needs: set-version
     env:
-      SEMVER: ${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
-      GIT_TAG: ${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
+      SEMVER: ${{ needs.set-version.outputs.semVer }}
+      GIT_TAG: ${{ needs.set-version.outputs.semVer }}
       GOVCS: false
     steps:
       - uses: actions/checkout@v3
@@ -65,6 +65,6 @@ jobs:
           # Additional arguments for the sonarcloud scanner
           args:             
             # mandatory
-            -Dsonar.projectVersion=${{ needs.set-deps-dotnet-poop-here.outputs.semVer }}
+            -Dsonar.projectVersion=${{ needs.set-version.outputs.semVer }}
             -Dsonar.go.coverage.reportPaths=/github/workspace/.coverage/out
             -Dsonar.go.tests.reportPaths=/github/workspace/.coverage/report-junit.xml

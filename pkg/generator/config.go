@@ -1,10 +1,28 @@
 package generator
 
+import (
+	"regexp"
+	"strings"
+)
+
+// TokenConfigVars
+type TokenConfigVars struct {
+	Token string
+	// AWS IAM Role for Vault AWS IAM Auth
+	Role string
+	// where supported a version of the secret can be specified
+	//
+	// e.g. HashiVault or AWS SecretsManager
+	//
+	Version string
+}
+
 // GenVarsConfig defines the input config object to be passed
 type GenVarsConfig struct {
 	outpath        string
 	tokenSeparator string
 	keySeparator   string
+	// parseAdditionalVars func(token string) TokenConfigVars
 }
 
 // NewConfig
@@ -48,4 +66,27 @@ func (c *GenVarsConfig) TokenSeparator() string {
 // KeySeparator returns the keySeparator set in the config
 func (c *GenVarsConfig) KeySeparator() string {
 	return c.keySeparator
+}
+
+func (c GenVarsConfig) ParseTokenVars(token string) TokenConfigVars {
+	tc := TokenConfigVars{}
+	// strip anything in []
+	vars := regexp.MustCompile(`\[.+\]`)
+	rawVars := vars.FindString(token)
+	// extract [role:,version:]
+	if rawVars != "" {
+		role := regexp.MustCompile(`role:(.*?)(?:,|])`).FindStringSubmatch(rawVars)
+		if len(role) > 0 {
+			tc.Role = role[1]
+		}
+		version := regexp.MustCompile(`version:(.*?)(?:,|])`).FindStringSubmatch(rawVars)
+		if len(version) > 0 {
+			tc.Version = version[1]
+		}
+		tc.Token = strings.ReplaceAll(token, rawVars, "")
+		// tc.Role =
+		return tc
+	}
+	tc.Token = token
+	return tc
 }

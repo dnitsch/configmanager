@@ -170,7 +170,7 @@ type chanResp struct {
 
 type retrieveIface interface {
 	RetrieveByToken(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp
-	SelectImplementation(ctx context.Context, prefix ImplementationPrefix, in string, config *GenVarsConfig) (genVarsStrategy, error)
+	SelectImplementation(ctx context.Context, prefix ImplementationPrefix, in string, config GenVarsConfig) (genVarsStrategy, error)
 }
 
 // generate checks if any tokens found
@@ -191,15 +191,17 @@ func (c *GenVars) generate(rawMap map[string]string, rs retrieveIface) error {
 
 	wg.Add(initChanLen)
 	for token, prefix := range rawMap {
-		go func(a string, p ImplementationPrefix) {
+		// take value from config allocation on a per iteration basis
+		conf := c.Config()
+		go func(prfx ImplementationPrefix, tkn string, conf GenVarsConfig) {
 			defer wg.Done()
-			strategy, err := rs.SelectImplementation(c.ctx, p, a, c.Config())
+			strategy, err := rs.SelectImplementation(c.ctx, prfx, tkn, conf)
 			if err != nil {
 				outCh <- chanResp{err: err}
 				return
 			}
-			outCh <- rs.RetrieveByToken(c.ctx, strategy, p, a)
-		}(token, ImplementationPrefix(prefix))
+			outCh <- rs.RetrieveByToken(c.ctx, strategy, prfx, tkn)
+		}(ImplementationPrefix(prefix), token, *conf)
 	}
 
 	go func() {
