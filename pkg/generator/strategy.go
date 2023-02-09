@@ -56,7 +56,7 @@ func (rs *retrieveStrategy) RetrieveByToken(ctx context.Context, impl genVarsStr
 func (rs *retrieveStrategy) SelectImplementation(ctx context.Context, prefix ImplementationPrefix, in string, config GenVarsConfig) (genVarsStrategy, error) {
 	switch prefix {
 	case SecretMgrPrefix:
-		return NewSecretsMgr(ctx, config)
+		return NewSecretsMgr(ctx)
 	case ParamStorePrefix:
 		return NewParamStore(ctx)
 	case AzKeyVaultSecretsPrefix:

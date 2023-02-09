@@ -85,7 +85,7 @@ func Test_GetSecretMgr(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			tt.config.WithTokenSeparator(tt.tokenSeparator).WithKeySeparator(tt.keySeparator)
-			impl, _ := NewSecretsMgr(context.TODO(), *tt.config)
+			impl, _ := NewSecretsMgr(context.TODO())
 			impl.svc = tt.mockClient(t)
 			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
 

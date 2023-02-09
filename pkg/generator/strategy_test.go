@@ -100,7 +100,7 @@ func TestSelectImpl(t *testing.T) {
 			context.TODO(),
 			SecretMgrPrefix, "AWSSECRETS://foo/bar", (&GenVarsConfig{}).WithKeySeparator("|").WithTokenSeparator("://"),
 			func(t *testing.T, ctx context.Context, conf GenVarsConfig) genVarsStrategy {
-				imp, err := NewSecretsMgr(ctx, conf)
+				imp, err := NewSecretsMgr(ctx)
 				if err != nil {
 					t.Errorf(testutils.TestPhraseWithContext, "aws secrets init impl error", err.Error(), nil)
 				}
