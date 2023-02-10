@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/dnitsch/configmanager/internal/testutils"
@@ -515,6 +516,69 @@ func Test_RetrieveMarshalledJson(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, &tt.expect) {
 				t.Errorf(testutils.TestPhraseWithContext, "returned types do not deep equal", got, tt.expect)
+			}
+		})
+	}
+}
+
+func TestFindTokens(t *testing.T) {
+	ttests := map[string]struct {
+		input  string
+		expect []string
+	}{
+		"extract from text correctly": {
+			`Where does it come from?
+			Contrary to popular belief, 
+			Lorem Ipsum is AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj <= in middle of sentencenot simply random text.
+			It has roots in a piece of classical Latin literature from 45 
+			BC, making it over 2000 years old. Richard McClintock, a Latin professor at
+			 Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, c
+			 onsectetur, from a Lorem Ipsum passage , at the end of line => AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj
+			  and going through the cites of the word in c
+			 lassical literature, discovered the undoubtable source. Lorem Ipsum comes from secti
+			 ons in singles =>'AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj'1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil)
+			 in doubles => "AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj"
+			  by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular 
+			  during the  :=> embedded in text RenaissanceAWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj[] embedded in text <=: 
+			  The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.`,
+			[]string{
+				"AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj",
+				"AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj",
+				"AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj",
+				"AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj",
+				"AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj[]"},
+		},
+		"unknown implementation not picked up": {
+			`foo: AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj
+				bar: AWSPARAMSTR#bar/djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj[version:123]
+				unknown: GCPPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj`,
+			[]string{
+				"AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj",
+				"AWSPARAMSTR#bar/djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj[version:123]"},
+		},
+		"all implementations": {
+			`param: AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj
+			secretsmgr: AWSSECRETS#bar/djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj[version:123]
+			gcp: GCPSECRETS:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj
+			vault: VAULT:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj[]
+			som othere strufsd
+			azkv: AZKVSECRET:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj`,
+			[]string{
+				"GCPSECRETS:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj",
+				"AWSPARAMSTR:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj",
+				"AWSSECRETS#bar/djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj[version:123]",
+				"AZKVSECRET:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj",
+				"VAULT:///djsfsdkjvfjkhfdvibdfinjdsfnjvdsflj[]"},
+		},
+	}
+	for name, tt := range ttests {
+		t.Run(name, func(t *testing.T) {
+			got := FindTokens(tt.input)
+			sort.Strings(got)
+			sort.Strings(tt.expect)
+
+			if !reflect.DeepEqual(got, tt.expect) {
+				t.Errorf("input=(%q)\n\ngot: %v\n\nwant: %v", tt.input, got, tt.expect)
 			}
 		})
 	}
