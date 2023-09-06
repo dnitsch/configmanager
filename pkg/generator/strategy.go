@@ -20,7 +20,7 @@ func newRetrieveStrategy(s genVarsStrategy, config GenVarsConfig) *retrieveStrat
 type genVarsStrategy interface {
 	// getTokenConfig() AdditionalVars
 	// setTokenConfig(AdditionalVars)
-	getTokenValue(rs *retrieveStrategy) (s string, e error)
+	tokenVal(rs *retrieveStrategy) (s string, e error)
 	setToken(s string)
 }
 
@@ -33,7 +33,7 @@ func (rs *retrieveStrategy) setToken(s string) {
 }
 
 func (rs *retrieveStrategy) getTokenValue() (string, error) {
-	return rs.implementation.getTokenValue(rs)
+	return rs.implementation.tokenVal(rs)
 }
 
 // retrieveSpecificCh wraps around the specific strategy implementation

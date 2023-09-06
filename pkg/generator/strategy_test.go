@@ -18,7 +18,7 @@ type mockGenerate struct {
 
 func (m *mockGenerate) setToken(s string) {
 }
-func (m *mockGenerate) getTokenValue(rs *retrieveStrategy) (s string, e error) {
+func (m *mockGenerate) tokenVal(rs *retrieveStrategy) (s string, e error) {
 	return m.value, m.err
 }
 

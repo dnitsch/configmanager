@@ -311,7 +311,7 @@ type mockImpl struct {
 	err          error
 }
 
-func (m *mockImpl) getTokenValue(rs *retrieveStrategy) (s string, e error) {
+func (m *mockImpl) tokenVal(rs *retrieveStrategy) (s string, e error) {
 	return m.value, m.err
 }
 func (m *mockImpl) setToken(s string) {
