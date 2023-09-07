@@ -11,12 +11,15 @@ func NewDefatultStrategy() *DefaultStrategy {
 	return &DefaultStrategy{}
 }
 
-// this should never be used
-func (implmt *DefaultStrategy) setToken(token string) {}
+// setToken on default strategy
+func (implmt *DefaultStrategy) setToken(token string) {
+	// default strategy impl of setToken
+}
 
-// this should never be used
-func (implmt *DefaultStrategy) setValue(val string) {}
-
+// setValue on default strategy
+func (implmt *DefaultStrategy) setValue(val string) {
+	// default strategy impl of setValue
+}
 
 func (implmt *DefaultStrategy) tokenVal(v *retrieveStrategy) (string, error) {
 	return "", fmt.Errorf("default strategy does not implement token retrieval")
