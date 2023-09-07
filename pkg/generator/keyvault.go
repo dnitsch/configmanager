@@ -9,8 +9,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets"
-
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
@@ -67,7 +66,7 @@ func (implmt *KvScrtStore) setToken(token string) {
 	// no need to re-set it here
 }
 
-func (imp *KvScrtStore) getTokenValue(v *retrieveStrategy) (string, error) {
+func (imp *KvScrtStore) tokenVal(v *retrieveStrategy) (string, error) {
 	log.Infof("%s", "Concrete implementation AzKeyVault Secret")
 	log.Infof("AzKeyVault Token: %s", imp.token)
 

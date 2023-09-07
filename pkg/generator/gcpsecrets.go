@@ -43,7 +43,7 @@ func (imp *GcpSecrets) setToken(token string) {
 	imp.token = ct.Token
 }
 
-func (imp *GcpSecrets) getTokenValue(v *retrieveStrategy) (string, error) {
+func (imp *GcpSecrets) tokenVal(v *retrieveStrategy) (string, error) {
 	defer imp.close()
 	log.Infof("%s", "Concrete implementation GcpSecrets")
 

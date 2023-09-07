@@ -101,7 +101,7 @@ func (imp *VaultStore) setToken(token string) {
 // getTokenValue implements the underlying techonology
 // token retrieval and returns a stringified version
 // of the secret
-func (imp *VaultStore) getTokenValue(v *retrieveStrategy) (string, error) {
+func (imp *VaultStore) tokenVal(v *retrieveStrategy) (string, error) {
 	log.Infof("%s", "Concrete implementation HashiVault")
 	log.Infof("Getting Secret: %s", imp.token)
 

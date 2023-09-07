@@ -59,7 +59,7 @@ type GenVarsiface interface {
 }
 
 type muRawMap struct {
-	sync.RWMutex
+	mu       sync.RWMutex
 	tokenMap ParsedMap
 }
 
@@ -127,8 +127,8 @@ func (c *GenVars) Config() *GenVarsConfig {
 }
 
 func (c *GenVars) RawMap() ParsedMap {
-	c.rawMap.RLock()
-	defer c.rawMap.RUnlock()
+	c.rawMap.mu.RLock()
+	defer c.rawMap.mu.RUnlock()
 	// make a copy of the map
 	m := make(ParsedMap)
 	for k, v := range c.rawMap.tokenMap {
@@ -138,8 +138,8 @@ func (c *GenVars) RawMap() ParsedMap {
 }
 
 func (c *GenVars) AddRawMap(key, val string) {
-	c.rawMap.Lock()
-	defer c.rawMap.Unlock()
+	c.rawMap.mu.Lock()
+	defer c.rawMap.mu.Unlock()
 	c.rawMap.tokenMap[key] = c.keySeparatorLookup(key, val)
 }
 

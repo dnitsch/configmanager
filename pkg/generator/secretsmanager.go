@@ -45,7 +45,7 @@ func (imp *SecretsMgr) setToken(token string) {
 	imp.token = ct.Token
 }
 
-func (imp *SecretsMgr) getTokenValue(v *retrieveStrategy) (string, error) {
+func (imp *SecretsMgr) tokenVal(v *retrieveStrategy) (string, error) {
 
 	log.Infof("%s", "Concrete implementation SecretsManager")
 

@@ -40,7 +40,7 @@ func (imp *ParamStore) setToken(token string) {
 	imp.token = ct.Token
 }
 
-func (imp *ParamStore) getTokenValue(v *retrieveStrategy) (string, error) {
+func (imp *ParamStore) tokenVal(v *retrieveStrategy) (string, error) {
 	log.Infof("%s", "Concrete implementation ParameterStore")
 	log.Infof("ParamStore Token: %s", imp.token)
 
