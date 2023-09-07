@@ -56,7 +56,7 @@ func retrieveWithInputReplaced(input string, gv GenerateAPI) (string, error) {
 func FindTokens(input string) []string {
 	tokens := []string{}
 	for k := range generator.VarPrefix {
-		matches := regexp.MustCompile(`(?s)`+regexp.QuoteMeta(string(k))+`.(`+TERMINATING_CHAR+`+)`).FindAllString(input, -1)
+		matches := regexp.MustCompile(regexp.QuoteMeta(string(k))+`.(`+TERMINATING_CHAR+`+)`).FindAllString(input, -1)
 		tokens = append(tokens, matches...)
 	}
 	return tokens
