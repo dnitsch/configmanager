@@ -79,6 +79,6 @@ func (rs *retrieveStrategy) stripPrefix(in string, prefix ImplementationPrefix) 
 // stripPrefix
 func stripPrefix(in string, prefix ImplementationPrefix, tokenSeparator, keySeparator string) string {
 	t := in
-	b := regexp.MustCompile(fmt.Sprintf(`[%s].*`, keySeparator)).ReplaceAll([]byte(t), []byte(""))
-	return strings.Replace(string(b), fmt.Sprintf("%s%s", prefix, tokenSeparator), "", 1)
+	b := regexp.MustCompile(fmt.Sprintf(`[%s].*`, keySeparator)).ReplaceAllString(t, "")
+	return strings.Replace(b, fmt.Sprintf("%s%s", prefix, tokenSeparator), "", 1)
 }
