@@ -28,11 +28,9 @@ Currently supported variable and secrets implementations:
 - [AzureKeyvault Secrets](https://azure.microsoft.com/en-gb/products/key-vault/)
 	- Implementation Indicator: `AZKVSECRET`
 	- see [Special consideration for AZKVSECRET](#special-consideration-for-azkvsecret) around how to structure the token in this case.
-- [Azure TableStorage]()
-	- TODO: 
-	AZTABLESTORE://account/app1Config/db/config => `{host: foo.bar, port: 8891}`
-	AZTABLESTORE://account/app1Config/db/config|host => `foo.bar`
-
+- [Azure TableStorage](https://azure.microsoft.com/en-gb/products/storage/tables/)
+	- Implementation Indicator: `AZTABLESTORE`
+	- see [Special consideration for AZTABLESTORE](#special-consideration-for-azkvsecret) around how to structure the token in this case.
 - [GCP Secrets](https://cloud.google.com/secret-manager)
 	- Implementation Indicator: `GCPSECRETS`
 - [Hashicorp Vault](https://developer.hashicorp.com/vault/docs/secrets/kv)
@@ -181,6 +179,23 @@ For Azure KeyVault the first part of the token needs to be the name of the vault
 `AZKVSECRET#/test-vault/no-slash-token-1` ==> will use KeyVault implementation to retrieve the `no-slash-token-1` from a `test-vault`.
 
 > The preceeding slash to the vault name is optional - `AZKVSECRET#/test-vault/no-slash-token-1` and `AZKVSECRET#test-vault/no-slash-token-1` will both identify the vault of name `test-vault`
+
+### Special consideration for AZTABLESTORE
+
+The token itself must contain all of the following properties:
+
+- Storage account name [`STORAGE_ACCOUNT_NAME`]
+- Table Name [`TABLE_NAME`]
+- Partition Key [`PARTITION_KEY`]
+- Row Key [`ROW_KEY`]
+
+So that it would look like this `AZTABLESTORE://STORAGE_ACCOUNT_NAME/TABLE_NAME/PARTITION_KEY/ROW_KEY`
+
+All the usual token rules apply e.g. of `keySeparator`
+
+`AZTABLESTORE://account/app1Config/db/config` => `{host: foo.bar, port: 8891}`
+
+`AZTABLESTORE://account/app1Config/db/config|host` => `foo.bar`
 
 ### Special consideration for HashicorpVault
 
