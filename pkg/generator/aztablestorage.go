@@ -1,5 +1,5 @@
 /**
- * Azure KeyVault implementation
+ * Azure TableStore implementation
 **/
 package generator
 
@@ -29,8 +29,7 @@ type AzTableStore struct {
 	config TokenConfigVars
 }
 
-// NewAzTableStore returns a KvScrtStore
-// requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfully work
+// NewAzTableStore
 func NewAzTableStore(ctx context.Context, token string, conf GenVarsConfig) (*AzTableStore, error) {
 
 	ct := conf.ParseTokenVars(token)
