@@ -2,9 +2,15 @@ package generator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
+)
+
+var (
+	ErrRetrieveFailed       = errors.New("failed to retrieve config item")
+	ErrClientInitialization = errors.New("failed to initialize the client")
 )
 
 type retrieveStrategy struct {

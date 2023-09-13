@@ -22,6 +22,8 @@ const (
 	ParamStorePrefix ImplementationPrefix = "AWSPARAMSTR"
 	// Azure Key Vault Secrets prefix
 	AzKeyVaultSecretsPrefix ImplementationPrefix = "AZKVSECRET"
+	// Azure Key Vault Secrets prefix
+	AzTableStorePrefix ImplementationPrefix = "AZTABLESTORE"
 	// Hashicorp Vault prefix
 	HashicorpVaultPrefix ImplementationPrefix = "VAULT"
 	// GcpSecrets

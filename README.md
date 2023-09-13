@@ -28,6 +28,11 @@ Currently supported variable and secrets implementations:
 - [AzureKeyvault Secrets](https://azure.microsoft.com/en-gb/products/key-vault/)
 	- Implementation Indicator: `AZKVSECRET`
 	- see [Special consideration for AZKVSECRET](#special-consideration-for-azkvsecret) around how to structure the token in this case.
+- [Azure TableStorage]()
+	- TODO: 
+	AZTABLESTORE://account/app1Config/db/config => `{host: foo.bar, port: 8891}`
+	AZTABLESTORE://account/app1Config/db/config|host => `foo.bar`
+
 - [GCP Secrets](https://cloud.google.com/secret-manager)
 	- Implementation Indicator: `GCPSECRETS`
 - [Hashicorp Vault](https://developer.hashicorp.com/vault/docs/secrets/kv)

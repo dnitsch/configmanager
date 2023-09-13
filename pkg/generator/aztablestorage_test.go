@@ -1,0 +1,221 @@
+package generator
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+	"testing"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
+	"github.com/dnitsch/configmanager/internal/testutils"
+)
+
+func azTableStoreCommonChecker(t *testing.T, partitionKey, rowKey, expectedPartitionKey, expectedRowKey string) {
+	if partitionKey == "" {
+		t.Errorf("expect name to not be nil")
+	}
+	if partitionKey != expectedPartitionKey {
+		t.Errorf(testutils.TestPhrase, partitionKey, expectedPartitionKey)
+	}
+
+	if strings.Contains(partitionKey, string(AzKeyVaultSecretsPrefix)) {
+		t.Errorf("incorrectly stripped prefix")
+	}
+
+	if rowKey != expectedRowKey {
+		t.Errorf(testutils.TestPhrase, rowKey, expectedPartitionKey)
+	}
+}
+
+type mockAzTableStoreApi func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error)
+
+func (m mockAzTableStoreApi) GetEntity(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
+	return m(ctx, partitionKey, rowKey, options)
+}
+
+func Test_AzTableStore_Success(t *testing.T) {
+
+	tests := map[string]struct {
+		token      string
+		expect     string
+		mockClient func(t *testing.T) tableStoreApi
+		config     *GenVarsConfig
+	}{
+		"successVal": {"AZTABLESTORE#/test-account/table//token/1", tsuccessParam, func(t *testing.T) tableStoreApi {
+			return mockAzTableStoreApi(func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
+				t.Helper()
+				azTableStoreCommonChecker(t, partitionKey, rowKey, "token", "1")
+				resp := aztables.GetEntityResponse{}
+				resp.Value = []byte(tsuccessParam)
+				return resp, nil
+			})
+		}, NewConfig().WithKeySeparator("|").WithTokenSeparator("#"),
+		},
+		"successVal with :// token Separator": {"AZTABLESTORE:///test-account/table//token/1", tsuccessParam, func(t *testing.T) tableStoreApi {
+			return mockAzTableStoreApi(func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
+				t.Helper()
+				azTableStoreCommonChecker(t, partitionKey, rowKey, "token", "1")
+				resp := aztables.GetEntityResponse{}
+				resp.Value = []byte(tsuccessParam)
+				return resp, nil
+			})
+		}, NewConfig().WithKeySeparator("|").WithTokenSeparator("://"),
+		},
+		"successVal with keyseparator but no val returned": {"AZTABLESTORE#/test-account/table/token/1|somekey", tsuccessParam, func(t *testing.T) tableStoreApi {
+			return mockAzTableStoreApi(func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
+				t.Helper()
+				azTableStoreCommonChecker(t, partitionKey, rowKey, "token", "1")
+
+				resp := aztables.GetEntityResponse{}
+				resp.Value = nil
+				return resp, nil
+			})
+		},
+			NewConfig().WithKeySeparator("|").WithTokenSeparator("#"),
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			impl, err := NewAzTableStore(context.TODO(), tt.token, *tt.config)
+			if err != nil {
+				t.Errorf("failed to init aztablestore")
+			}
+
+			impl.svc = tt.mockClient(t)
+			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
+			rs.setImplementation(impl)
+			got, err := rs.getTokenValue()
+			if err != nil {
+				if err.Error() != tt.expect {
+					t.Errorf(testutils.TestPhrase, err.Error(), tt.expect)
+				}
+				return
+			}
+
+			if got != tt.expect {
+				t.Errorf(testutils.TestPhrase, got, tt.expect)
+			}
+		})
+	}
+}
+
+func Test_AzTableStore_Error(t *testing.T) {
+
+	tests := map[string]struct {
+		token      string
+		expect     error
+		mockClient func(t *testing.T) tableStoreApi
+		config     *GenVarsConfig
+	}{
+		"errored on token parsing to partiationKey": {"AZTABLESTORE#/test-vault/token/1|somekey", ErrIncorrectlyStructuredToken, func(t *testing.T) tableStoreApi {
+			return mockAzTableStoreApi(func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
+				t.Helper()
+				resp := aztables.GetEntityResponse{}
+				return resp, nil
+			})
+		},
+			NewConfig().WithKeySeparator("|").WithTokenSeparator("#"),
+		},
+		"errored on service method call": {"AZTABLESTORE#/test-account/table/token/ok", ErrRetrieveFailed, func(t *testing.T) tableStoreApi {
+			return mockAzTableStoreApi(func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
+				t.Helper()
+				resp := aztables.GetEntityResponse{}
+				return resp, fmt.Errorf("network error")
+			})
+		},
+			NewConfig().WithKeySeparator("|").WithTokenSeparator("#"),
+		},
+
+		"empty": {"AZTABLESTORE#/test-vault/token/1|somekey", ErrIncorrectlyStructuredToken, func(t *testing.T) tableStoreApi {
+			return mockAzTableStoreApi(func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
+				t.Helper()
+				resp := aztables.GetEntityResponse{}
+				return resp, nil
+			})
+		},
+			NewConfig().WithKeySeparator("|").WithTokenSeparator("#"),
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			impl, err := NewAzTableStore(context.TODO(), tt.token, *tt.config)
+			if err != nil {
+				t.Fatal("failed to init aztablestore")
+			}
+
+			impl.svc = tt.mockClient(t)
+			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
+			rs.setImplementation(impl)
+			if _, err := rs.getTokenValue(); !errors.Is(err, tt.expect) {
+				t.Errorf(testutils.TestPhrase, err.Error(), tt.expect)
+			}
+		})
+	}
+}
+
+func Test_fail_AzTable_Client_init(t *testing.T) {
+	// this is basically a wrap around test for the url.Parse method in the stdlib
+	// as that is what the client uses under the hood
+	_, err := NewAzTableStore(context.TODO(), "/%25%65%6e%301-._~/</partitionKey/rowKey", *NewConfig())
+	if err == nil {
+		t.Fatal("expected err to not be <nil>")
+	}
+	if !errors.Is(err, ErrClientInitialization) {
+		t.Fatalf(testutils.TestPhraseWithContext, "aztables client init", err.Error(), ErrClientInitialization.Error())
+	}
+}
+
+func Test_azSplitTokenTableStore(t *testing.T) {
+	tests := []struct {
+		name   string
+		token  string
+		expect azServiceHelper
+	}{
+		{
+			name:  "simple_with_preceding_slash",
+			token: "/test-account/tablename/somejsontest",
+			expect: azServiceHelper{
+				serviceUri: "https://test-account.table.core.windows.net/tablename",
+				token:      "somejsontest",
+			},
+		},
+		{
+			name:  "missing_initial_slash",
+			token: "test-account/tablename/somejsontest",
+			expect: azServiceHelper{
+				serviceUri: "https://test-account.table.core.windows.net/tablename",
+				token:      "somejsontest",
+			},
+		},
+		{
+			name:  "missing_initial_slash_multislash_secretname",
+			token: "test-account/tablename/some/json/test",
+			expect: azServiceHelper{
+				serviceUri: "https://test-account.table.core.windows.net/tablename",
+				token:      "some/json/test",
+			},
+		},
+		{
+			name:  "with_initial_slash_multislash_secretname",
+			token: "test-account/tablename//some/json/test",
+			expect: azServiceHelper{
+				serviceUri: "https://test-account.table.core.windows.net/tablename",
+				token:      "/some/json/test",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := azServiceFromToken(tt.token, "https://%s.table.core.windows.net/%s", 2)
+			if got.token != tt.expect.token {
+				t.Errorf(testutils.TestPhrase, tt.expect.token, got.token)
+			}
+			if got.serviceUri != tt.expect.serviceUri {
+				t.Errorf(testutils.TestPhrase, tt.expect.serviceUri, got.serviceUri)
+			}
+		})
+	}
+}

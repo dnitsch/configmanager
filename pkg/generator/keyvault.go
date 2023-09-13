@@ -5,8 +5,6 @@ package generator
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
@@ -24,12 +22,6 @@ type KvScrtStore struct {
 	config TokenConfigVars
 }
 
-// azVaultHelper provides a broken up string
-type azVaultHelper struct {
-	vaultUri string
-	token    string
-}
-
 // NewKvScrtStore returns a KvScrtStore
 // requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfully work
 func NewKvScrtStore(ctx context.Context, token string, conf GenVarsConfig) (*KvScrtStore, error) {
@@ -41,7 +33,7 @@ func NewKvScrtStore(ctx context.Context, token string, conf GenVarsConfig) (*KvS
 		config: ct,
 	}
 
-	vc := azSplitToken(stripPrefix(ct.Token, AzKeyVaultSecretsPrefix, conf.TokenSeparator(), conf.KeySeparator()))
+	vc := azServiceFromToken(stripPrefix(ct.Token, AzKeyVaultSecretsPrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.vault.azure.net", 1)
 	kv.token = vc.token
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
@@ -50,7 +42,7 @@ func NewKvScrtStore(ctx context.Context, token string, conf GenVarsConfig) (*KvS
 		return nil, err
 	}
 
-	c, err := azsecrets.NewClient(vc.vaultUri, cred, nil)
+	c, err := azsecrets.NewClient(vc.serviceUri, cred, nil)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -61,10 +53,8 @@ func NewKvScrtStore(ctx context.Context, token string, conf GenVarsConfig) (*KvS
 
 }
 
-func (implmt *KvScrtStore) setToken(token string) {
-	// setToken already happens in AzureKVClient in the constructor
-	// no need to re-set it here
-}
+// setToken already happens in AzureKVClient in the constructor
+func (implmt *KvScrtStore) setToken(token string) {}
 
 func (imp *KvScrtStore) tokenVal(v *retrieveStrategy) (string, error) {
 	log.Infof("%s", "Concrete implementation AzKeyVault Secret")
@@ -85,11 +75,4 @@ func (imp *KvScrtStore) tokenVal(v *retrieveStrategy) (string, error) {
 	}
 	log.Errorf("value retrieved but empty for token: %v", imp.token)
 	return "", nil
-}
-
-func azSplitToken(token string) azVaultHelper {
-	// ensure preceding slash is trimmed
-	splitToken := strings.Split(strings.TrimPrefix(token, "/"), "/")
-	vaultUri := fmt.Sprintf("https://%s.vault.azure.net", splitToken[0])
-	return azVaultHelper{vaultUri: vaultUri, token: strings.Join(splitToken[1:], "/")}
 }
