@@ -62,7 +62,7 @@ func Test_AzTableStore_Success(t *testing.T) {
 			})
 		}, NewConfig().WithKeySeparator("|").WithTokenSeparator("://"),
 		},
-		"successVal with keyseparator but no val returned": {"AZTABLESTORE#/test-account/table/token/1|somekey", tsuccessParam, func(t *testing.T) tableStoreApi {
+		"successVal with keyseparator but no val returned": {"AZTABLESTORE#/test-account/table/token/1|somekey", "", func(t *testing.T) tableStoreApi {
 			return mockAzTableStoreApi(func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
 				t.Helper()
 				azTableStoreCommonChecker(t, partitionKey, rowKey, "token", "1")
