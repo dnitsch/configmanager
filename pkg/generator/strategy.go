@@ -71,6 +71,8 @@ func (rs *retrieveStrategy) SelectImplementation(ctx context.Context, prefix Imp
 		return NewGcpSecrets(ctx)
 	case HashicorpVaultPrefix:
 		return NewVaultStore(ctx, in, config)
+	case AzTableStorePrefix:
+		return NewAzTableStore(ctx, in, config)
 	default:
 		return nil, fmt.Errorf("implementation not found for input string: %s", in)
 	}

@@ -42,7 +42,7 @@ var (
 	// default varPrefix used by the replacer function
 	// any token must beging with one of these else
 	// it will be skipped as not a replaceable token
-	VarPrefix = map[ImplementationPrefix]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true, GcpSecretsPrefix: true, HashicorpVaultPrefix: true}
+	VarPrefix = map[ImplementationPrefix]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true, GcpSecretsPrefix: true, HashicorpVaultPrefix: true, AzTableStorePrefix: true}
 )
 
 // Generatoriface describes the exported methods
