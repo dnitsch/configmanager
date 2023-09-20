@@ -101,6 +101,85 @@ func Test_AzTableStore_Success(t *testing.T) {
 	}
 }
 
+func Test_azstorage_with_value_property(t *testing.T) {
+	conf := NewConfig().WithKeySeparator("|").WithTokenSeparator("://")
+	ttests := map[string]struct {
+		token      string
+		expect     string
+		mockClient func(t *testing.T) tableStoreApi
+		config     *GenVarsConfig
+	}{
+		"return value property with json like object": {
+			"AZTABLESTORE:///test-account/table/partitionkey/rowKey|host",
+			"map[bool:true host:foo port:1234]",
+			func(t *testing.T) tableStoreApi {
+				return mockAzTableStoreApi(func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
+					t.Helper()
+					resp := aztables.GetEntityResponse{Value: []byte(`{"value":{"host":"foo","port":1234,"bool":true}}`)}
+					return resp, nil
+				})
+			},
+			conf,
+		},
+		"return value property with string only": {
+			"AZTABLESTORE:///test-account/table/partitionkey/rowKey",
+			"foo.bar.com",
+			func(t *testing.T) tableStoreApi {
+				return mockAzTableStoreApi(func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
+					t.Helper()
+					resp := aztables.GetEntityResponse{Value: []byte(`{"value":"foo.bar.com"}`)}
+					return resp, nil
+				})
+			},
+			conf,
+		},
+		"return value property with numeric only": {
+			"AZTABLESTORE:///test-account/table/partitionkey/rowKey",
+			"1234",
+			func(t *testing.T) tableStoreApi {
+				return mockAzTableStoreApi(func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
+					t.Helper()
+					resp := aztables.GetEntityResponse{Value: []byte(`{"value":1234}`)}
+					return resp, nil
+				})
+			},
+			conf,
+		},
+		"return value property with boolean only": {
+			"AZTABLESTORE:///test-account/table/partitionkey/rowKey",
+			"false",
+			func(t *testing.T) tableStoreApi {
+				return mockAzTableStoreApi(func(ctx context.Context, partitionKey string, rowKey string, options *aztables.GetEntityOptions) (aztables.GetEntityResponse, error) {
+					t.Helper()
+					resp := aztables.GetEntityResponse{Value: []byte(`{"value":false}`)}
+					return resp, nil
+				})
+			},
+			conf,
+		},
+	}
+	for name, tt := range ttests {
+		t.Run(name, func(t *testing.T) {
+			impl, err := NewAzTableStore(context.TODO(), tt.token, *tt.config)
+			if err != nil {
+				t.Fatal("failed to init aztablestore")
+			}
+
+			impl.svc = tt.mockClient(t)
+			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
+			rs.setImplementation(impl)
+			got, err := rs.getTokenValue()
+			if err != nil {
+				t.Fatalf(testutils.TestPhrase, err.Error(), nil)
+			}
+
+			if got != tt.expect {
+				t.Errorf(testutils.TestPhraseWithContext, "AZ Table storage with value property inside entity", fmt.Sprintf("%q", got), fmt.Sprintf("%q", tt.expect))
+			}
+		})
+	}
+}
+
 func Test_AzTableStore_Error(t *testing.T) {
 
 	tests := map[string]struct {

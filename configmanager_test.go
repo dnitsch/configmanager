@@ -218,14 +218,12 @@ db:
 }
 
 type MockCfgMgr struct {
-	RetrieveWithInputReplacedTest func(input string, config generator.GenVarsConfig) (string, error)
+	retrieveInput func(input string, config generator.GenVarsConfig) (string, error)
+	// retrieve func(input string, config generator.GenVarsConfig) (string, error)
 }
 
 func (m *MockCfgMgr) RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error) {
-	if m.RetrieveWithInputReplacedTest != nil {
-		return m.RetrieveWithInputReplacedTest(input, config)
-	}
-	return "", nil
+	return m.retrieveInput(input, config)
 }
 
 func (m *MockCfgMgr) Insert(force bool) error {
@@ -280,7 +278,7 @@ func Test_KubeControllerSpecHelper(t *testing.T) {
 			},
 			cfmgr: func(t *testing.T) mockConfigManageriface {
 				mcm := &MockCfgMgr{}
-				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+				mcm.retrieveInput = func(input string, config generator.GenVarsConfig) (string, error) {
 					return `{"foo":"baz","bar":"quz"}`, nil
 				}
 				return mcm
@@ -298,7 +296,7 @@ func Test_KubeControllerSpecHelper(t *testing.T) {
 			},
 			cfmgr: func(t *testing.T) mockConfigManageriface {
 				mcm := &MockCfgMgr{}
-				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+				mcm.retrieveInput = func(input string, config generator.GenVarsConfig) (string, error) {
 					return `{"foo":"baz2","bar":"quz"}`, nil
 				}
 				return mcm
@@ -353,7 +351,7 @@ func Test_KubeControllerComplex(t *testing.T) {
 			},
 			cfmgr: func(t *testing.T) mockConfigManageriface {
 				mcm := &MockCfgMgr{}
-				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+				mcm.retrieveInput = func(input string, config generator.GenVarsConfig) (string, error) {
 					return `{"foo":"baz","bar":"quz", "lol":{"bla":"booo","another":{"number": 1235, "float": 123.09}}}`, nil
 				}
 				return mcm
@@ -407,7 +405,7 @@ func Test_YamlRetrieveMarshalled(t *testing.T) {
 			},
 			cfmgr: func(t *testing.T) mockConfigManageriface {
 				mcm := &MockCfgMgr{}
-				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+				mcm.retrieveInput = func(input string, config generator.GenVarsConfig) (string, error) {
 					return `{"foo":"baz","bar":"quz", "lol":{"bla":"booo","another":{"number": 1235, "float": 123.09}}}`, nil
 				}
 				return mcm
@@ -426,7 +424,7 @@ func Test_YamlRetrieveMarshalled(t *testing.T) {
 			},
 			cfmgr: func(t *testing.T) mockConfigManageriface {
 				mcm := &MockCfgMgr{}
-				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+				mcm.retrieveInput = func(input string, config generator.GenVarsConfig) (string, error) {
 					return `{"foo":"baz","bar":"quz", "lol":{"bla":"","another":{"number": 0, "float": 0}}}`, nil
 				}
 				return mcm
@@ -443,6 +441,58 @@ func Test_YamlRetrieveMarshalled(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, &tt.expect) {
 				t.Errorf(testutils.TestPhraseWithContext, "returned types do not deep equal", got, tt.expect)
+			}
+		})
+	}
+}
+
+func Test_YamlRetrieveMarshalled_errored(t *testing.T) {
+	tests := []struct {
+		name     string
+		testType *testNestedStruct
+		expect   error
+		cfmgr    func(t *testing.T) mockConfigManageriface
+	}{
+		{
+			name: "complex struct - complete",
+			testType: &testNestedStruct{
+				Foo: testTokenAWS,
+				Bar: "quz",
+				Lol: testLol{
+					Bla: "booo",
+					Another: testAnotherNEst{
+						Number: 1235,
+						Float:  123.09,
+					},
+				},
+			},
+			// expect: testNestedStruct{
+			// 	Foo: "baz",
+			// 	Bar: "quz",
+			// 	Lol: testLol{
+			// 		Bla: "booo",
+			// 		Another: testAnotherNEst{
+			// 			Number: 1235,
+			// 			Float:  123.09,
+			// 		},
+			// 	},
+			// },
+			cfmgr: func(t *testing.T) mockConfigManageriface {
+				mcm := &MockCfgMgr{}
+				mcm.retrieveInput = func(input string, config generator.GenVarsConfig) (string, error) {
+					return ``, fmt.Errorf("%s", "error decoding")
+				}
+				return mcm
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := generator.NewConfig().WithTokenSeparator("://")
+
+			_, err := RetrieveMarshalledYaml(tt.testType, tt.cfmgr(t), *config)
+			if err == nil {
+				t.Errorf(testutils.TestPhrase, nil, err.Error())
 			}
 		})
 	}
@@ -481,7 +531,7 @@ func Test_RetrieveMarshalledJson(t *testing.T) {
 			},
 			cfmgr: func(t *testing.T) mockConfigManageriface {
 				mcm := &MockCfgMgr{}
-				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+				mcm.retrieveInput = func(input string, config generator.GenVarsConfig) (string, error) {
 					return `{"foo":"baz","bar":"quz", "lol":{"bla":"booo","another":{"number": 1235, "float": 123.09}}}`, nil
 				}
 				return mcm
@@ -500,7 +550,7 @@ func Test_RetrieveMarshalledJson(t *testing.T) {
 			},
 			cfmgr: func(t *testing.T) mockConfigManageriface {
 				mcm := &MockCfgMgr{}
-				mcm.RetrieveWithInputReplacedTest = func(input string, config generator.GenVarsConfig) (string, error) {
+				mcm.retrieveInput = func(input string, config generator.GenVarsConfig) (string, error) {
 					return `{"foo":"baz","bar":"quz", "lol":{"bla":"","another":{"number": 0, "float": 0}}}`, nil
 				}
 				return mcm

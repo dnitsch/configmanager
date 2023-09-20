@@ -186,8 +186,15 @@ The token itself must contain all of the following properties:
 
 - Storage account name [`STORAGE_ACCOUNT_NAME`]
 - Table Name [`TABLE_NAME`]
+	- > It might make sense to make this table global to the domain or project 
 - Partition Key [`PARTITION_KEY`]
+	- > This could correspond to the component/service name
 - Row Key [`ROW_KEY`]
+	- > This could correspond to the property itself a group of properties 
+	- > e.g. `AZTABLESTORE://globalconfigstorageaccount/domainXyz/serviceXyz/db` => `{"value":{"host":"foo","port":1234,"enabled":true}}`
+
+> NOTE: if you store a more complex object inside a top level `value` property, this will also work for simple properties.
+> NOTE2: it will continue to work the same way for keyseparator.
 
 So that it would look like this `AZTABLESTORE://STORAGE_ACCOUNT_NAME/TABLE_NAME/PARTITION_KEY/ROW_KEY`
 

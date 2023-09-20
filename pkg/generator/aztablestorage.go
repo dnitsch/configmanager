@@ -5,6 +5,7 @@ package generator
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -62,6 +63,11 @@ func NewAzTableStore(ctx context.Context, token string, conf GenVarsConfig) (*Az
 // setToken already happens in the constructor
 func (implmt *AzTableStore) setToken(token string) {}
 
+// tokenVal in AZ table storage if an Entity contains the `value` property
+// we attempt to extract it and return.
+//
+// From this point then normal rules of configmanager apply,
+// including keySeperator and lookup.
 func (imp *AzTableStore) tokenVal(v *retrieveStrategy) (string, error) {
 	log.Info("Concrete implementation AzTableSTore")
 	log.Infof("AzTableSTore Token: %s", imp.token)
@@ -77,10 +83,16 @@ func (imp *AzTableStore) tokenVal(v *retrieveStrategy) (string, error) {
 
 	s, err := imp.svc.GetEntity(ctx, pKey, rKey, &aztables.GetEntityOptions{})
 	if err != nil {
-		log.Errorf(implementationNetworkErr, AzKeyVaultSecretsPrefix, err, imp.token)
-		return "", fmt.Errorf(implementationNetworkErr+" %w", AzKeyVaultSecretsPrefix, err, imp.token, ErrRetrieveFailed)
+		log.Errorf(implementationNetworkErr, AzTableStorePrefix, err, imp.token)
+		return "", fmt.Errorf(implementationNetworkErr+" %w", AzTableStorePrefix, err, imp.token, ErrRetrieveFailed)
 	}
-	if s.Value != nil {
+	if len(s.Value) > 0 {
+		// check for `value` property in entity
+		checkVal := make(map[string]interface{})
+		json.Unmarshal(s.Value, &checkVal)
+		if checkVal["value"] != nil {
+			return fmt.Sprintf("%v", checkVal["value"]), nil
+		}
 		return string(s.Value), nil
 	}
 	log.Errorf("value retrieved but empty for token: %v", imp.token)
@@ -101,7 +113,7 @@ func azTableStoreTokenSplitter(token string) (
 
 // Generic Azure Service Init Helpers
 //
-// azTableStoreHelper returns a service URI and the stripped token
+// azServiceHelper returns a service URI and the stripped token
 type azServiceHelper struct {
 	serviceUri string
 	token      string
