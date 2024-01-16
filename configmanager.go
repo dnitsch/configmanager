@@ -98,12 +98,12 @@ type CMRetrieveWithInputReplacediface interface {
 	RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error)
 }
 
-// @deprecated
-// left for compatibility
 // KubeControllerSpecHelper is a helper method, it marshalls an input value of that type into a string and passes it into the relevant configmanger retrieve method
-// and returns the unmarshalled object back
+// and returns the unmarshalled object back.
 //
-// It accepts a DI of configmanager and the config (for testability) to replace all occurences of replaceable tokens inside a Marshalled string of that type
+// # It accepts a DI of configmanager and the config (for testability) to replace all occurences of replaceable tokens inside a Marshalled string of that type
+//
+// Deprecated: Left for compatibility reasons
 func KubeControllerSpecHelper[T any](inputType T, cm CMRetrieveWithInputReplacediface, config generator.GenVarsConfig) (*T, error) {
 	outType := new(T)
 	rawBytes, err := json.Marshal(inputType)
