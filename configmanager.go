@@ -25,6 +25,7 @@ func (c *ConfigManager) Retrieve(tokens []string, config generator.GenVarsConfig
 	return retrieve(tokens, gv)
 }
 
+// GenerateAPI
 type GenerateAPI interface {
 	Generate(tokens []string) (generator.ParsedMap, error)
 }
@@ -34,7 +35,7 @@ func retrieve(tokens []string, gv GenerateAPI) (generator.ParsedMap, error) {
 }
 
 // RetrieveWithInputReplaced parses given input against all possible token strings
-// using regex to grab a list of found tokens in the given string and return the replaced string
+// using regex to grab a list of found tokens in the given string and returns the replaced string
 func (c *ConfigManager) RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error) {
 	gv := generator.NewGenerator().WithConfig(&config)
 	return retrieveWithInputReplaced(input, gv)

@@ -54,7 +54,7 @@ func NewKvScrtStore(ctx context.Context, token string, conf GenVarsConfig) (*KvS
 }
 
 // setToken already happens in AzureKVClient in the constructor
-func (implmt *KvScrtStore) setToken(token string) {}
+func (implmt *KvScrtStore) setTokenVal(token string) {}
 
 func (imp *KvScrtStore) tokenVal(v *retrieveStrategy) (string, error) {
 	log.Infof("%s", "Concrete implementation AzKeyVault Secret")

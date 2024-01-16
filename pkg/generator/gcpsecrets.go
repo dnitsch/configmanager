@@ -37,7 +37,7 @@ func NewGcpSecrets(ctx context.Context) (*GcpSecrets, error) {
 	}, nil
 }
 
-func (imp *GcpSecrets) setToken(token string) {
+func (imp *GcpSecrets) setTokenVal(token string) {
 	ct := (GenVarsConfig{}).ParseTokenVars(token)
 	imp.config = ct
 	imp.token = ct.Token

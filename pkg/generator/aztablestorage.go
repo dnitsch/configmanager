@@ -61,7 +61,7 @@ func NewAzTableStore(ctx context.Context, token string, conf GenVarsConfig) (*Az
 }
 
 // setToken already happens in the constructor
-func (implmt *AzTableStore) setToken(token string) {}
+func (implmt *AzTableStore) setTokenVal(token string) {}
 
 // tokenVal in AZ table storage if an Entity contains the `value` property
 // we attempt to extract it and return.

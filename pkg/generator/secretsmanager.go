@@ -35,7 +35,7 @@ func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
 
 }
 
-func (imp *SecretsMgr) setToken(token string) {
+func (imp *SecretsMgr) setTokenVal(token string) {
 	ct := (GenVarsConfig{}).ParseTokenVars(token)
 	imp.config = ct
 	imp.token = ct.Token
