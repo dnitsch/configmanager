@@ -318,11 +318,11 @@ func (m *mockImpl) setTokenVal(s string) {
 	m.token = s
 }
 
-func Test_generate(t *testing.T) {
+func Test_generate_rawmap_of_tokens_mapped_to_values(t *testing.T) {
 	ttests := map[string]struct {
-		rawMap func(t *testing.T) map[string]string
-		rs     func(t *testing.T) retrieveIface
-		expect string
+		rawMap    func(t *testing.T) map[string]string
+		rs        func(t *testing.T) retrieveIface
+		expectMap func() map[string]string
 	}{
 		"success": {
 			func(t *testing.T) map[string]string {
@@ -342,7 +342,11 @@ func Test_generate(t *testing.T) {
 						return &mockImpl{"foo", "bar", nil}, nil
 					}}
 			},
-			"",
+			func() map[string]string {
+				rm := make(map[string]string)
+				rm["foo"] = "bar"
+				return rm
+			},
 		},
 		// as the method swallows errors at the moment this is not very useful
 		"error in implementation": {
@@ -362,7 +366,10 @@ func Test_generate(t *testing.T) {
 						return &mockImpl{"foo", "bar", nil}, nil
 					}}
 			},
-			"unable to retrieve",
+			func() map[string]string {
+				rm := make(map[string]string)
+				return rm
+			},
 		},
 		"error in imp selection": {
 			func(t *testing.T) map[string]string {
@@ -381,22 +388,19 @@ func Test_generate(t *testing.T) {
 						return nil, fmt.Errorf("implementation not found for input string: %s", in)
 					}}
 			},
-			"implementation not found for input string: foo",
+			func() map[string]string {
+				rm := make(map[string]string)
+				return rm
+			},
 		},
 	}
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
 			generator := newGenVars()
-			err := generator.generate(tt.rawMap(t), tt.rs(t))
-			if err != nil {
-				if err.Error() != tt.expect {
-					t.Errorf(testutils.TestPhrase, err, tt.expect)
-				}
-				return
-			}
+			generator.generate(tt.rawMap(t), tt.rs(t))
 			got := generator.RawMap()
-			if !(len(got) > 0) {
-				t.Errorf(testutils.TestPhrase, len(got), "1 or more keys")
+			if len(got) != len(tt.expectMap()) {
+				t.Errorf(testutils.TestPhraseWithContext, "generated raw map did not match", len(got), len(tt.expectMap()))
 			}
 		})
 	}
@@ -427,21 +431,3 @@ func TestGenerate(t *testing.T) {
 		})
 	}
 }
-
-// func TestFlushtToFile(t *testing.T) {
-// 	ttests := map[string]struct {
-// 		objType	any
-
-// 	}{
-// 		"test1":
-// 		{
-// 			objType: nil,
-
-// 		},
-// 	}
-// 	for name, tt := range ttests {
-// 		t.Run(name, func(t *testing.T) {
-
-// 		})
-// 	}
-// }
