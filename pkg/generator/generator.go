@@ -22,6 +22,8 @@ const (
 	ParamStorePrefix ImplementationPrefix = "AWSPARAMSTR"
 	// Azure Key Vault Secrets prefix
 	AzKeyVaultSecretsPrefix ImplementationPrefix = "AZKVSECRET"
+	// Azure Key Vault Secrets prefix
+	AzTableStorePrefix ImplementationPrefix = "AZTABLESTORE"
 	// Hashicorp Vault prefix
 	HashicorpVaultPrefix ImplementationPrefix = "VAULT"
 	// GcpSecrets
@@ -40,7 +42,7 @@ var (
 	// default varPrefix used by the replacer function
 	// any token must beging with one of these else
 	// it will be skipped as not a replaceable token
-	VarPrefix = map[ImplementationPrefix]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true, GcpSecretsPrefix: true, HashicorpVaultPrefix: true}
+	VarPrefix = map[ImplementationPrefix]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true, GcpSecretsPrefix: true, HashicorpVaultPrefix: true, AzTableStorePrefix: true}
 )
 
 // Generatoriface describes the exported methods
@@ -215,6 +217,8 @@ func (c *GenVars) generate(rawMap map[string]string, rs retrieveIface) error {
 		if cr.err != nil {
 			log.Debugf("cr.err %v, for token: %s", cr.err, cr.key)
 			errors = append(errors, cr.err)
+			// Skip adding not found key to the RawMap
+			continue
 		}
 		c.AddRawMap(cr.key, cr.value)
 	}

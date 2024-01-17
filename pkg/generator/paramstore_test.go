@@ -103,7 +103,7 @@ func Test_GetParamStore(t *testing.T) {
 			}
 			impl.svc = tt.mockClient(t)
 			rs.setImplementation(impl)
-			rs.setToken(tt.token)
+			rs.setTokenVal(tt.token)
 			got, err := rs.getTokenValue()
 			if err != nil {
 				if err.Error() != tt.expect {

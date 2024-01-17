@@ -12,7 +12,7 @@ func NewDefatultStrategy() *DefaultStrategy {
 }
 
 // setToken on default strategy
-func (implmt *DefaultStrategy) setToken(token string) {}
+func (implmt *DefaultStrategy) setTokenVal(token string) {}
 
 // setValue on default strategy
 func (implmt *DefaultStrategy) setValue(val string) {}

@@ -34,7 +34,7 @@ func NewParamStore(ctx context.Context) (*ParamStore, error) {
 	}, nil
 }
 
-func (imp *ParamStore) setToken(token string) {
+func (imp *ParamStore) setTokenVal(token string) {
 	ct := (GenVarsConfig{}).ParseTokenVars(token)
 	imp.config = ct
 	imp.token = ct.Token

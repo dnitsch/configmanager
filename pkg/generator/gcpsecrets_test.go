@@ -126,7 +126,7 @@ func Test_GetGcpSecretVarHappy(t *testing.T) {
 			rs := newRetrieveStrategy(NewDefatultStrategy(), *tt.config)
 
 			rs.setImplementation(impl)
-			rs.setToken(tt.token)
+			rs.setTokenVal(tt.token)
 			got, err := rs.getTokenValue()
 
 			if err != nil {

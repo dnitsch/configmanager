@@ -2,9 +2,15 @@ package generator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
+)
+
+var (
+	ErrRetrieveFailed       = errors.New("failed to retrieve config item")
+	ErrClientInitialization = errors.New("failed to initialize the client")
 )
 
 type retrieveStrategy struct {
@@ -21,15 +27,15 @@ type genVarsStrategy interface {
 	// getTokenConfig() AdditionalVars
 	// setTokenConfig(AdditionalVars)
 	tokenVal(rs *retrieveStrategy) (s string, e error)
-	setToken(s string)
+	setTokenVal(s string)
 }
 
 func (rs *retrieveStrategy) setImplementation(strategy genVarsStrategy) {
 	rs.implementation = strategy
 }
 
-func (rs *retrieveStrategy) setToken(s string) {
-	rs.implementation.setToken(s)
+func (rs *retrieveStrategy) setTokenVal(s string) {
+	rs.implementation.setTokenVal(s)
 }
 
 func (rs *retrieveStrategy) getTokenValue() (string, error) {
@@ -43,7 +49,7 @@ func (rs *retrieveStrategy) RetrieveByToken(ctx context.Context, impl genVarsStr
 	cr.err = nil
 	cr.key = in
 	rs.setImplementation(impl)
-	rs.setToken(in)
+	rs.setTokenVal(in)
 	s, err := rs.getTokenValue()
 	if err != nil {
 		cr.err = err
@@ -65,6 +71,8 @@ func (rs *retrieveStrategy) SelectImplementation(ctx context.Context, prefix Imp
 		return NewGcpSecrets(ctx)
 	case HashicorpVaultPrefix:
 		return NewVaultStore(ctx, in, config)
+	case AzTableStorePrefix:
+		return NewAzTableStore(ctx, in, config)
 	default:
 		return nil, fmt.Errorf("implementation not found for input string: %s", in)
 	}

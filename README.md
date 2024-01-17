@@ -28,6 +28,9 @@ Currently supported variable and secrets implementations:
 - [AzureKeyvault Secrets](https://azure.microsoft.com/en-gb/products/key-vault/)
 	- Implementation Indicator: `AZKVSECRET`
 	- see [Special consideration for AZKVSECRET](#special-consideration-for-azkvsecret) around how to structure the token in this case.
+- [Azure TableStorage](https://azure.microsoft.com/en-gb/products/storage/tables/)
+	- Implementation Indicator: `AZTABLESTORE`
+	- see [Special consideration for AZTABLESTORE](#special-consideration-for-aztablestore) around how to structure the token in this case.
 - [GCP Secrets](https://cloud.google.com/secret-manager)
 	- Implementation Indicator: `GCPSECRETS`
 - [Hashicorp Vault](https://developer.hashicorp.com/vault/docs/secrets/kv)
@@ -176,6 +179,28 @@ For Azure KeyVault the first part of the token needs to be the name of the vault
 `AZKVSECRET#/test-vault/no-slash-token-1` ==> will use KeyVault implementation to retrieve the `no-slash-token-1` from a `test-vault`.
 
 > The preceeding slash to the vault name is optional - `AZKVSECRET#/test-vault/no-slash-token-1` and `AZKVSECRET#test-vault/no-slash-token-1` will both identify the vault of name `test-vault`
+
+### Special consideration for AZTABLESTORE
+
+The token itself must contain all of the following properties, so that it would look like this `AZTABLESTORE://STORAGE_ACCOUNT_NAME/TABLE_NAME/PARTITION_KEY/ROW_KEY`:
+
+- Storage account name [`STORAGE_ACCOUNT_NAME`]
+- Table Name [`TABLE_NAME`]
+	- > It might make sense to make this table global to the domain or project 
+- Partition Key [`PARTITION_KEY`]
+	- > This could correspond to the component/service name
+- Row Key [`ROW_KEY`]
+	- > This could correspond to the property itself or a group of properties
+	- > e.g. `AZTABLESTORE://globalconfigstorageaccount/domainXyz/serviceXyz/db` => `{"value":{"host":"foo","port":1234,"enabled":true}}`
+	- > It will continue to work the same way with additional keyseparators inside values.
+
+> NOTE: if you store a more complex object inside a top level `value` property this will reduce the number of columns and normalize the table - **THE DATA INSIDE THE VALUE MUST BE JSON PARSEABLE**
+
+All the usual token rules apply e.g. of `keySeparator`
+
+`AZTABLESTORE://account/app1Config/db/config` => `{host: foo.bar, port: 8891}`
+
+`AZTABLESTORE://account/app1Config/db/config|host` => `foo.bar`
 
 ### Special consideration for HashicorpVault
 

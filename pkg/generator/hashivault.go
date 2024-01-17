@@ -91,7 +91,7 @@ func newVaultStoreWithAWSAuthIAM(client *vault.Client, role string) (*vault.Clie
 
 // setToken already happens in Vault constructor
 // no need to re-set it here
-func (imp *VaultStore) setToken(token string) {
+func (imp *VaultStore) setTokenVal(token string) {
 	// this happens inside the New func call
 	// due to the way the client needs to be
 	// initialised with a mountpath
