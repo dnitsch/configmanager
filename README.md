@@ -30,7 +30,7 @@ Currently supported variable and secrets implementations:
 	- see [Special consideration for AZKVSECRET](#special-consideration-for-azkvsecret) around how to structure the token in this case.
 - [Azure TableStorage](https://azure.microsoft.com/en-gb/products/storage/tables/)
 	- Implementation Indicator: `AZTABLESTORE`
-	- see [Special consideration for AZTABLESTORE](#special-consideration-for-azkvsecret) around how to structure the token in this case.
+	- see [Special consideration for AZTABLESTORE](#special-consideration-for-aztablestore) around how to structure the token in this case.
 - [GCP Secrets](https://cloud.google.com/secret-manager)
 	- Implementation Indicator: `GCPSECRETS`
 - [Hashicorp Vault](https://developer.hashicorp.com/vault/docs/secrets/kv)
@@ -182,7 +182,7 @@ For Azure KeyVault the first part of the token needs to be the name of the vault
 
 ### Special consideration for AZTABLESTORE
 
-The token itself must contain all of the following properties:
+The token itself must contain all of the following properties, so that it would look like this `AZTABLESTORE://STORAGE_ACCOUNT_NAME/TABLE_NAME/PARTITION_KEY/ROW_KEY`:
 
 - Storage account name [`STORAGE_ACCOUNT_NAME`]
 - Table Name [`TABLE_NAME`]
@@ -190,13 +190,11 @@ The token itself must contain all of the following properties:
 - Partition Key [`PARTITION_KEY`]
 	- > This could correspond to the component/service name
 - Row Key [`ROW_KEY`]
-	- > This could correspond to the property itself a group of properties 
+	- > This could correspond to the property itself or a group of properties
 	- > e.g. `AZTABLESTORE://globalconfigstorageaccount/domainXyz/serviceXyz/db` => `{"value":{"host":"foo","port":1234,"enabled":true}}`
+	- > It will continue to work the same way with additional keyseparators inside values.
 
-> NOTE: if you store a more complex object inside a top level `value` property, this will also work for simple properties.
-> NOTE2: it will continue to work the same way for keyseparator.
-
-So that it would look like this `AZTABLESTORE://STORAGE_ACCOUNT_NAME/TABLE_NAME/PARTITION_KEY/ROW_KEY`
+> NOTE: if you store a more complex object inside a top level `value` property this will reduce the number of columns and normalize the table - **THE DATA INSIDE THE VALUE MUST BE JSON PARSEABLE**
 
 All the usual token rules apply e.g. of `keySeparator`
 

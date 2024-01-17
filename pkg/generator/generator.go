@@ -217,6 +217,8 @@ func (c *GenVars) generate(rawMap map[string]string, rs retrieveIface) error {
 		if cr.err != nil {
 			log.Debugf("cr.err %v, for token: %s", cr.err, cr.key)
 			errors = append(errors, cr.err)
+			// Skip adding not found key to the RawMap
+			continue
 		}
 		c.AddRawMap(cr.key, cr.value)
 	}

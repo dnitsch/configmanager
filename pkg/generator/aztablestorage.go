@@ -99,8 +99,7 @@ func (imp *AzTableStore) tokenVal(v *retrieveStrategy) (string, error) {
 	return "", nil
 }
 
-func azTableStoreTokenSplitter(token string) (
-	partitionKey, rowKey string, err error) {
+func azTableStoreTokenSplitter(token string) (partitionKey, rowKey string, err error) {
 	splitToken := strings.Split(strings.TrimPrefix(token, "/"), "/")
 	if len(splitToken) < 2 {
 		return "", "", fmt.Errorf("token: %s - could not be correctly destructured to pluck the partition and row keys\n%w", token, ErrIncorrectlyStructuredToken)
@@ -111,8 +110,10 @@ func azTableStoreTokenSplitter(token string) (
 	return
 }
 
+/*
 // Generic Azure Service Init Helpers
-//
+*/
+
 // azServiceHelper returns a service URI and the stripped token
 type azServiceHelper struct {
 	serviceUri string
