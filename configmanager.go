@@ -27,6 +27,8 @@ func (c *ConfigManager) Retrieve(tokens []string, config generator.GenVarsConfig
 
 // GenerateAPI
 type GenerateAPI interface {
+	// Generate converts tokens to their
+	// values from the respective backing store
 	Generate(tokens []string) (generator.ParsedMap, error)
 }
 
@@ -187,4 +189,16 @@ func RetrieveUnmarshalledFromYaml[T any](input []byte, output *T, cm CMRetrieveW
 		return output, err
 	}
 	return output, nil
+}
+
+type InsertToken struct {
+	Token    string
+	Value    string
+	IsBase64 bool
+}
+
+// Insert accepts tuples of token:value object pairs
+func (c *ConfigManager) Insert(insertTokens []InsertToken) error {
+	
+	return nil
 }

@@ -87,8 +87,8 @@ type GenVars struct {
 type ParsedMap map[string]any
 
 // NewGenerator returns a new instance of Generator
-// with a default strategy pattern wil be overwritten
-// during the first run of a found tokens map
+// with a default strategy pattern, which wil be overwritten
+// during the first run of a found TokensMap
 func NewGenerator() *GenVars {
 	// defaultStrategy := NewDefatultStrategy()
 	return newGenVars()
