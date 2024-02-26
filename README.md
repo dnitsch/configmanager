@@ -1,5 +1,6 @@
 # Config Manager
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/dnitsch/configmanager.svg)](https://pkg.go.dev/github.com/dnitsch/configmanager)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dnitsch/configmanager)](https://goreportcard.com/report/github.com/dnitsch/configmanager)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=bugs)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
 [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=dnitsch_configmanager&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=dnitsch_configmanager)
