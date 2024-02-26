@@ -68,7 +68,7 @@ func (imp *GcpSecrets) tokenVal(v *retrieveStrategy) (string, error) {
 		return "", err
 	}
 	if result.Payload != nil {
-		return string(result.Payload.Data), nil
+		return string(result.GetPayload().GetData()), nil
 	}
 
 	log.Errorf("value retrieved but empty for token: %v", imp.token)
