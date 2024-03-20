@@ -32,6 +32,8 @@ Currently supported variable and secrets implementations:
 - [Azure TableStorage](https://azure.microsoft.com/en-gb/products/storage/tables/)
 	- Implementation Indicator: `AZTABLESTORE`
 	- see [Special consideration for AZTABLESTORE](#special-consideration-for-aztablestore) around how to structure the token in this case.
+- [Azure AppConfig](https://azure.microsoft.com/en-gb/products/app-configuration/)
+	- Implementation Indicator: `AZAPPCONF`
 - [GCP Secrets](https://cloud.google.com/secret-manager)
 	- Implementation Indicator: `GCPSECRETS`
 - [Hashicorp Vault](https://developer.hashicorp.com/vault/docs/secrets/kv)
