@@ -12,7 +12,7 @@ type TokenConfigVars struct {
 	Role string
 	// where supported a version of the secret can be specified
 	//
-	// e.g. HashiVault or AWS SecretsManager
+	// e.g. HashiVault or AWS SecretsManager or AzAppConfig Label
 	//
 	Version string
 }
@@ -68,7 +68,10 @@ func (c *GenVarsConfig) KeySeparator() string {
 	return c.keySeparator
 }
 
-func (c GenVarsConfig) ParseTokenVars(token string) TokenConfigVars {
+// ParseTokenVars extracts info from the token "metadata"
+//
+// All data inside the `[` `]` is considered metadata about the token
+func (c *GenVarsConfig) ParseTokenVars(token string) TokenConfigVars {
 	tc := TokenConfigVars{}
 	// strip anything in []
 	vars := regexp.MustCompile(`\[.*\]`)
@@ -79,6 +82,7 @@ func (c GenVarsConfig) ParseTokenVars(token string) TokenConfigVars {
 		if len(role) > 0 {
 			tc.Role = role[1]
 		}
+		// TODO: create aliases for version (e.g. label)
 		version := regexp.MustCompile(`version:(.*?)(?:,|])`).FindStringSubmatch(rawVars)
 		if len(version) > 0 {
 			tc.Version = version[1]

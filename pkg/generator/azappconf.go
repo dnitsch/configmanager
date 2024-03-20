@@ -58,9 +58,8 @@ func NewAzAppConf(ctx context.Context, token string, conf GenVarsConfig) (*AzApp
 // setTokenVal sets the token
 func (implmt *AzAppConf) setTokenVal(token string) {}
 
-// tokenVal in AZ table storage if an Entity contains the `value` property
-// we attempt to extract it and return.
-//
+// tokenVal in AZ App Config
+// label can be specified
 // From this point then normal rules of configmanager apply,
 // including keySeperator and lookup.
 func (imp *AzAppConf) tokenVal(v *retrieveStrategy) (string, error) {
@@ -70,7 +69,7 @@ func (imp *AzAppConf) tokenVal(v *retrieveStrategy) (string, error) {
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
 
-	s, err := imp.svc.GetSetting(ctx, imp.token, &azappconfig.GetSettingOptions{})
+	s, err := imp.svc.GetSetting(ctx, imp.token, &azappconfig.GetSettingOptions{Label: &imp.config.Version})
 	if err != nil {
 		log.Errorf(implementationNetworkErr, AzAppConfigPrefix, err, imp.token)
 		return "", fmt.Errorf("token: %s, error: %v. %w", imp.token, err, ErrServiceCallFailed)
