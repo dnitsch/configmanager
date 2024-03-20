@@ -28,13 +28,13 @@ func NewKvScrtStore(ctx context.Context, token string, conf GenVarsConfig) (*KvS
 
 	ct := conf.ParseTokenVars(token)
 
-	kv := &KvScrtStore{
+	backingStore := &KvScrtStore{
 		ctx:    ctx,
 		config: ct,
 	}
 
-	vc := azServiceFromToken(stripPrefix(ct.Token, AzKeyVaultSecretsPrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.vault.azure.net", 1)
-	kv.token = vc.token
+	srvInit := azServiceFromToken(stripPrefix(ct.Token, AzKeyVaultSecretsPrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.vault.azure.net", 1)
+	backingStore.token = srvInit.token
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
@@ -42,14 +42,14 @@ func NewKvScrtStore(ctx context.Context, token string, conf GenVarsConfig) (*KvS
 		return nil, err
 	}
 
-	c, err := azsecrets.NewClient(vc.serviceUri, cred, nil)
+	c, err := azsecrets.NewClient(srvInit.serviceUri, cred, nil)
 	if err != nil {
 		log.Error(err)
 		return nil, err
 	}
 
-	kv.svc = c
-	return kv, nil
+	backingStore.svc = c
+	return backingStore, nil
 
 }
 

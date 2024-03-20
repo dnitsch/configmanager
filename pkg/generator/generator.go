@@ -198,6 +198,8 @@ func (c *GenVars) generate(rawMap map[string]string, rs retrieveIface) error {
 	outCh := make(chan chanResp, initChanLen)
 
 	wg.Add(initChanLen)
+	// TODO: initialise the singleton serviceContainer
+	// pass into each goroutine
 	for token, prefix := range rawMap {
 		// take value from config allocation on a per iteration basis
 		conf := c.Config()

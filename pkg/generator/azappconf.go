@@ -67,8 +67,17 @@ func (imp *AzAppConf) tokenVal(v *retrieveStrategy) (string, error) {
 	log.Info("Concrete implementation AzAppConf")
 	log.Infof("AzAppConf Token: %s", imp.token)
 
-	_, cancel := context.WithCancel(imp.ctx)
+	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
 
+	s, err := imp.svc.GetSetting(ctx, imp.token, &azappconfig.GetSettingOptions{})
+	if err != nil {
+		log.Errorf(implementationNetworkErr, AzAppConfigPrefix, err, imp.token)
+		return "", fmt.Errorf("token: %s, error: %v. %w", imp.token, err, ErrServiceCallFailed)
+	}
+	if s.Value != nil {
+		return *s.Value, nil
+	}
+	log.Errorf("token: %v, %w", imp.token, ErrEmptyResponse)
 	return "", nil
 }

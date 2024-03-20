@@ -92,7 +92,8 @@ func TestSelectImpl(t *testing.T) {
 	}{
 		"success AWSSEcretsMgr": {
 			func() func() {
-				os.Setenv("AWS_PROFILE", "foo")
+				os.Setenv("AWS_ACCESS_KEY", "AAAAAAAAAAAAAAA")
+				os.Setenv("AWS_SECRET_ACCESS_KEY", "00000000000000000000111111111")
 				return func() {
 					os.Clearenv()
 				}
@@ -109,7 +110,8 @@ func TestSelectImpl(t *testing.T) {
 		},
 		"success AWSParamStore": {
 			func() func() {
-				os.Setenv("AWS_PROFILE", "foo")
+				os.Setenv("AWS_ACCESS_KEY", "AAAAAAAAAAAAAAA")
+				os.Setenv("AWS_SECRET_ACCESS_KEY", "00000000000000000000111111111")
 				return func() {
 					os.Clearenv()
 				}
@@ -181,7 +183,8 @@ func TestSelectImpl(t *testing.T) {
 		},
 		"default Error": {
 			func() func() {
-				os.Setenv("AWS_PROFILE", "foo")
+				os.Setenv("AWS_ACCESS_KEY", "AAAAAAAAAAAAAAA")
+				os.Setenv("AWS_SECRET_ACCESS_KEY", "00000000000000000000111111111")
 				return func() {
 					os.Clearenv()
 				}
