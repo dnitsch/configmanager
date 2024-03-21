@@ -24,6 +24,8 @@ const (
 	AzKeyVaultSecretsPrefix ImplementationPrefix = "AZKVSECRET"
 	// Azure Key Vault Secrets prefix
 	AzTableStorePrefix ImplementationPrefix = "AZTABLESTORE"
+	// Azure App Config prefix
+	AzAppConfigPrefix ImplementationPrefix = "AZAPPCONF"
 	// Hashicorp Vault prefix
 	HashicorpVaultPrefix ImplementationPrefix = "VAULT"
 	// GcpSecrets
@@ -42,7 +44,11 @@ var (
 	// default varPrefix used by the replacer function
 	// any token must beging with one of these else
 	// it will be skipped as not a replaceable token
-	VarPrefix = map[ImplementationPrefix]bool{SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true, GcpSecretsPrefix: true, HashicorpVaultPrefix: true, AzTableStorePrefix: true}
+	VarPrefix = map[ImplementationPrefix]bool{
+		SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true,
+		GcpSecretsPrefix: true, HashicorpVaultPrefix: true, AzTableStorePrefix: true,
+		AzAppConfigPrefix: true,
+	}
 )
 
 // Generatoriface describes the exported methods
@@ -192,6 +198,8 @@ func (c *GenVars) generate(rawMap map[string]string, rs retrieveIface) error {
 	outCh := make(chan chanResp, initChanLen)
 
 	wg.Add(initChanLen)
+	// TODO: initialise the singleton serviceContainer
+	// pass into each goroutine
 	for token, prefix := range rawMap {
 		// take value from config allocation on a per iteration basis
 		conf := c.Config()

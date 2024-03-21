@@ -7,9 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	yaml "gopkg.in/yaml.v3"
-
 	"github.com/dnitsch/configmanager/pkg/generator"
+	yaml "gopkg.in/yaml.v3"
 )
 
 const (

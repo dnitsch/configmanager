@@ -12,6 +12,7 @@ import (
 )
 
 func azTableStoreCommonChecker(t *testing.T, partitionKey, rowKey, expectedPartitionKey, expectedRowKey string) {
+	t.Helper()
 	if partitionKey == "" {
 		t.Errorf("expect name to not be nil")
 	}

@@ -16,8 +16,12 @@ type secretsMgrApi interface {
 type SecretsMgr struct {
 	svc    secretsMgrApi
 	ctx    context.Context
-	config TokenConfigVars
+	config *SecretsMgrConfig
 	token  string
+}
+
+type SecretsMgrConfig struct {
+	Version string `json:"version"`
 }
 
 func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
@@ -36,9 +40,11 @@ func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
 }
 
 func (imp *SecretsMgr) setTokenVal(token string) {
-	ct := (GenVarsConfig{}).ParseTokenVars(token)
-	imp.config = ct
-	imp.token = ct.Token
+	storeConf := &SecretsMgrConfig{}
+	initialToken := ParseMetadata(token, storeConf)
+
+	imp.config = storeConf
+	imp.token = initialToken
 }
 
 func (imp *SecretsMgr) tokenVal(v *retrieveStrategy) (string, error) {

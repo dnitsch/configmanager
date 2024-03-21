@@ -73,6 +73,8 @@ func (rs *retrieveStrategy) SelectImplementation(ctx context.Context, prefix Imp
 		return NewVaultStore(ctx, in, config)
 	case AzTableStorePrefix:
 		return NewAzTableStore(ctx, in, config)
+	case AzAppConfigPrefix:
+		return NewAzAppConf(ctx, in, config)
 	default:
 		return nil, fmt.Errorf("implementation not found for input string: %s", in)
 	}

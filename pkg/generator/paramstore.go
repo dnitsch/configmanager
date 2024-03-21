@@ -16,8 +16,12 @@ type paramStoreApi interface {
 type ParamStore struct {
 	svc    paramStoreApi
 	ctx    context.Context
-	config TokenConfigVars
+	config *ParamStrConfig
 	token  string
+}
+
+type ParamStrConfig struct {
+	// reserved for potential future use
 }
 
 func NewParamStore(ctx context.Context) (*ParamStore, error) {
@@ -35,9 +39,11 @@ func NewParamStore(ctx context.Context) (*ParamStore, error) {
 }
 
 func (imp *ParamStore) setTokenVal(token string) {
-	ct := (GenVarsConfig{}).ParseTokenVars(token)
-	imp.config = ct
-	imp.token = ct.Token
+	storeConf := &ParamStrConfig{}
+	initialToken := ParseMetadata(token, storeConf)
+
+	imp.config = storeConf
+	imp.token = initialToken
 }
 
 func (imp *ParamStore) tokenVal(v *retrieveStrategy) (string, error) {

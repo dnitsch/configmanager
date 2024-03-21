@@ -28,33 +28,34 @@ type hashiVaultApi interface {
 type VaultStore struct {
 	svc    hashiVaultApi
 	ctx    context.Context
-	config TokenConfigVars
+	config *VaultConfig
 	token  string
 }
 
+// VaultConfig holds the parseable metadata struct
+type VaultConfig struct {
+	Version string `json:"version"`
+	Role    string `json:"iam_role"`
+}
+
 func NewVaultStore(ctx context.Context, token string, conf GenVarsConfig) (*VaultStore, error) {
-	var client *vault.Client
-
-	tc := conf.ParseTokenVars(token)
-
+	storeConf := &VaultConfig{}
+	initialToken := ParseMetadata(token, storeConf)
 	imp := &VaultStore{
 		ctx:    ctx,
-		config: tc,
+		config: storeConf,
 	}
 
 	config := vault.DefaultConfig()
-
-	vt := splitToken(stripPrefix(tc.Token, HashicorpVaultPrefix, conf.TokenSeparator(), conf.KeySeparator()))
-
+	vt := splitToken(stripPrefix(initialToken, HashicorpVaultPrefix, conf.TokenSeparator(), conf.KeySeparator()))
 	imp.token = vt.token
-
 	client, err := vault.NewClient(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize Vault client: %v", err)
 	}
 
 	if strings.HasPrefix(os.Getenv("VAULT_TOKEN"), "aws_iam") {
-		awsclient, err := newVaultStoreWithAWSAuthIAM(client, tc.Role)
+		awsclient, err := newVaultStoreWithAWSAuthIAM(client, storeConf.Role)
 		if err != nil {
 			return nil, err
 		}
@@ -74,13 +75,13 @@ func newVaultStoreWithAWSAuthIAM(client *vault.Client, role string) (*vault.Clie
 		auth.WithRole(role),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to initialize AWS auth method: %w", err)
+		return nil, fmt.Errorf("unable to initialize AWS auth method: %s. %w", err, ErrClientInitialization)
 	}
 
 	authInfo, err := client.Auth().Login(context.Background(), awsAuth)
 
 	if err != nil {
-		return nil, fmt.Errorf("unable to login to AWS auth method: %w", err)
+		return nil, fmt.Errorf("unable to login to AWS auth method: %s. %w", err, ErrClientInitialization)
 	}
 	if authInfo == nil {
 		return nil, fmt.Errorf("no auth info was returned after login")
@@ -89,14 +90,14 @@ func newVaultStoreWithAWSAuthIAM(client *vault.Client, role string) (*vault.Clie
 	return client, nil
 }
 
-// setToken already happens in Vault constructor
-// no need to re-set it here
-func (imp *VaultStore) setTokenVal(token string) {
-	// this happens inside the New func call
-	// due to the way the client needs to be
-	// initialised with a mountpath
-	// and mountpath is part of the token so it is set then
-}
+// setTokenVal
+// imp.token is already set in the Vault constructor
+//
+// This happens inside the New func call
+// due to the way the client needs to be
+// initialised with a mountpath
+// and mountpath is part of the token so it is set then
+func (imp *VaultStore) setTokenVal(token string) {}
 
 // getTokenValue implements the underlying techonology
 // token retrieval and returns a stringified version

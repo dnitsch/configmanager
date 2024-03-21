@@ -200,7 +200,7 @@ func TestVaultScenarios(t *testing.T) {
 				}
 			},
 		},
-		"version provided correctly": {"VAULT://secret___/some/other/foo2[version:1]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `{"foo2":"dsfsdf3454456"}`, func(t *testing.T) hashiVaultApi {
+		"version provided correctly": {"VAULT://secret___/some/other/foo2[version=1]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, `{"foo2":"dsfsdf3454456"}`, func(t *testing.T) hashiVaultApi {
 			mv := mockVaultApi{}
 			mv.gv = func(ctx context.Context, secretPath string, version int) (*vault.KVSecret, error) {
 				t.Helper()
@@ -220,7 +220,7 @@ func TestVaultScenarios(t *testing.T) {
 				}
 			},
 		},
-		"version provided but unable to parse": {"VAULT://secret___/some/other/foo2[version:1a]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, "unable to parse version into an integer: strconv.Atoi: parsing \"1a\": invalid syntax", func(t *testing.T) hashiVaultApi {
+		"version provided but unable to parse": {"VAULT://secret___/some/other/foo2[version=1a]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"}, "unable to parse version into an integer: strconv.Atoi: parsing \"1a\": invalid syntax", func(t *testing.T) hashiVaultApi {
 			mv := mockVaultApi{}
 			mv.gv = func(ctx context.Context, secretPath string, version int) (*vault.KVSecret, error) {
 				t.Helper()
@@ -326,13 +326,13 @@ func TestAwsIamAuth(t *testing.T) {
 			},
 		},
 		"aws_iam auth incorrectly formatted request": {
-			"VAULT://secret___/some/other/foo2[version:1,role:not_a_role]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
+			"VAULT://secret___/some/other/foo2[version=1,iam_role=not_a_role]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
 			`unable to login to AWS auth method: unable to log in to auth method: unable to log in with AWS auth: Error making API request.
 
 URL: PUT %s/v1/auth/aws/login
 Code: 400. Raw Message:
 
-incorrect values supplied`,
+incorrect values supplied. failed to initialize the client`,
 			func(t *testing.T) hashiVaultApi {
 				mv := mockVaultApi{}
 				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
@@ -367,7 +367,7 @@ incorrect values supplied`,
 			},
 		},
 		"aws_iam auth success": {
-			"VAULT://secret___/some/other/foo2[role:arn:aws:iam::1111111:role/i-orchestration]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
+			"VAULT://secret___/some/other/foo2[iam_role=arn:aws:iam::1111111:role/i-orchestration]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
 			`{"foo2":"dsfsdf3454456"}`,
 			func(t *testing.T) hashiVaultApi {
 				mv := mockVaultApi{}
@@ -404,8 +404,8 @@ incorrect values supplied`,
 			},
 		},
 		"aws_iam auth no token returned": {
-			"VAULT://secret___/some/other/foo2[role:arn:aws:iam::1111111:role/i-orchestration]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
-			`unable to login to AWS auth method: response did not return ClientToken, client token not set`,
+			"VAULT://secret___/some/other/foo2[iam_role=arn:aws:iam::1111111:role/i-orchestration]", GenVarsConfig{tokenSeparator: "://", keySeparator: "|"},
+			`unable to login to AWS auth method: response did not return ClientToken, client token not set. failed to initialize the client`,
 			func(t *testing.T) hashiVaultApi {
 				mv := mockVaultApi{}
 				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
