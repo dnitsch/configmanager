@@ -67,109 +67,106 @@ ConfigManager comes packaged as a CLI for all major platforms, to see [download/
 
 For more detailed usage you can run -h with each subcommand and additional info can be found [here](./docs/commands.md)
 
-## __Config Tokens__
+## __Token Config__
 
-The token is made up of 3 parts:
+The token is made up of the following parts:
+
+_An example token would look like this_
+
+#### `AWSSECRETS#/path/to/my/key|lookup.Inside.Object[meta=data]`
 
 ### Implementation indicator
 
-e.g. `AWSSECRETS` the strategy identifier to choose at runtime
+The `AWSSECRETS` the strategy identifier to choose the correct provider at runtime. Multiple providers can be referenced in a single run via a CLI or with the API.
+
+This is not overrideable and must be exactly as it is in the provided list of providers. 
 
 ### __Token Separator__
 
-e.g. `#` - used for separating the implementation indicator and the look up value.
+The `#` symbol from the [example token](#awssecretspathtomykeylookupinsideobjectmetadata) - used for separating the implementation indicator and the look up value.
 
-> The default is currently `#` - it will change to `://` to allow for a more natural reading of the "token". you can achieve this behaviour now by either specifying the `-s` to the CLI or ConfigManager public methods, like below.
+> The default is currently `#` - it will change to `://` to allow for a more natural reading of the "token". you can achieve this behaviour now by either specifying the `-s` to the CLI or ConfigManager Go API.
 
 ```go
-rawStr := `somePAss: AWSPARAMSTR:///int-test/pocketbase/admin-pwd`
-cm := configmanager.ConfigManager{}
-// use custom token separator
-// inline with v2 coming changes
 cnf := generator.NewConfig().WithTokenSeparator("://")
-// replaced will be a string which needs unmarshalling
-replaced, err := cm.RetrieveWithInputReplaced(rawStr, *cnf)
 ```
 
-Alternatively you can use the helper methods for Yaml or Json tagged structs - see [examples](./examples/examples.go) for more details
+### __Provider Secret/Config Path__
 
-- `/path/to/parameter` the actual path to the secret or parameter in the target system e.g. AWS SecretsManager or ParameterStore (it does assume a path like pattern might throw a runtime error if not found)
+The `/path/to/my/key` part from the [example token](#awssecretspathtomykeylookupinsideobjectmetadata) is the actual path to the item in the backing store. 
 
-If contents of the `AWSSECRETS#/appxyz/service1-password` are a string then `service1-password` will be the key and converted to UPPERCASE e.g. `SERVICE1_PASSWORD=som3V4lue`
+See the different special considerations per provider as it different providers will require different implementations.
 
 ### __Key Separator__
 
-Specifying a key seperator on token items that can be parsed as a K/V map will result in only retrieving the specific key from the map. 
+__THIS IS OPTIONAL__
 
-e.g. if contents of the `AWSSECRETS#/appxyz/service1-db-config` are parseable into the below object
+The `|` symbol from the [example token](#awssecretspathtomykeylookupinsideobjectmetadata) is used to specify the key seperator.
+
+If an item retrieved from a store is JSON parseable map it can be interrogated for further properties inside. 
+
+### __Look up key__
+
+__THIS IS OPTIONAL__
+
+The `lookup.Inside.Object` from the [example token](#awssecretspathtomykeylookupinsideobjectmetadata) is used to perform a lookup inside the retrieved item IF it is parseable into a `map[string]any` structure.
+
+Given the below response from a backing store
 
 ```json
 {
-  "host": "db.internal",
-  "port": 3306,
-  "pass": "sUp3$ecr3T!",
+	"lookup": {
+		"Inside": {
+			"Object": {
+				"host": "db.internal",
+				"port": 3306,
+				"pass": "sUp3$ecr3T!",
+			}
+		}
+	}
 }
 ```
 
-Then you can access the single values like this `AWSSECRETS#/appxyz/service1-db-config|host` ==> `export SERVICE1_DB_CONFIG__HOST='db.internal'`
+The value returned for the [example token](#awssecretspathtomykeylookupinsideobjectmetadata)  would be:
 
-Alternatively if you are `configmanager`-ing a file via the fromstr command and the input is something like this:
-
-(YAML)
-
-```yaml
-app:
-  name: xyz
-db:
-  host: AWSSECRETS#/appxyz/service1-db-config|host
-  port: AWSSECRETS#/appxyz/service1-db-config|port
-  pass: AWSSECRETS#/appxyz/service1-db-config|pass
-```
-
-which would result in this
-
-```yaml
-app:
-  name: xyz
-db:
-  host: db.internal
-  port: 3306
-  pass: sUp3$ecr3T!
-```
-
-If your config parameter matches the config interface, you can also leave the entire token to point to the `db` key
-
-```yaml
-app:
-  name: xyz
-db: AWSSECRETS#/appxyz/service1-db-config
-```
-
-result:
-
-```yaml
-app:
-  name: xyz
-db: {
-  "host": "db.internal",
-  "port": 3306,
-  "pass": "sUp3$ecr3T!",
+```json
+{
+	"host": "db.internal",
+	"port": 3306,
+	"pass": "sUp3$ecr3T!",
 }
 ```
 
-### Additional Token Config
+See [examples of working with files](docs/examples.md#working-with-files) for more details.
 
-Suffixed `[]` with `role:` or `version:` specified inside the brackets and comma separated
+### Token Metadata Config
 
-order is not important, but the `role:` keyword must be followed by the role string
+The `[meta=data]` from the [example token](#awssecretspathtomykeylookupinsideobjectmetadata) - is the optional metadata about the target in the backing provider 
 
-e.g. `VAULT://baz/bar/123|d88[role:arn:aws:iam::1111111:role/i-orchestration,version:1082313]`
+IT must have this format `[key=value]` - IT IS OPTIONAL
 
-Currently only supporting version and role but may be extended in the future.
+The `key` and `value` would be provider specific. Meaning that different providers support different config, these values _CAN_ be safely omitted configmanager would just use the defaults where applicable or not specify the additional
 
-- role is used with `VAULT` `aws_iam` auth type. Specifying it on a token level as opposed to globally will ensure that multiple roles can be used provided that the caller has the ability to assume them.
+- Hashicorp Vault (VAULT)
+	- `iam_role` - would be the value of an IAM role ARN to use with AWSClient Authentication.
+	- `version` - is the version of the secret/configitem to get (should be in an integer format)
 
-- version can be used within all implementations that support versioned config items e.g. `VAULT`, `GCPSECRETS` , `AWSSECRETS`, `AZKVSECRET`. If omitted it will default to the `LATEST`.
+	e.g. `VAULT://baz/bar/123|d88[role=arn:aws:iam::1111111:role/i-orchestration,version=1082313]`
+
+- Azure AppConfig (AZAPPCONF)
+	- `label` - the label to use whilst retrieving the item
+	- `etag` - etag value
+
+	e.g. `AZAPPCONF://baz/bar/123|d88[label=dev,etag=aaaaa1082313]`
+
+- GCP secrets, AWS SEcrets, AZ KeyVault (`GCPSECRETS` , `AWSSECRETS`, `AZKVSECRET`)
+	they all support the `version` metadata property
+
+	e.g. `GCPSECRETS://baz/bar/123|d88[version=verUUID0000-1123zss]`
+
+## Special considerations
+
+This section outlines the special consideration in token construction on a per provider basis
 
 ### Special consideration for AZKVSECRET
 
@@ -220,105 +217,9 @@ when using Vault in AWS - you can set the value of the `VAULT_TOKEN=aws_iam` thi
 
 The Hashicorp Vault functions in the same exact way as the other implementations. It will retrieve the JSON object and can be looked up within it by using a key separator.
 
-## Go API
+## [Go API](https://pkg.go.dev/github.com/dnitsch/configmanager)
 
-latest api [here](https://pkg.go.dev/github.com/dnitsch/configmanager)
-
-### Sample Use case
-
-One of the sample use cases includes implementation in a K8s controller.
-
-E.g. your Custom CRD stores some values in plain text that should really be secrets/nonpublic config parameters - something like this can be invoked from inside the controller code using the generator pkg API.
-
-See [examples](./examples/examples.go) for more examples and tests for sample input/usage
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-
-	"github.com/dnitsch/configmanager/pkg/generator"
-	"github.com/dnitsch/configmanager"
-)
-
-func main() {
-	cm := &configmanager.ConfigManager{}
-	cnf := generator.NewConfig()
-	// JSON Marshal K8s CRD into
-	exampleK8sCrdMarshalled := `apiVersion: crd.foo.custom/v1alpha1
-kind: CustomFooCrd
-metadata:
-	name: foo
-	namespace: bar
-spec:
-	name: baz
-	secret_val: AWSSECRETS#/customfoo/secret-val
-	owner: test_10016@example.com
-`
-	pm, err := cm.RetrieveWithInputReplaced(exampleK8sCrdMarshalled, *cnf)
-
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(pm)
-}
-```
-
-Above example would ensure that you can safely store config/secret values on a CRD in plain text.
-
-Or using go1.19+ [generics example](https://github.com/dnitsch/reststrategy/blob/d14ccec2b29bff646678ab9cf1775c0e93308569/controller/controller.go#L353).
-
-> Beware logging out the CRD after tokens have been replaced.
-
-Samlpe call to retrieve from inside an app/serverless function to only grab the relevant values from config.
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"log"
-	"os"
-
-	"github.com/dnitsch/configmanager"
-	"github.com/dnitsch/configmanager/pkg/generator"
-)
-
-var (
-	DB_CONNECTION_STRING    string = "someuser:%v@tcp(%s:3306)/someschema"
-	DB_PASSWORD_SECRET_PATH string = os.Getenv("DB_PASSWORD_TOKEN")
-	DB_HOST_URL             string = os.Getenv("DB_URL_TOKEN")
-)
-
-func main() {
-	connString, err := credentialString(context.TODO, DB_PASSWORD_SECRET_PATH, DB_HOST_URL)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-}
-
-func credentialString(ctx context.Context, pwdToken, hostToken string) (string, error) {
-
-	cnf := generator.NewConfig()
-
-	pm, err := configmanager.Retrieve([]string{pwdToken, hostToken}, *cnf)
-
-	if err != nil {
-		return "", err
-	}
-	if pwd, ok := pm[pwdToken]; ok {
-		if host, ok := pm[hostToken]; ok {
-			return fmt.Sprintf(DB_CONNECTION_STRING, pwd, host), nil
-		}
-	}
-
-	return "", fmt.Errorf("unable to find value via token")
-}
-```
+## [Examples](docs/examples.md)
 
 ## Help
 

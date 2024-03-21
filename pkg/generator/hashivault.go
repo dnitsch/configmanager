@@ -32,6 +32,7 @@ type VaultStore struct {
 	token  string
 }
 
+// VaultConfig holds the parseable metadata struct
 type VaultConfig struct {
 	Version string `json:"version"`
 	Role    string `json:"iam_role"`
