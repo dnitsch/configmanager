@@ -31,7 +31,7 @@ type AzAppConf struct {
 // and it is parsed from the token metadata
 type AzAppConfConfig struct {
 	Label          string       `json:"label"`
-	OnlyIfChanged  *azcore.ETag `json:"onlyIfChanged"`
+	Etag           *azcore.ETag `json:"etag"`
 	AcceptDateTime *time.Time   `json:"acceptedDateTime"`
 }
 
@@ -84,10 +84,14 @@ func (imp *AzAppConf) tokenVal(v *retrieveStrategy) (string, error) {
 		opts.Label = &imp.config.Label
 	}
 
+	if imp.config.Etag != nil {
+		opts.OnlyIfChanged = imp.config.Etag
+	}
+
 	s, err := imp.svc.GetSetting(ctx, imp.token, opts)
 	if err != nil {
 		log.Errorf(implementationNetworkErr, AzAppConfigPrefix, err, imp.token)
-		return "", fmt.Errorf("token: %s, error: %v. %w", imp.token, err, ErrServiceCallFailed)
+		return "", fmt.Errorf("token: %s, error: %v. %w", imp.token, err, ErrRetrieveFailed)
 	}
 	if s.Value != nil {
 		return *s.Value, nil
