@@ -17,9 +17,13 @@ type gcpSecretsApi interface {
 type GcpSecrets struct {
 	svc    gcpSecretsApi
 	ctx    context.Context
-	config TokenConfigVars
+	config *GcpSecretsConfig
 	close  func() error
 	token  string
+}
+
+type GcpSecretsConfig struct {
+	Version string `json:"version"`
 }
 
 func NewGcpSecrets(ctx context.Context) (*GcpSecrets, error) {
@@ -38,9 +42,11 @@ func NewGcpSecrets(ctx context.Context) (*GcpSecrets, error) {
 }
 
 func (imp *GcpSecrets) setTokenVal(token string) {
-	ct := (&GenVarsConfig{}).ParseTokenVars(token)
-	imp.config = ct
-	imp.token = ct.Token
+	storeConf := &GcpSecretsConfig{}
+	initialToken := ParseMetadata(token, storeConf)
+
+	imp.config = storeConf
+	imp.token = initialToken
 }
 
 func (imp *GcpSecrets) tokenVal(v *retrieveStrategy) (string, error) {

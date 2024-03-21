@@ -27,20 +27,24 @@ type AzTableStore struct {
 	svc    tableStoreApi
 	ctx    context.Context
 	token  string
-	config TokenConfigVars
+	config *AzTableStrgConfig
+}
+
+type AzTableStrgConfig struct {
+	Format string `json:"format"`
 }
 
 // NewAzTableStore
 func NewAzTableStore(ctx context.Context, token string, conf GenVarsConfig) (*AzTableStore, error) {
 
-	ct := conf.ParseTokenVars(token)
-
+	storeConf := &AzTableStrgConfig{}
+	initialToken := ParseMetadata(token, storeConf)
 	backingStore := &AzTableStore{
 		ctx:    ctx,
-		config: ct,
+		config: storeConf,
 	}
 
-	srvInit := azServiceFromToken(stripPrefix(ct.Token, AzTableStorePrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.table.core.windows.net/%s", 2)
+	srvInit := azServiceFromToken(stripPrefix(initialToken, AzTableStorePrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.table.core.windows.net/%s", 2)
 	backingStore.token = srvInit.token
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
@@ -109,4 +113,3 @@ func azTableStoreTokenSplitter(token string) (partitionKey, rowKey string, err e
 	// naked return to save having to define another struct
 	return
 }
-

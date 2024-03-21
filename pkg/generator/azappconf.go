@@ -6,7 +6,9 @@ package generator
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/azappconfig"
 	"github.com/dnitsch/configmanager/pkg/log"
@@ -22,20 +24,27 @@ type AzAppConf struct {
 	svc    appConfApi
 	ctx    context.Context
 	token  string
-	config TokenConfigVars
+	config *AzAppConfConfig
 }
 
-// NewAzTableStore
+// AzAppConfConfig is the azure conf service specific config
+// and it is parsed from the token metadata
+type AzAppConfConfig struct {
+	Label          string       `json:"label"`
+	OnlyIfChanged  *azcore.ETag `json:"onlyIfChanged"`
+	AcceptDateTime *time.Time   `json:"acceptedDateTime"`
+}
+
+// NewAzAppConf
 func NewAzAppConf(ctx context.Context, token string, conf GenVarsConfig) (*AzAppConf, error) {
-
-	ct := conf.ParseTokenVars(token)
-
+	storeConf := &AzAppConfConfig{}
+	initialToken := ParseMetadata(token, storeConf)
 	backingStore := &AzAppConf{
 		ctx:    ctx,
-		config: ct,
+		config: storeConf,
 	}
 
-	srvInit := azServiceFromToken(stripPrefix(ct.Token, AzAppConfigPrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.azconfig.io", 1)
+	srvInit := azServiceFromToken(stripPrefix(initialToken, AzAppConfigPrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.azconfig.io", 1)
 	backingStore.token = srvInit.token
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
@@ -68,8 +77,14 @@ func (imp *AzAppConf) tokenVal(v *retrieveStrategy) (string, error) {
 
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
+	opts := &azappconfig.GetSettingOptions{}
 
-	s, err := imp.svc.GetSetting(ctx, imp.token, &azappconfig.GetSettingOptions{Label: &imp.config.Version})
+	// assign any metadatas from the token
+	if imp.config.Label != "" {
+		opts.Label = &imp.config.Label
+	}
+
+	s, err := imp.svc.GetSetting(ctx, imp.token, opts)
 	if err != nil {
 		log.Errorf(implementationNetworkErr, AzAppConfigPrefix, err, imp.token)
 		return "", fmt.Errorf("token: %s, error: %v. %w", imp.token, err, ErrServiceCallFailed)

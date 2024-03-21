@@ -19,21 +19,28 @@ type KvScrtStore struct {
 	svc    kvApi
 	ctx    context.Context
 	token  string
-	config TokenConfigVars
+	config *AzKvConfig
+}
+
+// AzKvConfig takes any metadata from the token
+// Version is the only
+type AzKvConfig struct {
+	Version string `json:"version"`
 }
 
 // NewKvScrtStore returns a KvScrtStore
 // requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfully work
 func NewKvScrtStore(ctx context.Context, token string, conf GenVarsConfig) (*KvScrtStore, error) {
 
-	ct := conf.ParseTokenVars(token)
+	storeConf := &AzKvConfig{}
 
+	initialToken := ParseMetadata(token, storeConf)
 	backingStore := &KvScrtStore{
 		ctx:    ctx,
-		config: ct,
+		config: storeConf,
 	}
 
-	srvInit := azServiceFromToken(stripPrefix(ct.Token, AzKeyVaultSecretsPrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.vault.azure.net", 1)
+	srvInit := azServiceFromToken(stripPrefix(initialToken, AzKeyVaultSecretsPrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.vault.azure.net", 1)
 	backingStore.token = srvInit.token
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
