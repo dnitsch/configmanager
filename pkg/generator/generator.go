@@ -148,7 +148,12 @@ func (c *GenVars) RawMap() ParsedMap {
 func (c *GenVars) AddRawMap(key, val string) {
 	c.rawMap.mu.Lock()
 	defer c.rawMap.mu.Unlock()
-	c.rawMap.tokenMap[key] = c.keySeparatorLookup(key, val)
+	// strip the metadata from token
+	strippedToken := ParseMetadata(key, &struct{}{})
+	// still use the metadata in the key
+	// there could be different versions / labels for the same token and hence different values
+	// However the JSONpath look up
+	c.rawMap.tokenMap[key] = c.keySeparatorLookup(strippedToken, val)
 }
 
 // Generate generates a k/v map of the tokens with their corresponding secret/paramstore values

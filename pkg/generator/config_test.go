@@ -60,6 +60,12 @@ func Test_MarshalMetadata_with_label_struct_succeeds(t *testing.T) {
 			"",
 			"FOO://basjh/dskjuds/123]asdas=bar]",
 		},
+		"metadata is in the middle of path lookup": {
+			generator.NewConfig(),
+			`FOO://basjh/dskjuds/123[label=bar]|lookup`,
+			"bar",
+			"FOO://basjh/dskjuds/123|lookup",
+		},
 	}
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {

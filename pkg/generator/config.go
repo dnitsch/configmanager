@@ -76,13 +76,13 @@ func (c *GenVarsConfig) KeySeparator() string {
 //
 // Further processing down the line will remove other elements of the token.
 func ParseMetadata[T comparable](token string, typ T) string {
-	metadataStr, startIndex, found := extractMetadataStr(token)
+	metadataStr, metaLessToken, found := extractMetadataStr(token)
 	if !found {
 		return token
 	}
-	if startIndex > 0 {
-		token = token[0:startIndex]
-	}
+
+	token = metaLessToken
+
 	// crude json like builder from key/val tags
 	// since we are only ever dealing with a string input
 	// extracted from the token there is little chance panic would occur here
@@ -94,6 +94,7 @@ func ParseMetadata[T comparable](token string, typ T) string {
 			metaMap = append(metaMap, fmt.Sprintf(`"%s":"%s"`, mapKeyVal[0], mapKeyVal[1]))
 		}
 	}
+
 	// empty map will be parsed as `{}` still resulting in a valid json
 	// and successful unmarshalling but default value pointer struct
 	b := []byte(fmt.Sprintf(`{%s}`, strings.Join(metaMap, ",")))
@@ -111,18 +112,26 @@ const endMetaStr string = `]`
 
 // extractMetadataStr returns anything between the start and end
 // metadata markers in the token string itself
-func extractMetadataStr(str string) (metaString string, startIndex int, found bool) {
+func extractMetadataStr(token string) (metaString string, tokenWithoutMeta string, found bool) {
 
-	startIndex = strings.Index(str, startMetaStr)
+	startIndex := strings.Index(token, startMetaStr)
 	// token has no startMetaStr
 	if startIndex == -1 {
-		return metaString, startIndex, false
+		return metaString, token, false
 	}
-	newS := str[startIndex+len(startMetaStr):]
+	newS := token[startIndex+len(startMetaStr):]
+
 	endIndex := strings.Index(newS, endMetaStr)
+	// token has no meta end
 	if endIndex == -1 {
-		return metaString, -1, false
+		return metaString, token, false
 	}
+	// metastring extracted
 	metaString = newS[:endIndex]
-	return metaString, startIndex, true
+
+	// complete [key=value] has been found
+	// Remove from the token
+	metaLessToken := strings.Replace(token, startMetaStr+metaString+endMetaStr, "", -1)
+
+	return metaString, metaLessToken, true
 }
