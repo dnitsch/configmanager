@@ -114,14 +114,15 @@ const endMetaStr string = `]`
 func extractMetadataStr(str string) (metaString string, startIndex int, found bool) {
 
 	startIndex = strings.Index(str, startMetaStr)
+	// token has no startMetaStr
 	if startIndex == -1 {
 		return metaString, startIndex, false
 	}
 	newS := str[startIndex+len(startMetaStr):]
-	e := strings.Index(newS, endMetaStr)
-	if e == -1 {
+	endIndex := strings.Index(newS, endMetaStr)
+	if endIndex == -1 {
 		return metaString, -1, false
 	}
-	metaString = newS[:e]
+	metaString = newS[:endIndex]
 	return metaString, startIndex, true
 }
