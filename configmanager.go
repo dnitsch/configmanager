@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	TERMINATING_CHAR string = `[^\'\"\s\n\\]`
+	TERMINATING_CHAR string = `[^\'\"\s\n\\\,]`
 )
 
 type ConfigManager struct{}

@@ -119,7 +119,7 @@ key = "val1"
 			input: `
 // TOML
 [[somestuff]]
-key = FOO#/test
+key = FOO#/test,FOO#/test-FOO#/test
 key2 = FOO#/test
 key3 = FOO#/test
 key4 = FOO#/test
@@ -128,7 +128,7 @@ key4 = FOO#/test
 			expect: `
 // TOML
 [[somestuff]]
-key = val1
+key = val1,val1-val1
 key2 = val1
 key3 = val1
 key4 = val1
