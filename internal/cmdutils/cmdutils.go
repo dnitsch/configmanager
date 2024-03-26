@@ -9,23 +9,24 @@ import (
 	"os"
 	"strings"
 
+	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
-type confMgrRetrieveWithInputReplacediface interface {
-	RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error)
+type configManagerIface interface {
+	RetrieveWithInputReplaced(input string) (string, error)
+	Retrieve(tokens []string) (generator.ParsedMap, error)
+	GeneratorConfig() *config.GenVarsConfig
 }
 
 type CmdUtils struct {
-	cfgmgr    confMgrRetrieveWithInputReplacediface
-	generator generator.GenVarsiface
+	cfgmgr configManagerIface
 }
 
-func New(gv generator.GenVarsiface, confManager confMgrRetrieveWithInputReplacediface) *CmdUtils {
+func New(confManager configManagerIface) *CmdUtils {
 	return &CmdUtils{
-		cfgmgr:    confManager,
-		generator: gv,
+		cfgmgr: confManager,
 	}
 }
 
@@ -41,7 +42,7 @@ func (c *CmdUtils) GenerateFromCmd(tokens []string, output string) error {
 
 // generateFromToken
 func (c *CmdUtils) generateFromToken(tokens []string, w io.Writer) error {
-	pm, err := c.generator.Generate(tokens)
+	pm, err := c.cfgmgr.Retrieve(tokens)
 	if err != nil {
 		// return full error to terminal if no tokens were parsed
 		if len(pm) < 1 {
@@ -51,7 +52,8 @@ func (c *CmdUtils) generateFromToken(tokens []string, w io.Writer) error {
 		log.Errorf("%e", err)
 	}
 	// Conver to ExportVars and flush to file
-	return c.generator.FlushToFile(w, c.generator.ConvertToExportVar())
+	// return c.generator.FlushToFile(w, c.generator.ConvertToExportVar())
+	return nil
 }
 
 // Generate a replaced string from string input command
@@ -124,9 +126,8 @@ func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string, outtmp io.
 	if err != nil {
 		return err
 	}
-
 	// move temp file to output path
-	return os.WriteFile(c.generator.Config().OutputPath(), tr, 0644)
+	return os.WriteFile(c.cfgmgr.GeneratorConfig().OutputPath(), tr, 0644)
 }
 
 // generateStrOutFromInput takes a reader and writer as input
@@ -136,12 +137,14 @@ func (c *CmdUtils) generateStrOutFromInput(input io.Reader, output io.Writer) er
 	if err != nil {
 		return err
 	}
-	str, err := c.cfgmgr.RetrieveWithInputReplaced(string(b), *c.generator.Config())
+	_, err = c.cfgmgr.RetrieveWithInputReplaced(string(b))
 	if err != nil {
 		return err
 	}
 
-	return c.generator.StrToFile(output, str)
+	// TODO: move to cmdutils helper
+	// return c.cfgmgr. .StrToFile(output, str)
+	return nil
 }
 
 func writer(outputpath string) (*os.File, error) {
@@ -155,3 +158,4 @@ func writer(outputpath string) (*os.File, error) {
 func (c *CmdUtils) UploadTokensWithVals(tokens map[string]string) error {
 	return fmt.Errorf("notYetImplemented")
 }
+

@@ -2,93 +2,75 @@ package generator
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"regexp"
-	"strings"
+
+	"github.com/dnitsch/configmanager/internal/config"
+	"github.com/dnitsch/configmanager/internal/store"
 )
 
-var (
-	ErrRetrieveFailed       = errors.New("failed to retrieve config item")
-	ErrClientInitialization = errors.New("failed to initialize the client")
-)
-
-type retrieveStrategy struct {
-	implementation genVarsStrategy
-	config         GenVarsConfig
+type RetrieveStrategy struct {
+	implementation store.Strategy
+	config         config.GenVarsConfig
 	token          string
 }
 
-func newRetrieveStrategy(s genVarsStrategy, config GenVarsConfig) *retrieveStrategy {
-	return &retrieveStrategy{implementation: s, config: config}
+// NewRetrieveStrategy
+func NewRetrieveStrategy(s store.Strategy, config config.GenVarsConfig) *RetrieveStrategy {
+	return &RetrieveStrategy{implementation: s, config: config}
 }
 
-type genVarsStrategy interface {
-	// getTokenConfig() AdditionalVars
-	// setTokenConfig(AdditionalVars)
-	tokenVal(rs *retrieveStrategy) (s string, e error)
-	setTokenVal(s string)
-}
-
-func (rs *retrieveStrategy) setImplementation(strategy genVarsStrategy) {
+func (rs *RetrieveStrategy) setImplementation(strategy store.Strategy) {
 	rs.implementation = strategy
 }
 
-func (rs *retrieveStrategy) setTokenVal(s string) {
-	rs.implementation.setTokenVal(s)
+func (rs *RetrieveStrategy) setTokenVal(s *config.ParsedTokenConfig) {
+	rs.implementation.SetToken(s)
 }
 
-func (rs *retrieveStrategy) getTokenValue() (string, error) {
-	return rs.implementation.tokenVal(rs)
+func (rs *RetrieveStrategy) getTokenValue() (string, error) {
+	return rs.implementation.Token()
+}
+
+type TokenResponse struct {
+	value string
+	key   *config.ParsedTokenConfig
+	Err   error
 }
 
 // retrieveSpecificCh wraps around the specific strategy implementation
 // and publishes results to a channel
-func (rs *retrieveStrategy) RetrieveByToken(ctx context.Context, impl genVarsStrategy, prefix ImplementationPrefix, in string) chanResp {
-	cr := chanResp{}
-	cr.err = nil
-	cr.key = in
+func (rs *RetrieveStrategy) RetrieveByToken(ctx context.Context, impl store.Strategy, tokenConf *config.ParsedTokenConfig) *TokenResponse {
+	cr := &TokenResponse{}
+	cr.Err = nil
+	cr.key = tokenConf
 	rs.setImplementation(impl)
-	rs.setTokenVal(in)
+	rs.setTokenVal(tokenConf)
 	s, err := rs.getTokenValue()
 	if err != nil {
-		cr.err = err
+		cr.Err = err
 		return cr
 	}
 	cr.value = s
 	return cr
 }
 
-func (rs *retrieveStrategy) SelectImplementation(ctx context.Context, prefix ImplementationPrefix, in string, config GenVarsConfig) (genVarsStrategy, error) {
-	switch prefix {
-	case SecretMgrPrefix:
-		return NewSecretsMgr(ctx)
-	case ParamStorePrefix:
-		return NewParamStore(ctx)
-	case AzKeyVaultSecretsPrefix:
-		return NewKvScrtStore(ctx, in, config)
-	case GcpSecretsPrefix:
-		return NewGcpSecrets(ctx)
-	case HashicorpVaultPrefix:
-		return NewVaultStore(ctx, in, config)
-	case AzTableStorePrefix:
-		return NewAzTableStore(ctx, in, config)
-	case AzAppConfigPrefix:
-		return NewAzAppConf(ctx, in, config)
+func (rs *RetrieveStrategy) SelectImplementation(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+	switch token.Prefix() {
+	case config.AzTableStorePrefix:
+		return store.NewAzTableStore(ctx, token)
+	// case SecretMgrPrefix:
+	// 	return NewSecretsMgr(ctx)
+	// case ParamStorePrefix:
+	// 	return NewParamStore(ctx)
+	// case AzKeyVaultSecretsPrefix:
+	// 	return NewKvScrtStore(ctx, in, config)
+	// case GcpSecretsPrefix:
+	// 	return NewGcpSecrets(ctx)
+	// case HashicorpVaultPrefix:
+	// 	return NewVaultStore(ctx, in, config)
+	// case AzAppConfigPrefix:
+	// 	return NewAzAppConf(ctx, in, config)
 	default:
-		return nil, fmt.Errorf("implementation not found for input string: %s", in)
+		return nil, fmt.Errorf("implementation not found for input string: %s", token)
 	}
-}
-
-// stripPrefix returns the token which the config/secret store
-// expects to find in a provided vault/paramstore
-func (rs *retrieveStrategy) stripPrefix(in string, prefix ImplementationPrefix) string {
-	return stripPrefix(in, prefix, rs.config.tokenSeparator, rs.config.keySeparator)
-}
-
-// stripPrefix
-func stripPrefix(in string, prefix ImplementationPrefix, tokenSeparator, keySeparator string) string {
-	t := in
-	b := regexp.MustCompile(fmt.Sprintf(`[%s].*`, keySeparator)).ReplaceAllString(t, "")
-	return strings.Replace(b, fmt.Sprintf("%s%s", prefix, tokenSeparator), "", 1)
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/dnitsch/configmanager"
-	"github.com/dnitsch/configmanager/pkg/generator"
 )
 
 const DO_STUFF_WITH_VALS_HERE = "connstring:user@%v:host=%s/someschema..."
@@ -19,10 +18,10 @@ func main() {
 // retrieveExample uses the standard Retrieve method on the API
 // this will return generator.ParsedMap which can be later used for more complex use cases
 func retrieveExample() {
-	cm := &configmanager.ConfigManager{}
-	cnf := generator.NewConfig()
+	cm := configmanager.New()
+	cm.Config.WithTokenSeparator("://")
 
-	pm, err := cm.Retrieve([]string{"token1", "token2"}, *cnf)
+	pm, err := cm.Retrieve([]string{"token1", "token2"})
 
 	if err != nil {
 		panic(err)
@@ -40,8 +39,7 @@ func retrieveExample() {
 
 // retrieveStringOut accepts a string as an input
 func retrieveStringOut() {
-	cm := &configmanager.ConfigManager{}
-	cnf := generator.NewConfig()
+	cm := configmanager.New()
 	// JSON Marshal K8s CRD into
 	exampleK8sCrdMarshalled := `apiVersion: crd.foo.custom/v1alpha1
 kind: CustomFooCrd
@@ -53,7 +51,7 @@ spec:
 	secret_val: AWSSECRETS#/customfoo/secret-val
 	owner: test_10016@example.com
 `
-	pm, err := cm.RetrieveWithInputReplaced(exampleK8sCrdMarshalled, *cnf)
+	pm, err := cm.RetrieveWithInputReplaced(exampleK8sCrdMarshalled)
 
 	if err != nil {
 		panic(err)
@@ -72,13 +70,11 @@ func SpecConfigTokenReplace[T any](inputType T) (*T, error) {
 		return nil, err
 	}
 
-	cm := configmanager.ConfigManager{}
-
+	cm := configmanager.New()
 	// use custom token separator
-	// inline with
-	cnf := generator.NewConfig().WithTokenSeparator("://")
+	cm.Config.WithTokenSeparator("://")
 
-	replaced, err := cm.RetrieveWithInputReplaced(string(rawBytes), *cnf)
+	replaced, err := cm.RetrieveWithInputReplaced(string(rawBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +86,7 @@ func SpecConfigTokenReplace[T any](inputType T) (*T, error) {
 
 // Example using a helper method
 func retrieveYaml() {
+
 	type config struct {
 		DbHost   string `yaml:"dbhost"`
 		Username string `yaml:"user"`
@@ -101,10 +98,11 @@ pass: AWSPARAMSTR:///int-test/pocketbase/config|pwd
 dbhost: AWSPARAMSTR:///int-test/pocketbase/config|host
 `
 
-	cm := &configmanager.ConfigManager{}
+	appConf := &config{}
+	cm := configmanager.New()
 	// use custom token separator inline with future releases
-	cmConf := generator.NewConfig().WithTokenSeparator("://")
-	appConf, err := configmanager.RetrieveUnmarshalledFromYaml([]byte(configMarshalled), &config{}, cm, *cmConf)
+	cm.Config.WithTokenSeparator("://")
+	err := cm.RetrieveUnmarshalledFromYaml([]byte(configMarshalled), appConf)
 	if err != nil {
 		panic(err)
 	}
