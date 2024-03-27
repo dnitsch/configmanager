@@ -50,7 +50,7 @@ func NewAzTableStore(ctx context.Context, token *config.ParsedTokenConfig) (*AzT
 		token:  token,
 	}
 
-	srvInit := azServiceFromToken(token.StripPrefix(), "https://%s.table.core.windows.net/%s", 2)
+	srvInit := azServiceFromToken(token.StoreToken(), "https://%s.table.core.windows.net/%s", 2)
 	backingStore.strippedToken = srvInit.token
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
@@ -80,7 +80,7 @@ func (implmt *AzTableStore) SetToken(token *config.ParsedTokenConfig) {}
 // including keySeperator and lookup.
 func (imp *AzTableStore) Token() (string, error) {
 	log.Info("Concrete implementation AzTableSTore")
-	log.Infof("AzTableSTore Token: %s", imp.token)
+	log.Infof("AzTableSTore Token: %s", imp.token.String())
 
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
@@ -93,8 +93,8 @@ func (imp *AzTableStore) Token() (string, error) {
 
 	s, err := imp.svc.GetEntity(ctx, pKey, rKey, &aztables.GetEntityOptions{})
 	if err != nil {
-		log.Errorf(implementationNetworkErr, imp.token, err, imp.token)
-		return "", fmt.Errorf(implementationNetworkErr+" %w", config.AzTableStorePrefix, err, imp.token, ErrRetrieveFailed)
+		log.Errorf(implementationNetworkErr, config.AzTableStorePrefix, err, imp.strippedToken)
+		return "", fmt.Errorf(implementationNetworkErr+" %w", config.AzTableStorePrefix, err, imp.token.StoreToken(), ErrRetrieveFailed)
 	}
 	if len(s.Value) > 0 {
 		// check for `value` property in entity

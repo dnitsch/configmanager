@@ -2,11 +2,14 @@ package generator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/store"
 )
+
+var ErrTokenInvalid = errors.New("invalid token - cannot get prefix")
 
 type RetrieveStrategy struct {
 	implementation store.Strategy
@@ -55,6 +58,10 @@ func (rs *RetrieveStrategy) RetrieveByToken(ctx context.Context, impl store.Stra
 }
 
 func (rs *RetrieveStrategy) SelectImplementation(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+	if token == nil {
+		return nil, fmt.Errorf("unable to get prefix, %w", ErrTokenInvalid)
+	}
+
 	switch token.Prefix() {
 	case config.AzTableStorePrefix:
 		return store.NewAzTableStore(ctx, token)
@@ -68,8 +75,8 @@ func (rs *RetrieveStrategy) SelectImplementation(ctx context.Context, token *con
 	// 	return NewGcpSecrets(ctx)
 	// case HashicorpVaultPrefix:
 	// 	return NewVaultStore(ctx, in, config)
-	// case AzAppConfigPrefix:
-	// 	return NewAzAppConf(ctx, in, config)
+	case config.AzAppConfigPrefix:
+		return store.NewAzAppConf(ctx, token)
 	default:
 		return nil, fmt.Errorf("implementation not found for input string: %s", token)
 	}

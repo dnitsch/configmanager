@@ -20,8 +20,8 @@ type PostProcessor struct {
 
 // ConvertToExportVar assigns the k/v out
 // as unix style export key=val pairs separated by `\n`
-func (p *PostProcessor) ConvertToExportVar(rawMap generator.ParsedMap) []string {
-	for k, v := range rawMap {
+func (p *PostProcessor) ConvertToExportVar() []string {
+	for k, v := range p.ProcessedMap {
 		rawKeyToken := strings.Split(k, "/") // assumes a path like token was used
 		topLevelKey := rawKeyToken[len(rawKeyToken)-1]
 		trm := make(generator.ParsedMap)
@@ -71,7 +71,7 @@ func (p *PostProcessor) normalizeKey(k string) string {
 // FlushToFile saves contents to file provided
 // in the config input into the generator
 // default location is ./app.env
-func (p *PostProcessor) FlushToFile(w io.Writer, out []string) error {
+func (p *PostProcessor) FlushToFile(w io.Writer) error {
 	return p.flushToFile(w, listToString(p.outString))
 }
 

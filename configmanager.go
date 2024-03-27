@@ -1,6 +1,7 @@
 package configmanager
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -36,7 +37,7 @@ type ConfigManager struct {
 // ```
 //
 // Calling cm.Config.WithXXX() will overwrite the generator config
-func New() *ConfigManager {
+func New(ctx context.Context) *ConfigManager {
 	cm := &ConfigManager{}
 	defaultConfig := config.NewConfig()
 	cm.Config = defaultConfig

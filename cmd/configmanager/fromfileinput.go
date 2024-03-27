@@ -41,7 +41,7 @@ unix style output only`)
 }
 
 func retrieveFromStr(cmd *cobra.Command, args []string) error {
-	cm := configmanager.New()
+	cm := configmanager.New(cmd.Context())
 	cm.Config.WithTokenSeparator(tokenSeparator).WithOutputPath(path).WithKeySeparator(keySeparator)
 	return cmdutils.New(cm).GenerateStrOut(input, path)
 }

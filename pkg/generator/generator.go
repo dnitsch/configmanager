@@ -19,6 +19,11 @@ type muRawMap struct {
 	tokenMap ParsedMap
 }
 
+type retrieveIface interface {
+	RetrieveByToken(ctx context.Context, impl store.Strategy, in *config.ParsedTokenConfig) *TokenResponse
+	SelectImplementation(ctx context.Context, in *config.ParsedTokenConfig) (store.Strategy, error)
+}
+
 // GenVars is the main struct holding the
 // strategy patterns iface
 // any initialised config if overridded with withers
@@ -26,8 +31,9 @@ type muRawMap struct {
 // which wil be passed in a loop into a goroutine to perform the
 // relevant strategy network calls to the config store implementations
 type GenVars struct {
-	ctx    context.Context
-	config config.GenVarsConfig
+	strategy retrieveIface
+	ctx      context.Context
+	config   config.GenVarsConfig
 	// rawMap is the internal object that holds the values
 	// of original token => retrieved value - decrypted in plain text
 	// with a mutex RW locker
@@ -48,11 +54,14 @@ func NewGenerator() *GenVars {
 
 func newGenVars() *GenVars {
 	m := make(ParsedMap)
+	conf := config.NewConfig()
 	return &GenVars{
 		rawMap: muRawMap{tokenMap: m},
 		ctx:    context.TODO(),
 		// return using default config
-		config: *config.NewConfig(),
+		config: *conf,
+		// using a default Strategy
+		strategy: NewRetrieveStrategy(store.NewDefatultStrategy(), *conf),
 	}
 }
 
@@ -106,30 +115,25 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 	for _, token := range tokens {
 		// TODO: normalize tokens here potentially
 		// merge any tokens that only differ in keys lookup inside the object
-		parsedToken := config.NewParsedTokenConfig(token, c.config)
-		if parsedToken != nil {
-			parsedTokenMap[token] = parsedToken
+		parsedToken, err := config.NewParsedTokenConfig(token, c.config)
+		if err != nil {
+			log.Infof(err.Error())
 		}
+		parsedTokenMap[token] = parsedToken
 	}
-	rs := NewRetrieveStrategy(store.NewDefatultStrategy(), c.config)
 	// pass in default initialised retrieveStrategy
 	// input should be
-	if err := c.generate(parsedTokenMap, rs); err != nil {
+	if err := c.generate(parsedTokenMap); err != nil {
 		return nil, err
 	}
 	return c.RawMap(), nil
-}
-
-type retrieveIface interface {
-	RetrieveByToken(ctx context.Context, impl store.Strategy, in *config.ParsedTokenConfig) *TokenResponse
-	SelectImplementation(ctx context.Context, in *config.ParsedTokenConfig) (store.Strategy, error)
 }
 
 // generate checks if any tokens found
 // initiates groutines with fixed size channel map
 // to capture responses and errors
 // generates ParsedMap which includes
-func (c *GenVars) generate(rawMap rawTokenMap, rs retrieveIface) error {
+func (c *GenVars) generate(rawMap rawTokenMap) error {
 	if len(rawMap) < 1 {
 		log.Debug("no replaceable tokens found in input strings")
 		return nil
@@ -148,12 +152,12 @@ func (c *GenVars) generate(rawMap rawTokenMap, rs retrieveIface) error {
 		// take value from config allocation on a per iteration basis
 		go func(tkn *config.ParsedTokenConfig) {
 			defer wg.Done()
-			strategy, err := rs.SelectImplementation(c.ctx, tkn)
+			strategy, err := c.strategy.SelectImplementation(c.ctx, tkn)
 			if err != nil {
 				outCh <- &TokenResponse{Err: err}
 				return
 			}
-			outCh <- rs.RetrieveByToken(c.ctx, strategy, tkn)
+			outCh <- c.strategy.RetrieveByToken(c.ctx, strategy, tkn)
 		}(parsedToken)
 	}
 

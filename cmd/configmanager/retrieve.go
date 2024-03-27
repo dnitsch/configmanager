@@ -37,7 +37,7 @@ func init() {
 }
 
 func retrieveRun(cmd *cobra.Command, args []string) error {
-	cm := configmanager.New()
+	cm := configmanager.New(cmd.Context())
 	cm.Config.WithTokenSeparator(tokenSeparator).WithOutputPath(path).WithKeySeparator(keySeparator)
 	return cmdutils.New(cm).GenerateFromCmd(tokens, path)
 }

@@ -21,12 +21,12 @@ type configManagerIface interface {
 }
 
 type CmdUtils struct {
-	cfgmgr configManagerIface
+	configManager configManagerIface
 }
 
 func New(confManager configManagerIface) *CmdUtils {
 	return &CmdUtils{
-		cfgmgr: confManager,
+		configManager: confManager,
 	}
 }
 
@@ -42,7 +42,7 @@ func (c *CmdUtils) GenerateFromCmd(tokens []string, output string) error {
 
 // generateFromToken
 func (c *CmdUtils) generateFromToken(tokens []string, w io.Writer) error {
-	pm, err := c.cfgmgr.Retrieve(tokens)
+	pm, err := c.configManager.Retrieve(tokens)
 	if err != nil {
 		// return full error to terminal if no tokens were parsed
 		if len(pm) < 1 {
@@ -52,8 +52,9 @@ func (c *CmdUtils) generateFromToken(tokens []string, w io.Writer) error {
 		log.Errorf("%e", err)
 	}
 	// Conver to ExportVars and flush to file
-	// return c.generator.FlushToFile(w, c.generator.ConvertToExportVar())
-	return nil
+	pp := &PostProcessor{ProcessedMap: pm, Config: c.configManager.GeneratorConfig()}
+	pp.ConvertToExportVar()
+	return pp.FlushToFile(w)
 }
 
 // Generate a replaced string from string input command
@@ -127,7 +128,7 @@ func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string, outtmp io.
 		return err
 	}
 	// move temp file to output path
-	return os.WriteFile(c.cfgmgr.GeneratorConfig().OutputPath(), tr, 0644)
+	return os.WriteFile(c.configManager.GeneratorConfig().OutputPath(), tr, 0644)
 }
 
 // generateStrOutFromInput takes a reader and writer as input
@@ -137,7 +138,7 @@ func (c *CmdUtils) generateStrOutFromInput(input io.Reader, output io.Writer) er
 	if err != nil {
 		return err
 	}
-	_, err = c.cfgmgr.RetrieveWithInputReplaced(string(b))
+	_, err = c.configManager.RetrieveWithInputReplaced(string(b))
 	if err != nil {
 		return err
 	}
@@ -158,4 +159,3 @@ func writer(outputpath string) (*os.File, error) {
 func (c *CmdUtils) UploadTokensWithVals(tokens map[string]string) error {
 	return fmt.Errorf("notYetImplemented")
 }
-

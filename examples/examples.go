@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -18,7 +19,7 @@ func main() {
 // retrieveExample uses the standard Retrieve method on the API
 // this will return generator.ParsedMap which can be later used for more complex use cases
 func retrieveExample() {
-	cm := configmanager.New()
+	cm := configmanager.New(context.TODO())
 	cm.Config.WithTokenSeparator("://")
 
 	pm, err := cm.Retrieve([]string{"token1", "token2"})
@@ -39,7 +40,7 @@ func retrieveExample() {
 
 // retrieveStringOut accepts a string as an input
 func retrieveStringOut() {
-	cm := configmanager.New()
+	cm := configmanager.New(context.TODO())
 	// JSON Marshal K8s CRD into
 	exampleK8sCrdMarshalled := `apiVersion: crd.foo.custom/v1alpha1
 kind: CustomFooCrd
@@ -70,7 +71,7 @@ func SpecConfigTokenReplace[T any](inputType T) (*T, error) {
 		return nil, err
 	}
 
-	cm := configmanager.New()
+	cm := configmanager.New(context.TODO())
 	// use custom token separator
 	cm.Config.WithTokenSeparator("://")
 
@@ -99,7 +100,7 @@ dbhost: AWSPARAMSTR:///int-test/pocketbase/config|host
 `
 
 	appConf := &config{}
-	cm := configmanager.New()
+	cm := configmanager.New(context.TODO())
 	// use custom token separator inline with future releases
 	cm.Config.WithTokenSeparator("://")
 	err := cm.RetrieveUnmarshalledFromYaml([]byte(configMarshalled), appConf)

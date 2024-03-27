@@ -87,7 +87,11 @@ func Test_MarshalMetadata_with_label_struct_succeeds(t *testing.T) {
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
 			inputTyp := &labelMeta{}
-			got := config.NewParsedTokenConfig(tt.rawToken, *tt.config)
+			got, err := config.NewParsedTokenConfig(tt.rawToken, *tt.config)
+
+			if err != nil {
+				t.Fatalf("got an error on NewParsedTokenconfig (%s)\n", tt.rawToken)
+			}
 
 			if got == nil {
 				t.Errorf(testutils.TestPhraseWithContext, "Unable to parse token", nil, config.ParsedTokenConfig{})

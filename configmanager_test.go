@@ -1,6 +1,7 @@
 package configmanager_test
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sort"
@@ -59,7 +60,7 @@ func Test_Retrieve_from_token_list(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			cm := configmanager.New()
+			cm := configmanager.New(context.TODO())
 			cm.WithGenerator(tt.genvar)
 			pm, err := cm.Retrieve(tt.tokens)
 			if err != nil {
@@ -170,7 +171,7 @@ foo23 = val1
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cm := configmanager.New()
+			cm := configmanager.New(context.TODO())
 			cm.WithGenerator(tt.genvar)
 			got, err := cm.RetrieveWithInputReplaced(tt.input)
 			if err != nil {
@@ -309,7 +310,7 @@ var marshallTests = map[string]struct {
 func Test_RetrieveMarshalledJson(t *testing.T) {
 	for name, tt := range marshallTests {
 		t.Run(name, func(t *testing.T) {
-			c := configmanager.New()
+			c := configmanager.New(context.TODO())
 			c.Config.WithTokenSeparator("://")
 			c.WithGenerator(tt.generator(t))
 
@@ -323,7 +324,7 @@ func Test_RetrieveMarshalledJson(t *testing.T) {
 func Test_YamlRetrieveMarshalled(t *testing.T) {
 	for name, tt := range marshallTests {
 		t.Run(name, func(t *testing.T) {
-			c := configmanager.New()
+			c := configmanager.New(context.TODO())
 			c.Config.WithTokenSeparator("://")
 			c.WithGenerator(tt.generator(t))
 
@@ -400,7 +401,7 @@ bar: quz`),
 	}
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
-			c := configmanager.New()
+			c := configmanager.New(context.TODO())
 			c.Config.WithTokenSeparator("://")
 			c.WithGenerator(tt.generator(t))
 			output := &testNestedStruct{}
@@ -459,7 +460,7 @@ func Test_JsonRetrieveUnmarshalled(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			c := configmanager.New()
+			c := configmanager.New(context.TODO())
 			c.Config.WithTokenSeparator("://")
 			c.WithGenerator(tt.generator(t))
 			output := &testNestedStruct{}
@@ -537,7 +538,7 @@ func Test_YamlRetrieveMarshalled_errored_in_generator(t *testing.T) {
 	m.generate = func(tokens []string) (generator.ParsedMap, error) {
 		return nil, fmt.Errorf("failed to generate a parsedMap")
 	}
-	c := configmanager.New()
+	c := configmanager.New(context.TODO())
 	c.Config.WithTokenSeparator("://")
 	c.WithGenerator(m)
 	input := &testNestedStruct{}
@@ -554,7 +555,7 @@ func Test_YamlRetrieveMarshalled_errored_in_marshal(t *testing.T) {
 	m.generate = func(tokens []string) (generator.ParsedMap, error) {
 		return generator.ParsedMap{}, nil
 	}
-	c := configmanager.New()
+	c := configmanager.New(context.TODO())
 	c.Config.WithTokenSeparator("://")
 	c.WithGenerator(m)
 	// input := &testNestedStruct{}
@@ -575,7 +576,7 @@ func Test_JsonRetrieveMarshalled_errored_in_generator(t *testing.T) {
 	m.generate = func(tokens []string) (generator.ParsedMap, error) {
 		return nil, fmt.Errorf("failed to generate a parsedMap")
 	}
-	c := configmanager.New()
+	c := configmanager.New(context.TODO())
 	c.Config.WithTokenSeparator("://")
 	c.WithGenerator(m)
 	input := &testNestedStruct{}
@@ -591,7 +592,7 @@ func Test_JsonRetrieveMarshalled_errored_in_marshal(t *testing.T) {
 	m.generate = func(tokens []string) (generator.ParsedMap, error) {
 		return generator.ParsedMap{}, nil
 	}
-	c := configmanager.New()
+	c := configmanager.New(context.TODO())
 	c.Config.WithTokenSeparator("://")
 	c.WithGenerator(m)
 	// input := &testNestedStruct{}
@@ -626,7 +627,7 @@ func Test_Generator_Config_(t *testing.T) {
 	}
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
-			cm := configmanager.New()
+			cm := configmanager.New(context.TODO())
 			if tt.keySeparator != "" {
 				cm.Config.WithKeySeparator(tt.keySeparator)
 			}

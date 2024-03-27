@@ -51,11 +51,9 @@ func Test_Strategy_Retrieve_succeeds(t *testing.T) {
 	}
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
-			// channelResp := make(chan *generator.ChanResp)
 			rs := generator.NewRetrieveStrategy(store.NewDefatultStrategy(), *tt.config)
-
-			// var wg sync.WaitGroup
-			got := rs.RetrieveByToken(context.TODO(), tt.impl(t), config.NewParsedTokenConfig(tt.token, *tt.config))
+			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
+			got := rs.RetrieveByToken(context.TODO(), tt.impl(t), token)
 			if got.Err != nil {
 				t.Errorf(testutils.TestPhraseWithContext, "Token response errored", got.Err.Error(), tt.expect)
 			}
@@ -104,8 +102,18 @@ func Test_SelectImpl_(t *testing.T) {
 		token         string
 		config        *config.GenVarsConfig
 		expect        store.Strategy
+		expErr        error
 	}{
-
+		"unknown": {
+			func() func() {
+				return func() {
+				}
+			},
+			"UNKNOWN#foo/bar",
+			config.NewConfig(),
+			nil,
+			fmt.Errorf("unable to get prefix, invalid token - cannot get prefix"),
+		},
 		"success AZTABLESTORE": {
 			func() func() {
 				os.Setenv("AZURE_stuff", "foo")
@@ -116,6 +124,7 @@ func Test_SelectImpl_(t *testing.T) {
 			"AZTABLESTORE#foo/bar",
 			config.NewConfig(),
 			&store.AzTableStore{},
+			nil,
 		},
 		// "default Error": {
 		// 	func() func() {
@@ -141,10 +150,11 @@ func Test_SelectImpl_(t *testing.T) {
 			tearDown := tt.setUpTearDown()
 			defer tearDown()
 			rs := generator.NewRetrieveStrategy(store.NewDefatultStrategy(), *tt.config)
-			got, err := rs.SelectImplementation(context.TODO(), config.NewParsedTokenConfig(tt.token, *config.NewConfig().WithTokenSeparator("#")))
+			token, _ := config.NewParsedTokenConfig(tt.token, *config.NewConfig().WithTokenSeparator("#"))
+			got, err := rs.SelectImplementation(context.TODO(), token)
 
 			if err != nil {
-				if err.Error() != fmt.Sprintf("implementation not found for input string: %s", tt.token) {
+				if err.Error() != tt.expErr.Error() {
 					t.Errorf(testutils.TestPhraseWithContext, "uncaught error", err.Error(), fmt.Sprintf("implementation not found for input string: %s", tt.token))
 				}
 				return
