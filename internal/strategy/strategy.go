@@ -21,14 +21,19 @@ var defaultStrategyFuncMap = map[config.ImplementationPrefix]StrategyFunc{
 	config.AzAppConfigPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
 		return store.NewAzAppConf(ctx, token)
 	},
-	// case SecretMgrPrefix:
-	// 	return NewSecretsMgr(ctx)
-	// case ParamStorePrefix:
+	config.GcpSecretsPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+		return store.NewGcpSecrets(ctx)
+	},
+	config.SecretMgrPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+		return store.NewSecretsMgr(ctx)
+	},
+	config.ParamStorePrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+		return store.NewParamStore(ctx)
+	},
+	// config.ParamStorePrefix:
 	// 	return NewParamStore(ctx)
 	// case AzKeyVaultSecretsPrefix:
 	// 	return NewKvScrtStore(ctx, in, config)
-	// case GcpSecretsPrefix:
-	// 	return NewGcpSecrets(ctx)
 	// case HashicorpVaultPrefix:
 	// 	return NewVaultStore(ctx, in, config)
 }

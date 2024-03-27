@@ -67,7 +67,6 @@ func NewAzTableStore(ctx context.Context, token *config.ParsedTokenConfig) (*AzT
 
 	backingStore.svc = c
 	return backingStore, nil
-
 }
 
 // setToken already happens in the constructor
