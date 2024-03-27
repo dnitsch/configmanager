@@ -1,18 +1,168 @@
 package generator_test
 
-import "testing"
+import (
+	"context"
+	"fmt"
+	"testing"
+
+	"github.com/dnitsch/configmanager/internal/config"
+	"github.com/dnitsch/configmanager/internal/store"
+	"github.com/dnitsch/configmanager/internal/strategy"
+	"github.com/dnitsch/configmanager/internal/testutils"
+	"github.com/dnitsch/configmanager/pkg/generator"
+)
+
+type mockGenerate struct {
+	inToken, value string
+	err            error
+}
+
+func (m *mockGenerate) SetToken(s *config.ParsedTokenConfig) {
+}
+func (m *mockGenerate) Token() (s string, e error) {
+	return m.value, m.err
+}
 
 func Test_Generate(t *testing.T) {
+
+	t.Run("succeeds with funcMap", func(t *testing.T) {
+		var custFunc = func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+			m := &mockGenerate{"UNKNOWN://mountPath/token", "bar", nil}
+			return m, nil
+		}
+
+		g := generator.NewGenerator()
+		g.WithStrategyMap(strategy.StrategyFuncMap{config.UnknownPrefix: custFunc})
+		got, err := g.Generate([]string{"UNKNOWN://mountPath/token"})
+
+		if err != nil {
+			t.Fatal("errored on generate")
+		}
+		if len(got) != 1 {
+			t.Errorf(testutils.TestPhraseWithContext, "incorect number in a map", len(got), 1)
+		}
+	})
+
+	t.Run("errors in retrieval and logs it out", func(t *testing.T) {
+		var custFunc = func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+			m := &mockGenerate{"UNKNOWN://mountPath/token", "bar", fmt.Errorf("failed to get value")}
+			return m, nil
+		}
+
+		g := generator.NewGenerator()
+		g.WithStrategyMap(strategy.StrategyFuncMap{config.UnknownPrefix: custFunc})
+		got, err := g.Generate([]string{"UNKNOWN://mountPath/token"})
+
+		if err != nil {
+			t.Fatal("errored on generate")
+		}
+		if len(got) != 0 {
+			t.Errorf(testutils.TestPhraseWithContext, "incorect number in a map", len(got), 0)
+		}
+	})
+
+	t.Run("retrieves values correctly from a keylookup inside", func(t *testing.T) {
+		var custFunc = func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+			m := &mockGenerate{"token-unused", `{"foo":"bar","key1":{"key2":"val"}}`, nil}
+			return m, nil
+		}
+
+		g := generator.NewGenerator()
+		g.WithStrategyMap(strategy.StrategyFuncMap{config.UnknownPrefix: custFunc})
+		got, err := g.Generate([]string{"UNKNOWN://mountPath/token|key1.key2"})
+
+		if err != nil {
+			t.Fatal("errored on generate")
+		}
+		if len(got) != 1 {
+			t.Errorf(testutils.TestPhraseWithContext, "incorect number in a map", len(got), 0)
+		}
+		if got["UNKNOWN://mountPath/token|key1.key2"] != "val" {
+			t.Errorf(testutils.TestPhraseWithContext, "incorrect value returned in parsedMap", got["UNKNOWN://mountPath/token|key1.key2"], "val")
+		}
+	})
+}
+
+func Test_generate_withKeys_lookup(t *testing.T) {
 	ttests := map[string]struct {
-		objType any
+		custFunc  strategy.StrategyFunc
+		token     string
+		expectVal string
 	}{
-		"test1": {
-			objType: nil,
+		"retrieves string value correctly from a keylookup inside": {
+			custFunc: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+				m := &mockGenerate{"token", `{"foo":"bar","key1":{"key2":"val"}}`, nil}
+				return m, nil
+			},
+			token:     "UNKNOWN://mountPath/token|key1.key2",
+			expectVal: "val",
+		},
+		"retrieves number value correctly from a keylookup inside": {
+			custFunc: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+				m := &mockGenerate{"token", `{"foo":"bar","key1":{"key2":123}}`, nil}
+				return m, nil
+			},
+			token:     "UNKNOWN://mountPath/token|key1.key2",
+			expectVal: "123",
+		},
+		"retrieves nothing as keylookup is incorrect": {
+			custFunc: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+				m := &mockGenerate{"token", `{"foo":"bar","key1":{"key2":123}}`, nil}
+				return m, nil
+			},
+			token:     "UNKNOWN://mountPath/token|noprop",
+			expectVal: "",
+		},
+		"retrieves value as is due to incorrectly stored json in backing store": {
+			custFunc: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+				m := &mockGenerate{"token", `foo":"bar","key1":{"key2":123}}`, nil}
+				return m, nil
+			},
+			token:     "UNKNOWN://mountPath/token|noprop",
+			expectVal: `foo":"bar","key1":{"key2":123}}`,
 		},
 	}
-	for name, _ := range ttests {
+	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
+			g := generator.NewGenerator()
+			g.WithStrategyMap(strategy.StrategyFuncMap{config.UnknownPrefix: tt.custFunc})
+			got, err := g.Generate([]string{tt.token})
 
+			if err != nil {
+				t.Fatal("errored on generate")
+			}
+			if len(got) != 1 {
+				t.Errorf(testutils.TestPhraseWithContext, "incorect number in a map", len(got), 0)
+			}
+			if got[tt.token] != tt.expectVal {
+				t.Errorf(testutils.TestPhraseWithContext, "incorrect value returned in parsedMap", got[tt.token], tt.expectVal)
+			}
+		})
+	}
+}
+
+func Test_IsParsed(t *testing.T) {
+	ttests := map[string]struct {
+		val      any
+		isParsed bool
+	}{
+		"not parseable": {
+			`notparseable`, false,
+		},
+		"one level parseable": {
+			`{"parseable":"foo"}`, true,
+		},
+		"incorrect JSON": {
+			`parseable":"foo"}`, false,
+		},
+	}
+	for name, tt := range ttests {
+		t.Run(name, func(t *testing.T) {
+			typ := &generator.ParsedMap{}
+			got := generator.IsParsed(tt.val, typ)
+			if got != tt.isParsed {
+				t.Errorf(testutils.TestPhraseWithContext, "unexpected IsParsed", got, tt.isParsed)
+			}
 		})
 	}
 }

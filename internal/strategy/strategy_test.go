@@ -1,4 +1,4 @@
-package generator_test
+package strategy_test
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/store"
+	"github.com/dnitsch/configmanager/internal/strategy"
 	"github.com/dnitsch/configmanager/internal/testutils"
-	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/go-test/deep"
 )
 
@@ -18,13 +18,15 @@ type mockGenerate struct {
 	err            error
 }
 
-func (m *mockGenerate) SetToken(s *config.ParsedTokenConfig) {
+func (m mockGenerate) SetToken(s *config.ParsedTokenConfig) {
 }
-func (m *mockGenerate) Token() (s string, e error) {
+
+func (m mockGenerate) Token() (s string, e error) {
 	return m.value, m.err
 }
 
 func Test_Strategy_Retrieve_succeeds(t *testing.T) {
+
 	ttests := map[string]struct {
 		impl   func(t *testing.T) store.Strategy
 		config *config.GenVarsConfig
@@ -36,7 +38,7 @@ func Test_Strategy_Retrieve_succeeds(t *testing.T) {
 				return &mockGenerate{"AZTABLESTORE://mountPath/token", "bar", nil}
 			},
 			config.NewConfig().WithOutputPath("stdout").WithTokenSeparator("://"),
-			"AZTABLESTORE://token",
+			"AZTABLESTORE://mountPath/token",
 			"bar",
 		},
 		// "error in retrieval": {
@@ -51,57 +53,60 @@ func Test_Strategy_Retrieve_succeeds(t *testing.T) {
 	}
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
-			rs := generator.NewRetrieveStrategy(store.NewDefatultStrategy(), *tt.config)
+			rs := strategy.New(store.NewDefatultStrategy(), *tt.config)
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
 			got := rs.RetrieveByToken(context.TODO(), tt.impl(t), token)
 			if got.Err != nil {
 				t.Errorf(testutils.TestPhraseWithContext, "Token response errored", got.Err.Error(), tt.expect)
 			}
-			// wg.Add(len(tt.token))
-			// go func() {
-			// 	defer wg.Done()
-			// 	channelResp <- rs.RetrieveByToken(context.TODO(), tt.impl(t), config.NewParsedTokenConfig(tt.token[0], *tt.config))
-			// }()
-			// // var got *generator.ChanResp
-			// // for {
-			// // 	// channelResp := make(chan *generator.ChanResp)
-			// // 	<-channelResp
-			// // 	// select {
-			// // 	// case resp := <-channelResp:
-			// // 	// 	got = resp
-			// // 	// 	return
-			// // 	// }
-
-			// // }
-
-			// // got.
-			// go func() {
-			// 	wg.Wait()
-			// 	close(channelResp)
-			// }()
-			// for g := range channelResp {
-			// 	if g.err != nil {
-			// 		if g.err.Error() != tt.expect {
-			// 			t.Errorf(testutils.TestPhraseWithContext, "channel errored not expected", g.err.Error(), tt.expect)
-			// 		}
-			// 		return
-			// 	}
-			// 	if g.value != tt.expect {
-			// 		t.Errorf(testutils.TestPhraseWithContext, "channel value", g.value, tt.expect)
-			// 	}
-			// }
+			if got.Value() != tt.expect {
+				t.Errorf(testutils.TestPhraseWithContext, "Value not correct", got.Value(), tt.expect)
+			}
+			if got.Key().String() != tt.token {
+				t.Errorf(testutils.TestPhraseWithContext, "INcorrect Token returned in Key", got.Key().String(), tt.token)
+			}
 		})
 	}
 }
 
-var UnknownPrefix config.ImplementationPrefix = "WRONG"
+func Test_CustomStrategyFuncMap_add_own(t *testing.T) {
+	// t.Skip()
+	ttests := map[string]struct {
+	}{
+		"default": {},
+	}
+	for name, _ := range ttests {
+		t.Run(name, func(t *testing.T) {
+			called := 0
+			genVarsConf := config.NewConfig()
+			token, _ := config.NewParsedTokenConfig("AZTABLESTORE://mountPath/token", *genVarsConf)
 
-func Test_SelectImpl_(t *testing.T) {
+			var custFunc = func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+				m := &mockGenerate{"AZTABLESTORE://mountPath/token", "bar", nil}
+				called++
+				return m, nil
+			}
+
+			s := strategy.New(store.NewDefatultStrategy(), *genVarsConf)
+			s.WithStrategyFuncMap(strategy.StrategyFuncMap{config.AzTableStorePrefix: custFunc})
+
+			store, _ := s.SelectImplementation(context.TODO(), token)
+			_ = s.RetrieveByToken(context.TODO(), store, token)
+
+			if called != 1 {
+				t.Errorf(testutils.TestPhraseWithContext, "custom func not called", called, 1)
+			}
+		})
+	}
+}
+
+func Test_SelectImpl_With(t *testing.T) {
+
 	ttests := map[string]struct {
 		setUpTearDown func() func()
 		token         string
 		config        *config.GenVarsConfig
-		expect        store.Strategy
+		expect        func() store.Strategy
 		expErr        error
 	}{
 		"unknown": {
@@ -110,9 +115,9 @@ func Test_SelectImpl_(t *testing.T) {
 				}
 			},
 			"UNKNOWN#foo/bar",
-			config.NewConfig(),
-			nil,
-			fmt.Errorf("unable to get prefix, invalid token - cannot get prefix"),
+			config.NewConfig().WithTokenSeparator("#"),
+			func() store.Strategy { return nil },
+			fmt.Errorf("implementation not found for input string: UNKNOWN#foo/bar"),
 		},
 		"success AZTABLESTORE": {
 			func() func() {
@@ -121,11 +126,16 @@ func Test_SelectImpl_(t *testing.T) {
 					os.Clearenv()
 				}
 			},
-			"AZTABLESTORE#foo/bar",
-			config.NewConfig(),
-			&store.AzTableStore{},
+			"AZTABLESTORE#foo/bar1",
+			config.NewConfig().WithTokenSeparator("#"),
+			func() store.Strategy {
+				conf, _ := config.NewParsedTokenConfig("AZTABLESTORE#foo/bar1", *config.NewConfig().WithTokenSeparator("#"))
+				s, _ := store.NewAzTableStore(context.TODO(), conf)
+				return s
+			},
 			nil,
 		},
+
 		// "default Error": {
 		// 	func() func() {
 		// 		os.Setenv("AWS_ACCESS_KEY", "AAAAAAAAAAAAAAA")
@@ -149,20 +159,21 @@ func Test_SelectImpl_(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			tearDown := tt.setUpTearDown()
 			defer tearDown()
-			rs := generator.NewRetrieveStrategy(store.NewDefatultStrategy(), *tt.config)
-			token, _ := config.NewParsedTokenConfig(tt.token, *config.NewConfig().WithTokenSeparator("#"))
+			want := tt.expect()
+			rs := strategy.New(store.NewDefatultStrategy(), *tt.config)
+			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
 			got, err := rs.SelectImplementation(context.TODO(), token)
 
 			if err != nil {
 				if err.Error() != tt.expErr.Error() {
-					t.Errorf(testutils.TestPhraseWithContext, "uncaught error", err.Error(), fmt.Sprintf("implementation not found for input string: %s", tt.token))
+					t.Errorf(testutils.TestPhraseWithContext, "uncaught error", err.Error(), tt.expErr.Error())
 				}
 				return
 			}
 
-			diff := deep.Equal(got, tt.expect)
+			diff := deep.Equal(got, want)
 			if diff != nil {
-				t.Errorf(testutils.TestPhraseWithContext, "reflection of initialised implentations", fmt.Sprintf("%q", got), fmt.Sprintf("%q", tt.expect))
+				t.Errorf(testutils.TestPhraseWithContext, "reflection of initialised implentations", fmt.Sprintf("%q", got), fmt.Sprintf("%q", want))
 			}
 		})
 	}

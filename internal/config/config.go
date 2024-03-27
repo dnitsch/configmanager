@@ -47,7 +47,7 @@ var (
 	VarPrefix = map[ImplementationPrefix]bool{
 		SecretMgrPrefix: true, ParamStorePrefix: true, AzKeyVaultSecretsPrefix: true,
 		GcpSecretsPrefix: true, HashicorpVaultPrefix: true, AzTableStorePrefix: true,
-		AzAppConfigPrefix: true, UnknownPrefix: false,
+		AzAppConfigPrefix: true, UnknownPrefix: true,
 	}
 )
 
@@ -150,8 +150,6 @@ func (ptc *ParsedTokenConfig) new() *ParsedTokenConfig {
 	// token without keys
 	ptc.keysLookup()
 	return ptc
-	// ptc.keysPath = keysPath
-	// ptc.storeToken = tokenWithoutKeysLookup
 }
 
 func (t *ParsedTokenConfig) ParseMetadata(typ any) error {
@@ -181,7 +179,6 @@ func (t *ParsedTokenConfig) ParseMetadata(typ any) error {
 
 func (t *ParsedTokenConfig) StripPrefix() string {
 	return t.prefixLessToken
-	// return stripPrefix(t.fullToken, t.prefix, t.tokenSeparator, t.keySeparator)
 }
 
 // StripMetadata returns the fullToken without the
@@ -210,6 +207,10 @@ func (t *ParsedTokenConfig) StoreToken() string {
 // Including key separator and metadata values
 func (t *ParsedTokenConfig) String() string {
 	return t.fullToken
+}
+
+func (t *ParsedTokenConfig) LookupKeys() string {
+	return t.keysPath
 }
 
 func (t *ParsedTokenConfig) Prefix() ImplementationPrefix {

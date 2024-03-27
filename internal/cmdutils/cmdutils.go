@@ -54,7 +54,7 @@ func (c *CmdUtils) generateFromToken(tokens []string, w io.Writer) error {
 	// Conver to ExportVars and flush to file
 	pp := &PostProcessor{ProcessedMap: pm, Config: c.configManager.GeneratorConfig()}
 	pp.ConvertToExportVar()
-	return pp.FlushToFile(w)
+	return pp.FlushOutToFile(w)
 }
 
 // Generate a replaced string from string input command
@@ -138,14 +138,13 @@ func (c *CmdUtils) generateStrOutFromInput(input io.Reader, output io.Writer) er
 	if err != nil {
 		return err
 	}
-	_, err = c.configManager.RetrieveWithInputReplaced(string(b))
+	str, err := c.configManager.RetrieveWithInputReplaced(string(b))
 	if err != nil {
 		return err
 	}
+	pp := &PostProcessor{}
 
-	// TODO: move to cmdutils helper
-	// return c.cfgmgr. .StrToFile(output, str)
-	return nil
+	return pp.StrToFile(output, str)
 }
 
 func writer(outputpath string) (*os.File, error) {

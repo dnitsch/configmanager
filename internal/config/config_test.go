@@ -39,49 +39,49 @@ func Test_MarshalMetadata_with_label_struct_succeeds(t *testing.T) {
 			config.NewConfig().WithTokenSeparator("://"),
 			`AZTABLESTORE://basjh/dskjuds/123|d88[label=dev]`,
 			"dev",
-			"AZTABLESTORE://basjh/dskjuds/123|d88",
+			"basjh/dskjuds/123",
 		},
 		"when provider expects label on token and label does not exist": {
 			config.NewConfig().WithTokenSeparator("://"),
 			`AZTABLESTORE://basjh/dskjuds/123|d88[someother=dev]`,
 			"",
-			"AZTABLESTORE://basjh/dskjuds/123|d88",
+			"basjh/dskjuds/123",
 		},
 		"no metadata found": {
 			config.NewConfig().WithTokenSeparator("://"),
 			`AZTABLESTORE://basjh/dskjuds/123|d88`,
 			"",
-			"AZTABLESTORE://basjh/dskjuds/123|d88",
+			"basjh/dskjuds/123",
 		},
 		"no metadata found incorrect marker placement": {
 			config.NewConfig().WithTokenSeparator("://"),
 			`AZTABLESTORE://basjh/dskjuds/123|d88]asdas=bar[`,
 			"",
-			"AZTABLESTORE://basjh/dskjuds/123|d88]asdas=bar[",
+			"basjh/dskjuds/123",
 		},
 		"no metadata found incorrect marker placement and no key separator": {
 			config.NewConfig().WithTokenSeparator("://"),
 			`AZTABLESTORE://basjh/dskjuds/123]asdas=bar[`,
 			"",
-			"AZTABLESTORE://basjh/dskjuds/123]asdas=bar[",
+			"basjh/dskjuds/123]asdas=bar[",
 		},
 		"no end found incorrect marker placement and no key separator": {
 			config.NewConfig().WithTokenSeparator("://"),
 			`AZTABLESTORE://basjh/dskjuds/123[asdas=bar`,
 			"",
-			"AZTABLESTORE://basjh/dskjuds/123[asdas=bar",
+			"basjh/dskjuds/123[asdas=bar",
 		},
 		"no start found incorrect marker placement and no key separator": {
 			config.NewConfig().WithTokenSeparator("://"),
 			`AZTABLESTORE://basjh/dskjuds/123]asdas=bar]`,
 			"",
-			"AZTABLESTORE://basjh/dskjuds/123]asdas=bar]",
+			"basjh/dskjuds/123]asdas=bar]",
 		},
 		"metadata is in the middle of path lookup": {
 			config.NewConfig().WithTokenSeparator("://"),
 			`AZTABLESTORE://basjh/dskjuds/123[label=bar]|lookup`,
 			"bar",
-			"AZTABLESTORE://basjh/dskjuds/123|lookup",
+			"basjh/dskjuds/123",
 		},
 	}
 	for name, tt := range ttests {
@@ -99,7 +99,7 @@ func Test_MarshalMetadata_with_label_struct_succeeds(t *testing.T) {
 
 			got.ParseMetadata(inputTyp)
 
-			if got.StripMetadata() != tt.wantMetaStrippedToken {
+			if got.StoreToken() != tt.wantMetaStrippedToken {
 				t.Errorf(testutils.TestPhraseWithContext, "Token does not match", got.StripMetadata(), tt.wantMetaStrippedToken)
 			}
 

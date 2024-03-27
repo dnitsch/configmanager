@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/store"
+	"github.com/dnitsch/configmanager/internal/strategy"
 	"github.com/dnitsch/configmanager/pkg/log"
 	"github.com/spyzhov/ajson"
 )
@@ -20,7 +20,8 @@ type muRawMap struct {
 }
 
 type retrieveIface interface {
-	RetrieveByToken(ctx context.Context, impl store.Strategy, in *config.ParsedTokenConfig) *TokenResponse
+	WithStrategyFuncMap(funcMap strategy.StrategyFuncMap) *strategy.RetrieveStrategy
+	RetrieveByToken(ctx context.Context, impl store.Strategy, in *config.ParsedTokenConfig) *strategy.TokenResponse
 	SelectImplementation(ctx context.Context, in *config.ParsedTokenConfig) (store.Strategy, error)
 }
 
@@ -61,8 +62,16 @@ func newGenVars() *GenVars {
 		// return using default config
 		config: *conf,
 		// using a default Strategy
-		strategy: NewRetrieveStrategy(store.NewDefatultStrategy(), *conf),
+		strategy: strategy.New(store.NewDefatultStrategy(), *conf),
 	}
+}
+
+// WithStrategyMap
+//
+// Adds addtional funcs for storageRetrieval
+func (c *GenVars) WithStrategyMap(sm strategy.StrategyFuncMap) *GenVars {
+	c.strategy.WithStrategyFuncMap(sm)
+	return c
 }
 
 // WithConfig uses custom config
@@ -85,10 +94,12 @@ func (c *GenVars) Config() *config.GenVarsConfig {
 	return &c.config
 }
 
-func (c *GenVars) RawMap() ParsedMap {
+func (c *GenVars) parsedMap() ParsedMap {
 	c.rawMap.mu.RLock()
 	defer c.rawMap.mu.RUnlock()
 	// make a copy of the map
+	// so it cannot be passed
+	// as a pointer to live data
 	m := make(ParsedMap)
 	for k, v := range c.rawMap.tokenMap {
 		m[k] = v
@@ -96,13 +107,13 @@ func (c *GenVars) RawMap() ParsedMap {
 	return m
 }
 
-func (c *GenVars) AddRawMap(key *config.ParsedTokenConfig, val string) {
+func (c *GenVars) addRawMap(key *config.ParsedTokenConfig, val string) {
 	c.rawMap.mu.Lock()
 	defer c.rawMap.mu.Unlock()
 	// NOTE: still use the metadata in the key
 	// there could be different versions / labels for the same token and hence different values
 	// However the JSONpath look up
-	c.rawMap.tokenMap[key.String()] = c.keySeparatorLookup(key.StripMetadata(), val)
+	c.rawMap.tokenMap[key.String()] = c.keySeparatorLookup(key, val)
 }
 
 type rawTokenMap map[string]*config.ParsedTokenConfig
@@ -116,17 +127,18 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 		// TODO: normalize tokens here potentially
 		// merge any tokens that only differ in keys lookup inside the object
 		parsedToken, err := config.NewParsedTokenConfig(token, c.config)
-		if err != nil {
-			log.Infof(err.Error())
+		if err == nil {
+			parsedTokenMap[token] = parsedToken
+			continue
 		}
-		parsedTokenMap[token] = parsedToken
+		log.Infof(err.Error())
 	}
 	// pass in default initialised retrieveStrategy
 	// input should be
 	if err := c.generate(parsedTokenMap); err != nil {
 		return nil, err
 	}
-	return c.RawMap(), nil
+	return c.parsedMap(), nil
 }
 
 // generate checks if any tokens found
@@ -143,21 +155,21 @@ func (c *GenVars) generate(rawMap rawTokenMap) error {
 	// build an exact size channel
 	var wg sync.WaitGroup
 	initChanLen := len(rawMap)
-	outCh := make(chan *TokenResponse, initChanLen)
+	outCh := make(chan *strategy.TokenResponse, initChanLen)
 
 	wg.Add(initChanLen)
 	// TODO: initialise the singleton serviceContainer
 	// pass into each goroutine
 	for _, parsedToken := range rawMap {
 		// take value from config allocation on a per iteration basis
-		go func(tkn *config.ParsedTokenConfig) {
+		go func(token *config.ParsedTokenConfig) {
 			defer wg.Done()
-			strategy, err := c.strategy.SelectImplementation(c.ctx, tkn)
+			storeStrategy, err := c.strategy.SelectImplementation(c.ctx, token)
 			if err != nil {
-				outCh <- &TokenResponse{Err: err}
+				outCh <- &strategy.TokenResponse{Err: err}
 				return
 			}
-			outCh <- c.strategy.RetrieveByToken(c.ctx, strategy, tkn)
+			outCh <- c.strategy.RetrieveByToken(c.ctx, storeStrategy, token)
 		}(parsedToken)
 	}
 
@@ -170,12 +182,12 @@ func (c *GenVars) generate(rawMap rawTokenMap) error {
 		cr := cro
 		log.Debugf("cro: %+v", cr)
 		if cr.Err != nil {
-			log.Debugf("cr.err %v, for token: %s", cr.Err, cr.key)
+			log.Debugf("cr.err %v, for token: %s", cr.Err, cr.Key())
 			errors = append(errors, cr.Err)
 			// Skip adding not found key to the RawMap
 			continue
 		}
-		c.AddRawMap(cr.key, cr.value)
+		c.addRawMap(cr.Key(), cr.Value())
 	}
 
 	if len(errors) > 0 {
@@ -190,8 +202,8 @@ func (c *GenVars) generate(rawMap rawTokenMap) error {
 // map[string]string
 // If found it will convert that to a map with all keys uppercased
 // and any characters
-func IsParsed(res any, trm *ParsedMap) bool {
-	str := fmt.Sprint(res)
+func IsParsed(v any, trm *ParsedMap) bool {
+	str := fmt.Sprint(v)
 	if err := json.Unmarshal([]byte(str), &trm); err != nil {
 		log.Info("unable to parse into a k/v map returning a string instead")
 		return false
@@ -203,16 +215,15 @@ func IsParsed(res any, trm *ParsedMap) bool {
 // keySeparatorLookup checks if the key contains
 // keySeparator character
 // If it does contain one then it tries to parse
-func (c *GenVars) keySeparatorLookup(key, val string) string {
+func (c *GenVars) keySeparatorLookup(key *config.ParsedTokenConfig, val string) string {
 	// key has separator
-	kl := strings.Split(key, c.config.KeySeparator())
-	log.Debugf("key list: %v", kl)
-	if len(kl) < 2 {
+	k := key.LookupKeys()
+	if k == "" {
 		log.Infof("no keyseparator found")
 		return val
 	}
 
-	keys, err := ajson.JSONPath([]byte(val), fmt.Sprintf("$..%s", kl[1]))
+	keys, err := ajson.JSONPath([]byte(val), fmt.Sprintf("$..%s", k))
 	if err != nil {
 		log.Debugf("unable to parse as json object %v", err.Error())
 		return val

@@ -68,10 +68,12 @@ func (p *PostProcessor) normalizeKey(k string) string {
 	return strings.ToUpper(replacer.Replace(k))
 }
 
-// FlushToFile saves contents to file provided
+// FlushOutToFile saves contents to file provided
 // in the config input into the generator
 // default location is ./app.env
-func (p *PostProcessor) FlushToFile(w io.Writer) error {
+//
+// can also be to stdout or another file location
+func (p *PostProcessor) FlushOutToFile(w io.Writer) error {
 	return p.flushToFile(w, listToString(p.outString))
 }
 
