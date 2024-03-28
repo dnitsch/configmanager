@@ -104,7 +104,8 @@ func (c *GenVarsConfig) KeySeparator() string {
 
 // Config returns the derefed value
 func (c *GenVarsConfig) Config() GenVarsConfig {
-	return *c
+	cc := *c
+	return cc
 }
 
 // Parsed token config section

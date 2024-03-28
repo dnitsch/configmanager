@@ -110,17 +110,45 @@ func Test_MarshalMetadata_with_label_struct_succeeds(t *testing.T) {
 	}
 }
 
-func Test_StripPrefix(t *testing.T) {
-	ttests := map[string]struct {
-		objType any
-	}{
-		"test1": {
-			objType: nil,
-		},
+func Test_TokenParser_config(t *testing.T) {
+	type mockConfAwsSecrMgr struct {
+		Version string `json:"version"`
 	}
-	for name, _ := range ttests {
+	ttests := map[string]struct {
+		input              string
+		expPrefix          config.ImplementationPrefix
+		expLookupKeys      string
+		expStoreToken      string
+		expString          string // fullToken
+		expMetadataVersion string
+	}{
+		"bare":                              {"AWSSECRETS://foo/bar", config.SecretMgrPrefix, "", "foo/bar", "AWSSECRETS://foo/bar", ""},
+		"with metadata version":             {"AWSSECRETS://foo/bar[version=123]", config.SecretMgrPrefix, "", "foo/bar", "AWSSECRETS://foo/bar[version=123]", "123"},
+		"with keys lookup and label":        {"AWSSECRETS://foo/bar|key1.key2[version=123]", config.SecretMgrPrefix, "key1.key2", "foo/bar", "AWSSECRETS://foo/bar|key1.key2[version=123]", "123"},
+		"with keys lookup and longer token": {"AWSSECRETS://foo/bar|key1.key2]version=123]", config.SecretMgrPrefix, "key1.key2]version=123]", "foo/bar", "AWSSECRETS://foo/bar|key1.key2]version=123]", ""},
+		"with keys lookup but no keys":      {"AWSSECRETS://foo/bar/sdf/sddd.90dsfsd|[version=123]", config.SecretMgrPrefix, "", "foo/bar/sdf/sddd.90dsfsd", "AWSSECRETS://foo/bar/sdf/sddd.90dsfsd|[version=123]", "123"},
+	}
+	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
+			conf := &mockConfAwsSecrMgr{}
+			got, _ := config.NewParsedTokenConfig(tt.input, *config.NewConfig())
+			got.ParseMetadata(conf)
 
+			if got.LookupKeys() != tt.expLookupKeys {
+				t.Errorf(testutils.TestPhrase, got.LookupKeys(), tt.expLookupKeys)
+			}
+			if got.StoreToken() != tt.expStoreToken {
+				t.Errorf(testutils.TestPhrase, got.StoreToken(), tt.expLookupKeys)
+			}
+			if got.String() != tt.expString {
+				t.Errorf(testutils.TestPhrase, got.String(), tt.expString)
+			}
+			if got.Prefix() != tt.expPrefix {
+				t.Errorf(testutils.TestPhrase, got.Prefix(), tt.expPrefix)
+			}
+			if conf.Version != tt.expMetadataVersion {
+				t.Errorf(testutils.TestPhrase, conf.Version, tt.expMetadataVersion)
+			}
 		})
 	}
 }

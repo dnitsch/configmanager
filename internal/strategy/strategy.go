@@ -11,7 +11,10 @@ import (
 
 var ErrTokenInvalid = errors.New("invalid token - cannot get prefix")
 
+// StrategyFunc
 type StrategyFunc func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error)
+
+// StrategyFuncMap
 type StrategyFuncMap map[config.ImplementationPrefix]StrategyFunc
 
 var defaultStrategyFuncMap = map[config.ImplementationPrefix]StrategyFunc{
@@ -30,12 +33,12 @@ var defaultStrategyFuncMap = map[config.ImplementationPrefix]StrategyFunc{
 	config.ParamStorePrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
 		return store.NewParamStore(ctx)
 	},
-	// config.ParamStorePrefix:
-	// 	return NewParamStore(ctx)
-	// case AzKeyVaultSecretsPrefix:
-	// 	return NewKvScrtStore(ctx, in, config)
-	// case HashicorpVaultPrefix:
-	// 	return NewVaultStore(ctx, in, config)
+	config.AzKeyVaultSecretsPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+		return store.NewKvScrtStore(ctx, token)
+	},
+	config.HashicorpVaultPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+		return store.NewVaultStore(ctx, token)
+	},
 }
 
 type RetrieveStrategy struct {
