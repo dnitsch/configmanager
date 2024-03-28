@@ -2,7 +2,7 @@
 //
 // Wraps around the ConfigManager library
 // with additional postprocessing capabilities for
-// output management when used with by cli flags.
+// output management when used with cli flags.
 package cmdutils
 
 import (
