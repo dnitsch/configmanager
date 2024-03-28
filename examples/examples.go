@@ -1,4 +1,4 @@
-package main
+package examples
 
 import (
 	"context"
@@ -9,12 +9,6 @@ import (
 )
 
 const DO_STUFF_WITH_VALS_HERE = "connstring:user@%v:host=%s/someschema..."
-
-func main() {
-	retrieveExample()
-	retrieveStringOut()
-	retrieveYaml()
-}
 
 // retrieveExample uses the standard Retrieve method on the API
 // this will return generator.ParsedMap which can be later used for more complex use cases
@@ -85,8 +79,8 @@ func SpecConfigTokenReplace[T any](inputType T) (*T, error) {
 	return outType, nil
 }
 
-// Example using a helper method
-func retrieveYaml() {
+// Example
+func exampleRetrieveYamlUnmarshalled() {
 
 	type config struct {
 		DbHost   string `yaml:"dbhost"`
@@ -106,6 +100,34 @@ dbhost: AWSPARAMSTR:///int-test/pocketbase/config|host
 	err := cm.RetrieveUnmarshalledFromYaml([]byte(configMarshalled), appConf)
 	if err != nil {
 		panic(err)
+	}
+	fmt.Println(appConf.DbHost)
+	fmt.Println(appConf.Username)
+	fmt.Println(appConf.Password)
+}
+
+// ### exampleRetrieveYamlMarshalled
+func exampleRetrieveYamlMarshalled() {
+	type config struct {
+		DbHost   string `yaml:"dbhost"`
+		Username string `yaml:"user"`
+		Password string `yaml:"pass"`
+	}
+
+	appConf := &config{
+		DbHost:   "AWSPARAMSTR:///int-test/pocketbase/config|host",
+		Username: "AWSPARAMSTR:///int-test/pocketbase/config|user",
+		Password: "AWSPARAMSTR:///int-test/pocketbase/config|pwd",
+	}
+
+	cm := configmanager.New(context.TODO())
+	cm.Config.WithTokenSeparator("://")
+	err := cm.RetrieveMarshalledYaml(appConf)
+	if err != nil {
+		panic(err)
+	}
+	if appConf.DbHost == "AWSPARAMSTR:///int-test/pocketbase/config|host" {
+		panic(fmt.Errorf("value of DbHost should have been replaced with a value from token"))
 	}
 	fmt.Println(appConf.DbHost)
 	fmt.Println(appConf.Username)
