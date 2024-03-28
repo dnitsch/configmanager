@@ -53,7 +53,7 @@ Where `configVar` can be either a parseable string `'som3#!S$CRet'` or a number 
 
    This can be leveraged from any application written in Go - on start up or at runtime. Secrets/Config items can be retrieved in "bulk" and parsed into a provided type, [see here for examples](./examples/examples.go).
 
-   > BREAKING CHANGE v1.22.x when on the API (see [examples](./examples/examples.go))
+   > BREAKING CHANGE v2.x with the API (see [examples](./examples/examples.go))
   - `generator.NewConfig()` is no longer required.
 
     ```go
