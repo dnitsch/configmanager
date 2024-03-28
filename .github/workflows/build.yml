@@ -30,7 +30,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.19-bullseye
+      image: golang:1.21-bullseye
     needs: set-version
     env:
       SEMVER: ${{ needs.set-version.outputs.semVer }}

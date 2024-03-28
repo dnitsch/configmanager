@@ -15,6 +15,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: install deps
+        run: |
+          apt-get update && apt-get install -y jq git
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.email ${{ github.actor }}-ci@gha.org
+          git config user.name ${{ github.actor }}
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v1.1.1
         with:
@@ -25,7 +31,7 @@ jobs:
   pr:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.19-bullseye
+      image: golang:1.21-bullseye
     needs: set-version
     env:
       REVISION: $GITHUB_SHA
