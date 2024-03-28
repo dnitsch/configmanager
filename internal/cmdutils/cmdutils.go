@@ -35,7 +35,7 @@ type CmdUtils struct {
 func New(confManager configManagerIface) *CmdUtils {
 	return &CmdUtils{
 		configManager: confManager,
-		Writer:        os.Stdout, // default writer 
+		Writer:        os.Stdout, // default writer
 	}
 }
 

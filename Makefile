@@ -10,8 +10,8 @@ LDFLAGS := -ldflags="-s -w -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Ve
 .PHONY: test test_ci tidy install cross-build 
 
 test: test_prereq
-	go test `go list ./... | grep -v */generated/` -v -buildvcs=false -mod=readonly -coverprofile=.coverage/out ; \
-	cat .coverage/out | go-junit-report > .coverage/report-junit.xml && \
+	go test ./... -v -buildvcs=false -mod=readonly -coverprofile=.coverage/out > .coverage/unit ; \
+	cat .coverage/unit | go-junit-report > .coverage/report-junit.xml && \
 	gocov convert .coverage/out | gocov-xml > .coverage/report-cobertura.xml
 
 test_ci:
