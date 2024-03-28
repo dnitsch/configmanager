@@ -1,11 +1,12 @@
-package generator
+package store
 
 import (
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	awsConf "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
@@ -17,7 +18,7 @@ type ParamStore struct {
 	svc    paramStoreApi
 	ctx    context.Context
 	config *ParamStrConfig
-	token  string
+	token  *config.ParsedTokenConfig
 }
 
 type ParamStrConfig struct {
@@ -25,7 +26,7 @@ type ParamStrConfig struct {
 }
 
 func NewParamStore(ctx context.Context) (*ParamStore, error) {
-	cfg, err := config.LoadDefaultConfig(ctx)
+	cfg, err := awsConf.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Errorf("unable to load SDK config, %v", err)
 		return nil, err
@@ -38,20 +39,19 @@ func NewParamStore(ctx context.Context) (*ParamStore, error) {
 	}, nil
 }
 
-func (imp *ParamStore) setTokenVal(token string) {
+func (imp *ParamStore) SetToken(token *config.ParsedTokenConfig) {
 	storeConf := &ParamStrConfig{}
-	initialToken := ParseMetadata(token, storeConf)
-
+	token.ParseMetadata(storeConf)
+	imp.token = token
 	imp.config = storeConf
-	imp.token = initialToken
 }
 
-func (imp *ParamStore) tokenVal(v *retrieveStrategy) (string, error) {
+func (imp *ParamStore) Token() (string, error) {
 	log.Infof("%s", "Concrete implementation ParameterStore")
-	log.Infof("ParamStore Token: %s", imp.token)
+	log.Infof("ParamStore Token: %s", imp.token.String())
 
 	input := &ssm.GetParameterInput{
-		Name:           aws.String(v.stripPrefix(imp.token, ParamStorePrefix)),
+		Name:           aws.String(imp.token.StoreToken()),
 		WithDecryption: aws.Bool(true),
 	}
 	ctx, cancel := context.WithCancel(imp.ctx)
@@ -59,7 +59,7 @@ func (imp *ParamStore) tokenVal(v *retrieveStrategy) (string, error) {
 
 	result, err := imp.svc.GetParameter(ctx, input)
 	if err != nil {
-		log.Errorf(implementationNetworkErr, ParamStorePrefix, err, imp.token)
+		log.Errorf(implementationNetworkErr, config.ParamStorePrefix, err, imp.token.StoreToken())
 		return "", err
 	}
 

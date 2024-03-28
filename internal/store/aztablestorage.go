@@ -1,7 +1,7 @@
 /**
  * Azure TableStore implementation
 **/
-package generator
+package store
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
+	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
@@ -26,8 +27,11 @@ type tableStoreApi interface {
 type AzTableStore struct {
 	svc    tableStoreApi
 	ctx    context.Context
-	token  string
 	config *AzTableStrgConfig
+	token  *config.ParsedTokenConfig
+	// token only without table indicators
+	// key only
+	strippedToken string
 }
 
 type AzTableStrgConfig struct {
@@ -35,17 +39,19 @@ type AzTableStrgConfig struct {
 }
 
 // NewAzTableStore
-func NewAzTableStore(ctx context.Context, token string, conf GenVarsConfig) (*AzTableStore, error) {
+func NewAzTableStore(ctx context.Context, token *config.ParsedTokenConfig) (*AzTableStore, error) {
 
 	storeConf := &AzTableStrgConfig{}
-	initialToken := ParseMetadata(token, storeConf)
+	token.ParseMetadata(storeConf)
+	// initialToken := config.ParseMetadata(token, storeConf)
 	backingStore := &AzTableStore{
 		ctx:    ctx,
 		config: storeConf,
+		token:  token,
 	}
 
-	srvInit := azServiceFromToken(stripPrefix(initialToken, AzTableStorePrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.table.core.windows.net/%s", 2)
-	backingStore.token = srvInit.token
+	srvInit := azServiceFromToken(token.StoreToken(), "https://%s.table.core.windows.net/%s", 2)
+	backingStore.strippedToken = srvInit.token
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
@@ -61,34 +67,33 @@ func NewAzTableStore(ctx context.Context, token string, conf GenVarsConfig) (*Az
 
 	backingStore.svc = c
 	return backingStore, nil
-
 }
 
 // setToken already happens in the constructor
-func (implmt *AzTableStore) setTokenVal(token string) {}
+func (implmt *AzTableStore) SetToken(token *config.ParsedTokenConfig) {}
 
 // tokenVal in AZ table storage if an Entity contains the `value` property
 // we attempt to extract it and return.
 //
 // From this point then normal rules of configmanager apply,
 // including keySeperator and lookup.
-func (imp *AzTableStore) tokenVal(v *retrieveStrategy) (string, error) {
+func (imp *AzTableStore) Token() (string, error) {
 	log.Info("Concrete implementation AzTableSTore")
-	log.Infof("AzTableSTore Token: %s", imp.token)
+	log.Infof("AzTableSTore Token: %s", imp.token.String())
 
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
 
 	// split the token for partition and rowKey
-	pKey, rKey, err := azTableStoreTokenSplitter(imp.token)
+	pKey, rKey, err := azTableStoreTokenSplitter(imp.strippedToken)
 	if err != nil {
 		return "", err
 	}
 
 	s, err := imp.svc.GetEntity(ctx, pKey, rKey, &aztables.GetEntityOptions{})
 	if err != nil {
-		log.Errorf(implementationNetworkErr, AzTableStorePrefix, err, imp.token)
-		return "", fmt.Errorf(implementationNetworkErr+" %w", AzTableStorePrefix, err, imp.token, ErrRetrieveFailed)
+		log.Errorf(implementationNetworkErr, config.AzTableStorePrefix, err, imp.strippedToken)
+		return "", fmt.Errorf(implementationNetworkErr+" %w", config.AzTableStorePrefix, err, imp.token.StoreToken(), ErrRetrieveFailed)
 	}
 	if len(s.Value) > 0 {
 		// check for `value` property in entity

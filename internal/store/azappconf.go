@@ -1,7 +1,7 @@
 /**
  * Azure App Config implementation
 **/
-package generator
+package store
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/azappconfig"
+	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
@@ -21,10 +22,11 @@ type appConfApi interface {
 }
 
 type AzAppConf struct {
-	svc    appConfApi
-	ctx    context.Context
-	token  string
-	config *AzAppConfConfig
+	svc           appConfApi
+	ctx           context.Context
+	config        *AzAppConfConfig
+	token         *config.ParsedTokenConfig
+	strippedToken string
 }
 
 // AzAppConfConfig is the azure conf service specific config
@@ -36,16 +38,16 @@ type AzAppConfConfig struct {
 }
 
 // NewAzAppConf
-func NewAzAppConf(ctx context.Context, token string, conf GenVarsConfig) (*AzAppConf, error) {
+func NewAzAppConf(ctx context.Context, token *config.ParsedTokenConfig) (*AzAppConf, error) {
 	storeConf := &AzAppConfConfig{}
-	initialToken := ParseMetadata(token, storeConf)
+	token.ParseMetadata(storeConf)
 	backingStore := &AzAppConf{
 		ctx:    ctx,
 		config: storeConf,
+		token:  token,
 	}
-
-	srvInit := azServiceFromToken(stripPrefix(initialToken, AzAppConfigPrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.azconfig.io", 1)
-	backingStore.token = srvInit.token
+	srvInit := azServiceFromToken(token.StoreToken(), "https://%s.azconfig.io", 1)
+	backingStore.strippedToken = srvInit.token
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
@@ -65,15 +67,15 @@ func NewAzAppConf(ctx context.Context, token string, conf GenVarsConfig) (*AzApp
 }
 
 // setTokenVal sets the token
-func (implmt *AzAppConf) setTokenVal(token string) {}
+func (implmt *AzAppConf) SetToken(token *config.ParsedTokenConfig) {}
 
 // tokenVal in AZ App Config
 // label can be specified
 // From this point then normal rules of configmanager apply,
 // including keySeperator and lookup.
-func (imp *AzAppConf) tokenVal(v *retrieveStrategy) (string, error) {
+func (imp *AzAppConf) Token() (string, error) {
 	log.Info("Concrete implementation AzAppConf")
-	log.Infof("AzAppConf Token: %s", imp.token)
+	log.Infof("AzAppConf Token: %s", imp.token.String())
 
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
@@ -88,14 +90,14 @@ func (imp *AzAppConf) tokenVal(v *retrieveStrategy) (string, error) {
 		opts.OnlyIfChanged = imp.config.Etag
 	}
 
-	s, err := imp.svc.GetSetting(ctx, imp.token, opts)
+	s, err := imp.svc.GetSetting(ctx, imp.strippedToken, opts)
 	if err != nil {
-		log.Errorf(implementationNetworkErr, AzAppConfigPrefix, err, imp.token)
-		return "", fmt.Errorf("token: %s, error: %v. %w", imp.token, err, ErrRetrieveFailed)
+		log.Errorf(implementationNetworkErr, config.AzAppConfigPrefix, err, imp.strippedToken)
+		return "", fmt.Errorf("token: %s, error: %v. %w", imp.strippedToken, err, ErrRetrieveFailed)
 	}
 	if s.Value != nil {
 		return *s.Value, nil
 	}
-	log.Errorf("token: %v, %w", imp.token, ErrEmptyResponse)
+	log.Errorf("token: %v, %w", imp.token.String(), ErrEmptyResponse)
 	return "", nil
 }

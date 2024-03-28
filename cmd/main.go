@@ -1,8 +1,12 @@
 package main
 
-import cfgmgr "github.com/dnitsch/configmanager/cmd/configmanager"
+import (
+	"context"
+
+	cfgmgr "github.com/dnitsch/configmanager/cmd/configmanager"
+)
 
 func main() {
 	// init loggerHere or in init function
-	cfgmgr.Execute()
+	cfgmgr.Execute(context.Background())
 }

@@ -1,11 +1,12 @@
-package generator
+package store
 
 import (
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	awsConf "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
@@ -17,7 +18,7 @@ type SecretsMgr struct {
 	svc    secretsMgrApi
 	ctx    context.Context
 	config *SecretsMgrConfig
-	token  string
+	token  *config.ParsedTokenConfig
 }
 
 type SecretsMgrConfig struct {
@@ -25,7 +26,7 @@ type SecretsMgrConfig struct {
 }
 
 func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
-	cfg, err := config.LoadDefaultConfig(ctx)
+	cfg, err := awsConf.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Errorf("unable to load SDK config, %v", err)
 		return nil, err
@@ -39,17 +40,16 @@ func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
 
 }
 
-func (imp *SecretsMgr) setTokenVal(token string) {
+func (imp *SecretsMgr) SetToken(token *config.ParsedTokenConfig) {
 	storeConf := &SecretsMgrConfig{}
-	initialToken := ParseMetadata(token, storeConf)
-
+	token.ParseMetadata(storeConf)
+	imp.token = token
 	imp.config = storeConf
-	imp.token = initialToken
 }
 
-func (imp *SecretsMgr) tokenVal(v *retrieveStrategy) (string, error) {
-
-	log.Infof("%s", "Concrete implementation SecretsManager")
+func (imp *SecretsMgr) Token() (string, error) {
+	log.Infof("Concrete implementation SecretsManager")
+	log.Infof("SecretsManager Token: %s", imp.token.String())
 
 	version := "AWSCURRENT"
 	if imp.config.Version != "" {
@@ -59,7 +59,7 @@ func (imp *SecretsMgr) tokenVal(v *retrieveStrategy) (string, error) {
 	log.Infof("Getting Secret: %s @version: %s", imp.token, version)
 
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(v.stripPrefix(imp.token, SecretMgrPrefix)),
+		SecretId:     aws.String(imp.token.StoreToken()),
 		VersionStage: aws.String(version),
 	}
 
@@ -68,7 +68,7 @@ func (imp *SecretsMgr) tokenVal(v *retrieveStrategy) (string, error) {
 
 	result, err := imp.svc.GetSecretValue(ctx, input)
 	if err != nil {
-		log.Errorf(implementationNetworkErr, SecretMgrPrefix, err, imp.token)
+		log.Errorf(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
 		return "", err
 	}
 

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -20,8 +21,8 @@ var (
 	}
 )
 
-func Execute() {
-	if err := configmanagerCmd.Execute(); err != nil {
+func Execute(ctx context.Context) {
+	if err := configmanagerCmd.ExecuteContext(ctx); err != nil {
 		fmt.Errorf("cli error: %v", err)
 		os.Exit(1)
 	}

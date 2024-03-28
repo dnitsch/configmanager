@@ -1,4 +1,4 @@
-package generator
+package store
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 
 	gcpsecrets "cloud.google.com/go/secretmanager/apiv1"
 	gcpsecretspb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/pkg/log"
 	"github.com/googleapis/gax-go/v2"
 )
@@ -19,7 +20,7 @@ type GcpSecrets struct {
 	ctx    context.Context
 	config *GcpSecretsConfig
 	close  func() error
-	token  string
+	token  *config.ParsedTokenConfig
 }
 
 type GcpSecretsConfig struct {
@@ -32,8 +33,6 @@ func NewGcpSecrets(ctx context.Context) (*GcpSecrets, error) {
 	if err != nil {
 		return nil, err
 	}
-	// defer c.Close()
-
 	return &GcpSecrets{
 		svc:   c,
 		ctx:   ctx,
@@ -41,17 +40,19 @@ func NewGcpSecrets(ctx context.Context) (*GcpSecrets, error) {
 	}, nil
 }
 
-func (imp *GcpSecrets) setTokenVal(token string) {
+func (imp *GcpSecrets) SetToken(token *config.ParsedTokenConfig) {
 	storeConf := &GcpSecretsConfig{}
-	initialToken := ParseMetadata(token, storeConf)
-
+	token.ParseMetadata(storeConf)
+	imp.token = token
 	imp.config = storeConf
-	imp.token = initialToken
 }
 
-func (imp *GcpSecrets) tokenVal(v *retrieveStrategy) (string, error) {
+func (imp *GcpSecrets) Token() (string, error) {
+	// Close client currently as new one would be created per iteration
 	defer imp.close()
-	log.Infof("%s", "Concrete implementation GcpSecrets")
+
+	log.Info("Concrete implementation GcpSecrets")
+	log.Infof("GcpSecrets Token: %s", imp.token.String())
 
 	version := "latest"
 	if imp.config.Version != "" {
@@ -61,7 +62,7 @@ func (imp *GcpSecrets) tokenVal(v *retrieveStrategy) (string, error) {
 	log.Infof("Getting Secret: %s @version: %s", imp.token, version)
 
 	input := &gcpsecretspb.AccessSecretVersionRequest{
-		Name: fmt.Sprintf("%s/versions/%s", v.stripPrefix(imp.token, GcpSecretsPrefix), version),
+		Name: fmt.Sprintf("%s/versions/%s", imp.token.StoreToken(), version),
 	}
 
 	ctx, cancel := context.WithCancel(imp.ctx)
@@ -70,7 +71,7 @@ func (imp *GcpSecrets) tokenVal(v *retrieveStrategy) (string, error) {
 	result, err := imp.svc.AccessSecretVersion(ctx, input)
 
 	if err != nil {
-		log.Errorf(implementationNetworkErr, GcpSecretsPrefix, err, imp.token)
+		log.Errorf(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
 		return "", err
 	}
 	if result.Payload != nil {

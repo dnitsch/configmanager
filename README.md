@@ -53,6 +53,19 @@ Where `configVar` can be either a parseable string `'som3#!S$CRet'` or a number 
 
    This can be leveraged from any application written in Go - on start up or at runtime. Secrets/Config items can be retrieved in "bulk" and parsed into a provided type, [see here for examples](./examples/examples.go).
 
+   > BREAKING CHANGE v2.x with the API (see [examples](./examples/examples.go))
+  - `generator.NewConfig()` is no longer required.
+
+    ```go
+    // initialise new configmanager instance
+    cm := configmanager.New(context.TODO())
+    // add additional config to apply on your tokens
+    cm.Config.WithTokenSeparator("://")
+    pm, err := cm.Retrieve([]string{"IMPLEMENTATION://token1", "IMPLEMENTATION://  token2","ANOTHER_IMPL://token1"})
+    ```
+
+  - `RetrieveUnmarshalledFromYaml`|`RetrieveUnmarshalledFromJson`|`RetrieveMarshalledJson`|`RetrieveMarshalledYaml` methods are now on the ConfigManager struct, see `exampleRetrieveYamlMarshalled` or `exampleRetrieveYamlUnmarshalled` in [examples](./examples/examples.go)
+
 - Kubernetes
 
    Avoid storing overly large configmaps and especially using secrets objects to store actual secrets e.g. DB passwords, 3rd party API creds, etc... By only storing a config file or a script containing only the tokens e.g. `AWSSECRETS#/$ENV/service/db-config` it can be git committed without writing numerous shell scripts, only storing either some interpolation vars like `$ENV` in a configmap or the entire configmanager token for smaller use cases.

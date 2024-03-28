@@ -1,4 +1,4 @@
-package generator
+package store
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/pkg/log"
 
 	vault "github.com/hashicorp/vault/api"
@@ -26,10 +27,11 @@ type hashiVaultApi interface {
 }
 
 type VaultStore struct {
-	svc    hashiVaultApi
-	ctx    context.Context
-	config *VaultConfig
-	token  string
+	svc           hashiVaultApi
+	ctx           context.Context
+	config        *VaultConfig
+	token         *config.ParsedTokenConfig
+	strippedToken string
 }
 
 // VaultConfig holds the parseable metadata struct
@@ -38,17 +40,18 @@ type VaultConfig struct {
 	Role    string `json:"iam_role"`
 }
 
-func NewVaultStore(ctx context.Context, token string, conf GenVarsConfig) (*VaultStore, error) {
+func NewVaultStore(ctx context.Context, token *config.ParsedTokenConfig) (*VaultStore, error) {
 	storeConf := &VaultConfig{}
-	initialToken := ParseMetadata(token, storeConf)
+	token.ParseMetadata(storeConf)
 	imp := &VaultStore{
 		ctx:    ctx,
 		config: storeConf,
+		token:  token,
 	}
 
 	config := vault.DefaultConfig()
-	vt := splitToken(stripPrefix(initialToken, HashicorpVaultPrefix, conf.TokenSeparator(), conf.KeySeparator()))
-	imp.token = vt.token
+	vt := splitToken(token.StoreToken())
+	imp.strippedToken = vt.token
 	client, err := vault.NewClient(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize Vault client: %v", err)
@@ -97,21 +100,21 @@ func newVaultStoreWithAWSAuthIAM(client *vault.Client, role string) (*vault.Clie
 // due to the way the client needs to be
 // initialised with a mountpath
 // and mountpath is part of the token so it is set then
-func (imp *VaultStore) setTokenVal(token string) {}
+func (imp *VaultStore) SetToken(token *config.ParsedTokenConfig) {}
 
 // getTokenValue implements the underlying techonology
 // token retrieval and returns a stringified version
 // of the secret
-func (imp *VaultStore) tokenVal(v *retrieveStrategy) (string, error) {
+func (imp *VaultStore) Token() (string, error) {
 	log.Infof("%s", "Concrete implementation HashiVault")
 	log.Infof("Getting Secret: %s", imp.token)
 
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
 
-	secret, err := imp.getSecret(ctx, v.stripPrefix(imp.token, HashicorpVaultPrefix), imp.config.Version)
+	secret, err := imp.getSecret(ctx, imp.strippedToken, imp.config.Version)
 	if err != nil {
-		log.Errorf(implementationNetworkErr, HashicorpVaultPrefix, err, imp.token)
+		log.Errorf(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
 		return "", err
 	}
 

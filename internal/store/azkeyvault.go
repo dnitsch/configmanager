@@ -1,13 +1,14 @@
 /**
  * Azure KeyVault implementation
 **/
-package generator
+package store
 
 import (
 	"context"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
@@ -16,10 +17,11 @@ type kvApi interface {
 }
 
 type KvScrtStore struct {
-	svc    kvApi
-	ctx    context.Context
-	token  string
-	config *AzKvConfig
+	svc           kvApi
+	ctx           context.Context
+	token         *config.ParsedTokenConfig
+	config        *AzKvConfig
+	strippedToken string
 }
 
 // AzKvConfig takes any metadata from the token
@@ -30,18 +32,19 @@ type AzKvConfig struct {
 
 // NewKvScrtStore returns a KvScrtStore
 // requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfully work
-func NewKvScrtStore(ctx context.Context, token string, conf GenVarsConfig) (*KvScrtStore, error) {
+func NewKvScrtStore(ctx context.Context, token *config.ParsedTokenConfig) (*KvScrtStore, error) {
 
 	storeConf := &AzKvConfig{}
+	token.ParseMetadata(storeConf)
 
-	initialToken := ParseMetadata(token, storeConf)
 	backingStore := &KvScrtStore{
 		ctx:    ctx,
 		config: storeConf,
+		token:  token,
 	}
 
-	srvInit := azServiceFromToken(stripPrefix(initialToken, AzKeyVaultSecretsPrefix, conf.TokenSeparator(), conf.KeySeparator()), "https://%s.vault.azure.net", 1)
-	backingStore.token = srvInit.token
+	srvInit := azServiceFromToken(token.StoreToken(), "https://%s.vault.azure.net", 1)
+	backingStore.strippedToken = srvInit.token
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
@@ -61,20 +64,20 @@ func NewKvScrtStore(ctx context.Context, token string, conf GenVarsConfig) (*KvS
 }
 
 // setToken already happens in AzureKVClient in the constructor
-func (implmt *KvScrtStore) setTokenVal(token string) {}
+func (implmt *KvScrtStore) SetToken(token *config.ParsedTokenConfig) {}
 
-func (imp *KvScrtStore) tokenVal(v *retrieveStrategy) (string, error) {
-	log.Infof("%s", "Concrete implementation AzKeyVault Secret")
-	log.Infof("AzKeyVault Token: %s", imp.token)
+func (imp *KvScrtStore) Token() (string, error) {
+	log.Info("Concrete implementation AzKeyVault Secret")
+	log.Infof("AzKeyVault Token: %s", imp.token.String())
 
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
 
 	// secretVersion as "" => latest
 	// imp.config.Version will default `""` if not specified
-	s, err := imp.svc.GetSecret(ctx, imp.token, imp.config.Version, nil)
+	s, err := imp.svc.GetSecret(ctx, imp.strippedToken, imp.config.Version, nil)
 	if err != nil {
-		log.Errorf(implementationNetworkErr, AzKeyVaultSecretsPrefix, err, imp.token)
+		log.Errorf(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
 		return "", err
 	}
 	if s.Value != nil {

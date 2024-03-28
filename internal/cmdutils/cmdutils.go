@@ -1,6 +1,8 @@
-// command line utils
-// testable methods that wrap around the low level
-// implementation when invoked from the cli method.
+// pacakge cmdutils
+//
+// Wraps around the ConfigManager library
+// with additional postprocessing capabilities for
+// output management when used with cli flags.
 package cmdutils
 
 import (
@@ -9,39 +11,52 @@ import (
 	"os"
 	"strings"
 
+	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/dnitsch/configmanager/pkg/log"
 )
 
-type confMgrRetrieveWithInputReplacediface interface {
-	RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error)
+type configManagerIface interface {
+	RetrieveWithInputReplaced(input string) (string, error)
+	Retrieve(tokens []string) (generator.ParsedMap, error)
+	GeneratorConfig() *config.GenVarsConfig
+}
+
+type writerIface interface {
+	Write(p []byte) (n int, err error)
+	Close() error
 }
 
 type CmdUtils struct {
-	cfgmgr    confMgrRetrieveWithInputReplacediface
-	generator generator.GenVarsiface
+	configManager configManagerIface
+	writer        writerIface
 }
 
-func New(gv generator.GenVarsiface, confManager confMgrRetrieveWithInputReplacediface) *CmdUtils {
+func New(confManager configManagerIface) *CmdUtils {
 	return &CmdUtils{
-		cfgmgr:    confManager,
-		generator: gv,
+		configManager: confManager,
+		writer:        os.Stdout, // default writer
 	}
+}
+
+func (cmd *CmdUtils) WithWriter(w writerIface) *CmdUtils {
+	cmd.writer = w
+	return cmd
 }
 
 // GenerateFromTokens is a helper cmd method to call from retrieve command
 func (c *CmdUtils) GenerateFromCmd(tokens []string, output string) error {
-	w, err := writer(output)
+	err := c.setWriter(output)
 	if err != nil {
 		return err
 	}
-	defer w.Close()
-	return c.generateFromToken(tokens, w)
+	defer c.writer.Close()
+	return c.generateFromToken(tokens)
 }
 
 // generateFromToken
-func (c *CmdUtils) generateFromToken(tokens []string, w io.Writer) error {
-	pm, err := c.generator.Generate(tokens)
+func (c *CmdUtils) generateFromToken(tokens []string) error {
+	pm, err := c.configManager.Retrieve(tokens)
 	if err != nil {
 		// return full error to terminal if no tokens were parsed
 		if len(pm) < 1 {
@@ -51,7 +66,9 @@ func (c *CmdUtils) generateFromToken(tokens []string, w io.Writer) error {
 		log.Errorf("%e", err)
 	}
 	// Conver to ExportVars and flush to file
-	return c.generator.FlushToFile(w, c.generator.ConvertToExportVar())
+	pp := &PostProcessor{ProcessedMap: pm, Config: c.configManager.GeneratorConfig()}
+	pp.ConvertToExportVar()
+	return pp.FlushOutToFile(c.writer)
 }
 
 // Generate a replaced string from string input command
@@ -70,38 +87,37 @@ func (c *CmdUtils) GenerateStrOut(input, output string) error {
 		}
 		defer os.Remove(tempfile.Name())
 		log.Debugf("tmp file created: %s", tempfile.Name())
-		outtmp, err := writer(tempfile.Name())
-		if err != nil {
+		if err := c.setWriter(tempfile.Name()); err != nil {
 			return err
 		}
-		defer outtmp.Close()
-		return c.generateFromStrOutOverwrite(input, tempfile.Name(), outtmp)
+		defer c.writer.Close()
+		return c.generateFromStrOutOverwrite(input, tempfile.Name())
 	}
 
-	out, err := writer(output)
+	err := c.setWriter(output)
 	if err != nil {
 		return err
 	}
 
-	defer out.Close()
+	defer c.writer.Close()
 
-	return c.generateFromStrOut(input, out)
+	return c.generateFromStrOut(input)
 }
 
 // generateFromStrOut
-func (c *CmdUtils) generateFromStrOut(input string, output io.Writer) error {
+func (c *CmdUtils) generateFromStrOut(input string) error {
 	f, err := os.Open(input)
 	if err != nil {
 		if perr, ok := err.(*os.PathError); ok {
 			log.Debugf("input is not a valid file path: %v, falling back on using the string directly", perr)
 			// is actual string parse and write out to location
-			return c.generateStrOutFromInput(strings.NewReader(input), output)
+			return c.generateStrOutFromInput(strings.NewReader(input), c.writer)
 		}
 		return err
 	}
 	defer f.Close()
 
-	return c.generateStrOutFromInput(f, output)
+	return c.generateStrOutFromInput(f, c.writer)
 }
 
 // generateFromStrOutOverwrite uses the same file for input as output
@@ -109,7 +125,7 @@ func (c *CmdUtils) generateFromStrOut(input string, output io.Writer) error {
 // and then write contents from temp to actual target
 // otherwise, two open file operations would be targeting same descriptor
 // will cause issues and inconsistent writes
-func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string, outtmp io.Writer) error {
+func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string) error {
 
 	f, err := os.Open(input)
 	if err != nil {
@@ -117,16 +133,15 @@ func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string, outtmp io.
 	}
 	defer f.Close()
 
-	if err := c.generateStrOutFromInput(f, outtmp); err != nil {
+	if err := c.generateStrOutFromInput(f, c.writer); err != nil {
 		return err
 	}
 	tr, err := os.ReadFile(outtemp)
 	if err != nil {
 		return err
 	}
-
 	// move temp file to output path
-	return os.WriteFile(c.generator.Config().OutputPath(), tr, 0644)
+	return os.WriteFile(c.configManager.GeneratorConfig().OutputPath(), tr, 0644)
 }
 
 // generateStrOutFromInput takes a reader and writer as input
@@ -136,19 +151,25 @@ func (c *CmdUtils) generateStrOutFromInput(input io.Reader, output io.Writer) er
 	if err != nil {
 		return err
 	}
-	str, err := c.cfgmgr.RetrieveWithInputReplaced(string(b), *c.generator.Config())
+	str, err := c.configManager.RetrieveWithInputReplaced(string(b))
 	if err != nil {
 		return err
 	}
+	pp := &PostProcessor{}
 
-	return c.generator.StrToFile(output, str)
+	return pp.StrToFile(output, str)
 }
 
-func writer(outputpath string) (*os.File, error) {
-	if outputpath == "stdout" {
-		return os.Stdout, nil
+func (c *CmdUtils) setWriter(outputpath string) error {
+	// empty output path means StdOut
+	if outputpath != "stdout" {
+		f, err := os.OpenFile(outputpath, os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			return err
+		}
+		c.writer = f
 	}
-	return os.OpenFile(outputpath, os.O_WRONLY|os.O_CREATE, 0644)
+	return nil
 }
 
 // UploadTokensWithVals takes in a map of key/value pairs and uploads them
