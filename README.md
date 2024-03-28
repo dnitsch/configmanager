@@ -61,7 +61,7 @@ Where `configVar` can be either a parseable string `'som3#!S$CRet'` or a number 
     cm := configmanager.New(context.TODO())
     // add additional config to apply on your tokens
     cm.Config.WithTokenSeparator("://")
-    pm, err := cm.Retrieve([]string{"IMPLEMENTATION://token1", "IMPLEMENTATION://  token2","ANOTHER_IMPL://token1"})
+    pm, err := cm.Retrieve([]string{"IMPLEMENTATION://token1", "IMPLEMENTATION://token2", "ANOTHER_IMPL://token1"})
     ```
 
   - `RetrieveUnmarshalledFromYaml`|`RetrieveUnmarshalledFromJson`|`RetrieveMarshalledJson`|`RetrieveMarshalledYaml` methods are now on the ConfigManager struct, see `exampleRetrieveYamlMarshalled` or `exampleRetrieveYamlUnmarshalled` in [examples](./examples/examples.go)
