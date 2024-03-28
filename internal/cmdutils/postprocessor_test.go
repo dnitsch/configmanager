@@ -59,7 +59,7 @@ func Test_StrToWriter(t *testing.T) {
 	ttests := map[string]struct {
 		input string
 	}{
-		"matches": {`export FOO=BAR`},
+		"matches":   {`export FOO=BAR`},
 		"multiline": {`export FOO=BAR\nBUX=GED`},
 	}
 	for name, tt := range ttests {
@@ -75,26 +75,3 @@ func Test_StrToWriter(t *testing.T) {
 		})
 	}
 }
-
-// func Test_listToString(t *testing.T) {
-// 	tests := map[string]struct {
-// 		in     []string
-// 		expect string
-// 	}{
-// 		"1 item slice": {[]string{"export ONE=foo"}, "export ONE=foo"},
-// 		"0 item slice": {[]string{}, ""},
-// 		"4 item slice": {[]string{"123", "123", "123", "123"}, `123
-// 123
-// 123
-// 123`,
-// 		},
-// 	}
-// 	for name, tt := range tests {
-// 		t.Run(name, func(t *testing.T) {
-// 			got := listToString(tt.in)
-// 			if got != tt.expect {
-// 				t.Errorf(testutils.TestPhrase, tt.expect, got)
-// 			}
-// 		})
-// 	}
-// }

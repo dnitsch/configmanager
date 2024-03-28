@@ -1,6 +1,8 @@
-// command line utils
-// testable methods that wrap around the low level
-// implementation when invoked from the cli method.
+// pacakge cmdutils
+//
+// Wraps around the ConfigManager library
+// with additional postprocessing capabilities for
+// output management when used with by cli flags.
 package cmdutils
 
 import (
@@ -20,19 +22,26 @@ type configManagerIface interface {
 	GeneratorConfig() *config.GenVarsConfig
 }
 
+type writerIface interface {
+	Write(p []byte) (n int, err error)
+	Close() error
+}
+
 type CmdUtils struct {
 	configManager configManagerIface
+	Writer        writerIface
 }
 
 func New(confManager configManagerIface) *CmdUtils {
 	return &CmdUtils{
 		configManager: confManager,
+		Writer:        os.Stdout, // default writer 
 	}
 }
 
 // GenerateFromTokens is a helper cmd method to call from retrieve command
 func (c *CmdUtils) GenerateFromCmd(tokens []string, output string) error {
-	w, err := writer(output)
+	w, err := c.writer(output)
 	if err != nil {
 		return err
 	}
@@ -73,7 +82,7 @@ func (c *CmdUtils) GenerateStrOut(input, output string) error {
 		}
 		defer os.Remove(tempfile.Name())
 		log.Debugf("tmp file created: %s", tempfile.Name())
-		outtmp, err := writer(tempfile.Name())
+		outtmp, err := c.writer(tempfile.Name())
 		if err != nil {
 			return err
 		}
@@ -81,7 +90,7 @@ func (c *CmdUtils) GenerateStrOut(input, output string) error {
 		return c.generateFromStrOutOverwrite(input, tempfile.Name(), outtmp)
 	}
 
-	out, err := writer(output)
+	out, err := c.writer(output)
 	if err != nil {
 		return err
 	}
@@ -147,9 +156,9 @@ func (c *CmdUtils) generateStrOutFromInput(input io.Reader, output io.Writer) er
 	return pp.StrToFile(output, str)
 }
 
-func writer(outputpath string) (*os.File, error) {
+func (c *CmdUtils) writer(outputpath string) (writerIface, error) {
 	if outputpath == "stdout" {
-		return os.Stdout, nil
+		return c.Writer, nil
 	}
 	return os.OpenFile(outputpath, os.O_WRONLY|os.O_CREATE, 0644)
 }

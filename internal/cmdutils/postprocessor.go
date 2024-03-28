@@ -83,13 +83,10 @@ func (p *PostProcessor) StrToFile(w io.Writer, str string) error {
 }
 
 func (p *PostProcessor) flushToFile(f io.Writer, str string) error {
-
 	_, e := f.Write([]byte(str))
-
 	if e != nil {
 		return e
 	}
-
 	return nil
 }
 
