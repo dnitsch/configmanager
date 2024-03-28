@@ -29,28 +29,33 @@ type writerIface interface {
 
 type CmdUtils struct {
 	configManager configManagerIface
-	Writer        writerIface
+	writer        writerIface
 }
 
 func New(confManager configManagerIface) *CmdUtils {
 	return &CmdUtils{
 		configManager: confManager,
-		Writer:        os.Stdout, // default writer
+		writer:        os.Stdout, // default writer
 	}
+}
+
+func (cmd *CmdUtils) WithWriter(w writerIface) *CmdUtils {
+	cmd.writer = w
+	return cmd
 }
 
 // GenerateFromTokens is a helper cmd method to call from retrieve command
 func (c *CmdUtils) GenerateFromCmd(tokens []string, output string) error {
-	w, err := c.writer(output)
+	err := c.setWriter(output)
 	if err != nil {
 		return err
 	}
-	defer w.Close()
-	return c.generateFromToken(tokens, w)
+	defer c.writer.Close()
+	return c.generateFromToken(tokens)
 }
 
 // generateFromToken
-func (c *CmdUtils) generateFromToken(tokens []string, w io.Writer) error {
+func (c *CmdUtils) generateFromToken(tokens []string) error {
 	pm, err := c.configManager.Retrieve(tokens)
 	if err != nil {
 		// return full error to terminal if no tokens were parsed
@@ -63,7 +68,7 @@ func (c *CmdUtils) generateFromToken(tokens []string, w io.Writer) error {
 	// Conver to ExportVars and flush to file
 	pp := &PostProcessor{ProcessedMap: pm, Config: c.configManager.GeneratorConfig()}
 	pp.ConvertToExportVar()
-	return pp.FlushOutToFile(w)
+	return pp.FlushOutToFile(c.writer)
 }
 
 // Generate a replaced string from string input command
@@ -82,38 +87,37 @@ func (c *CmdUtils) GenerateStrOut(input, output string) error {
 		}
 		defer os.Remove(tempfile.Name())
 		log.Debugf("tmp file created: %s", tempfile.Name())
-		outtmp, err := c.writer(tempfile.Name())
-		if err != nil {
+		if err := c.setWriter(tempfile.Name()); err != nil {
 			return err
 		}
-		defer outtmp.Close()
-		return c.generateFromStrOutOverwrite(input, tempfile.Name(), outtmp)
+		defer c.writer.Close()
+		return c.generateFromStrOutOverwrite(input, tempfile.Name())
 	}
 
-	out, err := c.writer(output)
+	err := c.setWriter(output)
 	if err != nil {
 		return err
 	}
 
-	defer out.Close()
+	defer c.writer.Close()
 
-	return c.generateFromStrOut(input, out)
+	return c.generateFromStrOut(input)
 }
 
 // generateFromStrOut
-func (c *CmdUtils) generateFromStrOut(input string, output io.Writer) error {
+func (c *CmdUtils) generateFromStrOut(input string) error {
 	f, err := os.Open(input)
 	if err != nil {
 		if perr, ok := err.(*os.PathError); ok {
 			log.Debugf("input is not a valid file path: %v, falling back on using the string directly", perr)
 			// is actual string parse and write out to location
-			return c.generateStrOutFromInput(strings.NewReader(input), output)
+			return c.generateStrOutFromInput(strings.NewReader(input), c.writer)
 		}
 		return err
 	}
 	defer f.Close()
 
-	return c.generateStrOutFromInput(f, output)
+	return c.generateStrOutFromInput(f, c.writer)
 }
 
 // generateFromStrOutOverwrite uses the same file for input as output
@@ -121,7 +125,7 @@ func (c *CmdUtils) generateFromStrOut(input string, output io.Writer) error {
 // and then write contents from temp to actual target
 // otherwise, two open file operations would be targeting same descriptor
 // will cause issues and inconsistent writes
-func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string, outtmp io.Writer) error {
+func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string) error {
 
 	f, err := os.Open(input)
 	if err != nil {
@@ -129,7 +133,7 @@ func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string, outtmp io.
 	}
 	defer f.Close()
 
-	if err := c.generateStrOutFromInput(f, outtmp); err != nil {
+	if err := c.generateStrOutFromInput(f, c.writer); err != nil {
 		return err
 	}
 	tr, err := os.ReadFile(outtemp)
@@ -156,11 +160,16 @@ func (c *CmdUtils) generateStrOutFromInput(input io.Reader, output io.Writer) er
 	return pp.StrToFile(output, str)
 }
 
-func (c *CmdUtils) writer(outputpath string) (writerIface, error) {
-	if outputpath == "stdout" {
-		return c.Writer, nil
+func (c *CmdUtils) setWriter(outputpath string) error {
+	// empty output path means StdOut
+	if outputpath != "stdout" {
+		f, err := os.OpenFile(outputpath, os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			return err
+		}
+		c.writer = f
 	}
-	return os.OpenFile(outputpath, os.O_WRONLY|os.O_CREATE, 0644)
+	return nil
 }
 
 // UploadTokensWithVals takes in a map of key/value pairs and uploads them
