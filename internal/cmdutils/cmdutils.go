@@ -22,14 +22,9 @@ type configManagerIface interface {
 	GeneratorConfig() *config.GenVarsConfig
 }
 
-type writerIface interface {
-	Write(p []byte) (n int, err error)
-	Close() error
-}
-
 type CmdUtils struct {
 	configManager configManagerIface
-	writer        writerIface
+	writer        io.Writer
 }
 
 func New(confManager configManagerIface) *CmdUtils {
@@ -39,7 +34,7 @@ func New(confManager configManagerIface) *CmdUtils {
 	}
 }
 
-func (cmd *CmdUtils) WithWriter(w writerIface) *CmdUtils {
+func (cmd *CmdUtils) WithWriter(w io.Writer) *CmdUtils {
 	cmd.writer = w
 	return cmd
 }
@@ -50,7 +45,7 @@ func (c *CmdUtils) GenerateFromCmd(tokens []string, output string) error {
 	if err != nil {
 		return err
 	}
-	defer c.writer.Close()
+	// defer c.writer.Close()
 	return c.generateFromToken(tokens)
 }
 
@@ -90,7 +85,7 @@ func (c *CmdUtils) GenerateStrOut(input, output string) error {
 		if err := c.setWriter(tempfile.Name()); err != nil {
 			return err
 		}
-		defer c.writer.Close()
+		// defer c.writer.Close()
 		return c.generateFromStrOutOverwrite(input, tempfile.Name())
 	}
 
@@ -99,7 +94,7 @@ func (c *CmdUtils) GenerateStrOut(input, output string) error {
 		return err
 	}
 
-	defer c.writer.Close()
+	// defer c.writer.Close()
 
 	return c.generateFromStrOut(input)
 }

@@ -97,10 +97,6 @@ type mockWriter struct {
 	w io.Writer
 }
 
-func (m *mockWriter) Close() error {
-	return nil
-}
-
 func (m *mockWriter) Write(in []byte) (int, error) {
 	return m.w.Write(in)
 }

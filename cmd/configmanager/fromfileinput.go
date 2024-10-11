@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/dnitsch/configmanager"
@@ -26,9 +25,10 @@ func newFromStrCmd(rootCmd *Root) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cm := configmanager.New(cmd.Context())
 			cm.Config.WithTokenSeparator(rootCmd.rootFlags.tokenSeparator).WithOutputPath(f.path).WithKeySeparator(rootCmd.rootFlags.keySeparator)
+			if f.path == "stdout" {
+				
+			}
 			return cmdutils.New(cm).GenerateStrOut(f.input, f.path)
-
-			return retrieveFromStr(cmd.Context(), rootCmd.rootFlags.tokenSeparator, f.path, f.input, rootCmd.rootFlags.keySeparator)
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(f.input) < 1 {
@@ -49,10 +49,4 @@ func newFromStrCmd(rootCmd *Root) {
 	// 	retrieveFromStrInput.PersistentFlags().BoolVarP(&overwriteinputfile, "overwrite", "o", false, `Writes the outputs of the templated file
 	// to a the same location as the input file path`)
 	rootCmd.Cmd.AddCommand(fromstrCmd)
-}
-
-func retrieveFromStr(ctx context.Context, tokenSeparator, path, input, keySeparator string) error {
-	cm := configmanager.New(ctx)
-	cm.Config.WithTokenSeparator(tokenSeparator).WithOutputPath(path).WithKeySeparator(keySeparator)
-	return cmdutils.New(cm).GenerateStrOut(input, path)
 }
