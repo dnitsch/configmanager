@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/dnitsch/configmanager"
@@ -8,40 +9,50 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	input                string
-	retrieveFromStrInput = &cobra.Command{
+type fromStrFlags struct {
+	input string
+	path  string
+}
+
+func newFromStrCmd(rootCmd *Root) {
+
+	f := &fromStrFlags{}
+
+	fromstrCmd := &cobra.Command{
 		Use:     "string-input",
 		Aliases: []string{"fromstr", "getfromstr"},
 		Short:   `Retrieves all found token values in a specified string input`,
 		Long:    `Retrieves all found token values in a specified string input and optionally writes to a file or to stdout in a bash compliant`,
-		RunE:    retrieveFromStr,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cm := configmanager.New(cmd.Context())
+			cm.Config.WithTokenSeparator(rootCmd.rootFlags.tokenSeparator).WithOutputPath(f.path).WithKeySeparator(rootCmd.rootFlags.keySeparator)
+			return cmdutils.New(cm).GenerateStrOut(f.input, f.path)
+
+			return retrieveFromStr(cmd.Context(), rootCmd.rootFlags.tokenSeparator, f.path, f.input, rootCmd.rootFlags.keySeparator)
+		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			// if len(input) < 1 && !getStdIn() {
-			if len(input) < 1 {
+			if len(f.input) < 1 {
 				return fmt.Errorf("must include input")
 			}
 			return nil
 		},
 	}
-)
 
-func init() {
-	retrieveFromStrInput.PersistentFlags().StringVarP(&input, "input", "i", "", `Path to file which contents will be read in or the contents of a string 
-inside a variable to be searched for tokens. 
-If value is a valid path it will open it if not it will accept the string as an input. 
-e.g. -i /some/file or -i $"(cat /som/file)", are both valid input values`)
-	retrieveFromStrInput.MarkPersistentFlagRequired("input")
-	retrieveFromStrInput.PersistentFlags().StringVarP(&path, "path", "p", "./app.env", `Path where to write out the 
-replaced a config/secret variables. Special value of stdout can be used to return the output to stdout e.g. -p stdout, 
-unix style output only`)
+	fromstrCmd.PersistentFlags().StringVarP(&f.input, "input", "i", "", `Path to file which contents will be read in or the contents of a string 
+	inside a variable to be searched for tokens. 
+	If value is a valid path it will open it if not it will accept the string as an input. 
+	e.g. -i /some/file or -i $"(cat /som/file)", are both valid input values`)
+	fromstrCmd.MarkPersistentFlagRequired("input")
+	fromstrCmd.PersistentFlags().StringVarP(&f.path, "path", "p", "./app.env", `Path where to write out the 
+	replaced a config/secret variables. Special value of stdout can be used to return the output to stdout e.g. -p stdout, 
+	unix style output only`)
 	// 	retrieveFromStrInput.PersistentFlags().BoolVarP(&overwriteinputfile, "overwrite", "o", false, `Writes the outputs of the templated file
 	// to a the same location as the input file path`)
-	configmanagerCmd.AddCommand(retrieveFromStrInput)
+	rootCmd.Cmd.AddCommand(fromstrCmd)
 }
 
-func retrieveFromStr(cmd *cobra.Command, args []string) error {
-	cm := configmanager.New(cmd.Context())
+func retrieveFromStr(ctx context.Context, tokenSeparator, path, input, keySeparator string) error {
+	cm := configmanager.New(ctx)
 	cm.Config.WithTokenSeparator(tokenSeparator).WithOutputPath(path).WithKeySeparator(keySeparator)
 	return cmdutils.New(cm).GenerateStrOut(input, path)
 }
