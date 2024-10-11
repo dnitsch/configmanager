@@ -5,6 +5,9 @@ on:
     workflows: ['CI']
     types:
       - completed
+    branches: 
+      - master 
+      - main
 
 jobs:
   set-version:
@@ -25,21 +28,17 @@ jobs:
           git config user.email ${{ github.actor }}-ci@gha.org
           git config user.name ${{ github.actor }}
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v1.1.1
+        uses: gittools/actions/gitversion/setup@v3.0.0
         with:
           versionSpec: '5.x'
       - name: Set SemVer Version
-        uses: gittools/actions/gitversion/execute@v1.1.1
+        uses: gittools/actions/gitversion/execute@v3.0.0
         id: gitversion
 
-      - name: echo VERSIONS
-        run: | 
-          echo "REVISION  -> $GITHUB_SHA"
-          echo "VERSION -> $GITVERSION_SEMVER"
   release:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21-bullseye
+      image: golang:1.23-bullseye
       env:
         FOO: Bar
     needs: set-version
