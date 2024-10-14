@@ -3,12 +3,14 @@ package store
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/testutils"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 func Test_azSplitToken(t *testing.T) {
@@ -91,6 +93,8 @@ func (m mockAzKvSecretApi) GetSecret(ctx context.Context, name string, version s
 }
 
 func TestAzKeyVault(t *testing.T) {
+	t.Parallel()
+
 	tsuccessParam := "dssdfdweiuyh"
 	tests := map[string]struct {
 		token      string
@@ -158,7 +162,7 @@ func TestAzKeyVault(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
 
-			impl, err := NewKvScrtStore(context.TODO(), token)
+			impl, err := NewKvScrtStore(context.TODO(), token, log.New(io.Discard))
 			if err != nil {
 				t.Errorf("failed to init azkvstore")
 			}

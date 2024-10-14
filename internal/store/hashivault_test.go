@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/testutils"
+	"github.com/dnitsch/configmanager/pkg/log"
 	vault "github.com/hashicorp/vault/api"
 )
 
@@ -52,6 +54,8 @@ func (m mockVaultApi) GetVersion(ctx context.Context, secretPath string, version
 }
 
 func TestVaultScenarios(t *testing.T) {
+	t.Parallel()
+
 	ttests := map[string]struct {
 		token      string
 		conf       *config.GenVarsConfig
@@ -239,17 +243,22 @@ func TestVaultScenarios(t *testing.T) {
 				}
 			},
 		},
-		"vault rate limit incorrect": {"VAULT://secret___/some/other/foo2", config.NewConfig(), "unable to initialize Vault client: error encountered setting up default configuration: VAULT_RATE_LIMIT was provided but incorrectly formatted", func(t *testing.T) hashiVaultApi {
-			mv := mockVaultApi{}
-			mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
-				t.Helper()
-				if secretPath != "some/other/foo2" {
-					t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
+		"vault rate limit incorrect": {
+			"VAULT://secret___/some/other/foo2",
+			config.NewConfig(),
+			`error encountered setting up default configuration: VAULT_RATE_LIMIT was provided but incorrectly formatted
+failed to initialize the client`,
+			func(t *testing.T) hashiVaultApi {
+				mv := mockVaultApi{}
+				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+					t.Helper()
+					if secretPath != "some/other/foo2" {
+						t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
+					}
+					return &vault.KVSecret{Data: nil}, nil
 				}
-				return &vault.KVSecret{Data: nil}, nil
-			}
-			return mv
-		},
+				return mv
+			},
 			func() func() {
 				os.Setenv("VAULT_TOKEN", "")
 				os.Setenv("VAULT_RATE_LIMIT", "wrong")
@@ -266,7 +275,7 @@ func TestVaultScenarios(t *testing.T) {
 			defer tearDown()
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.conf)
 
-			impl, err := NewVaultStore(context.TODO(), token)
+			impl, err := NewVaultStore(context.TODO(), token, log.New(io.Discard))
 			if err != nil {
 				if err.Error() != tt.expect {
 					t.Fatalf("failed to init hashivault, %v", err.Error())
@@ -451,7 +460,7 @@ incorrect values supplied. failed to initialize the client`,
 			defer tearDown()
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.conf)
 
-			impl, err := NewVaultStore(context.TODO(), token)
+			impl, err := NewVaultStore(context.TODO(), token, log.New(io.Discard))
 			if err != nil {
 				// WHAT A CRAP way to do this...
 				if err.Error() != strings.Split(fmt.Sprintf(tt.expect, ts.URL), `%!`)[0] {

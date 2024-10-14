@@ -131,7 +131,7 @@ func NewParsedTokenConfig(token string, config GenVarsConfig) (*ParsedTokenConfi
 
 	// This should already only be a list of properly supported tokens but just in case
 	if found := VarPrefix[ImplementationPrefix(prfx)]; !found {
-		return nil, fmt.Errorf("%w", ErrInvalidTokenPrefix)
+		return nil, fmt.Errorf("prefix: %s\n%w", prfx, ErrInvalidTokenPrefix)
 	}
 
 	ptc.keySeparator = config.keySeparator

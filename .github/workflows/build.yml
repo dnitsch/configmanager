@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
 
 jobs:
   set-version:
@@ -22,11 +24,11 @@ jobs:
           git config user.email ${{ github.actor }}-ci@gha.org
           git config user.name ${{ github.actor }}
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v1.1.1
+        uses: gittools/actions/gitversion/setup@v3.0.0
         with:
           versionSpec: '5.x'
       - name: Set SemVer Version
-        uses: gittools/actions/gitversion/execute@v1.1.1
+        uses: gittools/actions/gitversion/execute@v3.0.0
         id: gitversion
 
       - name: echo VERSIONS
@@ -36,7 +38,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21-bullseye
+      image: golang:1.23-bullseye
     needs: set-version
     env:
       SEMVER: ${{ needs.set-version.outputs.semVer }}
@@ -46,15 +48,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: install deps
         run: |
           apt update && apt install -y jq git
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.email ${{ github.actor }}-ci@gha.org
           git config user.name ${{ github.actor }}
-      - name: make test 
+      - name: Run Lint 
         run: |
-          make REVISION=$GITHUB_SHA test
+          task lint
+      - name: Run Tests 
+        run: |
+          task coverage
       - name: Publish Junit style Test Report
         uses: mikepenz/action-junit-report@v4
         if: always() # always run even if the previous step fails

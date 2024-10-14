@@ -17,6 +17,7 @@ type paramStoreApi interface {
 type ParamStore struct {
 	svc    paramStoreApi
 	ctx    context.Context
+	logger log.ILogger
 	config *ParamStrConfig
 	token  *config.ParsedTokenConfig
 }
@@ -25,17 +26,18 @@ type ParamStrConfig struct {
 	// reserved for potential future use
 }
 
-func NewParamStore(ctx context.Context) (*ParamStore, error) {
+func NewParamStore(ctx context.Context, logger log.ILogger) (*ParamStore, error) {
 	cfg, err := awsConf.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Errorf("unable to load SDK config, %v", err)
+		logger.Error("unable to load SDK config, %v\n%w", err, ErrClientInitialization)
 		return nil, err
 	}
 	c := ssm.NewFromConfig(cfg)
 
 	return &ParamStore{
-		svc: c,
-		ctx: ctx,
+		svc:    c,
+		logger: logger,
+		ctx:    ctx,
 	}, nil
 }
 
@@ -47,8 +49,8 @@ func (imp *ParamStore) SetToken(token *config.ParsedTokenConfig) {
 }
 
 func (imp *ParamStore) Token() (string, error) {
-	log.Infof("%s", "Concrete implementation ParameterStore")
-	log.Infof("ParamStore Token: %s", imp.token.String())
+	imp.logger.Info("%s", "Concrete implementation ParameterStore")
+	imp.logger.Info("ParamStore Token: %s", imp.token.String())
 
 	input := &ssm.GetParameterInput{
 		Name:           aws.String(imp.token.StoreToken()),
@@ -59,13 +61,13 @@ func (imp *ParamStore) Token() (string, error) {
 
 	result, err := imp.svc.GetParameter(ctx, input)
 	if err != nil {
-		log.Errorf(implementationNetworkErr, config.ParamStorePrefix, err, imp.token.StoreToken())
+		imp.logger.Error(implementationNetworkErr, config.ParamStorePrefix, err, imp.token.StoreToken())
 		return "", err
 	}
 
 	if result.Parameter.Value != nil {
 		return *result.Parameter.Value, nil
 	}
-	log.Errorf("value retrieved but empty for token: %v", imp.token)
+	imp.logger.Error("value retrieved but empty for token: %v", imp.token)
 	return "", nil
 }

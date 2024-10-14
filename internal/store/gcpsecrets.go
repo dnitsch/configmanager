@@ -17,6 +17,7 @@ type gcpSecretsApi interface {
 
 type GcpSecrets struct {
 	svc    gcpSecretsApi
+	logger log.ILogger
 	ctx    context.Context
 	config *GcpSecretsConfig
 	close  func() error
@@ -27,16 +28,17 @@ type GcpSecretsConfig struct {
 	Version string `json:"version"`
 }
 
-func NewGcpSecrets(ctx context.Context) (*GcpSecrets, error) {
+func NewGcpSecrets(ctx context.Context, logger log.ILogger) (*GcpSecrets, error) {
 
 	c, err := gcpsecrets.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return &GcpSecrets{
-		svc:   c,
-		ctx:   ctx,
-		close: c.Close,
+		svc:    c,
+		logger: logger,
+		ctx:    ctx,
+		close:  c.Close,
 	}, nil
 }
 
@@ -51,15 +53,15 @@ func (imp *GcpSecrets) Token() (string, error) {
 	// Close client currently as new one would be created per iteration
 	defer imp.close()
 
-	log.Info("Concrete implementation GcpSecrets")
-	log.Infof("GcpSecrets Token: %s", imp.token.String())
+	imp.logger.Info("Concrete implementation GcpSecrets")
+	imp.logger.Info("GcpSecrets Token: %s", imp.token.String())
 
 	version := "latest"
 	if imp.config.Version != "" {
 		version = imp.config.Version
 	}
 
-	log.Infof("Getting Secret: %s @version: %s", imp.token, version)
+	imp.logger.Info("Getting Secret: %s @version: %s", imp.token, version)
 
 	input := &gcpsecretspb.AccessSecretVersionRequest{
 		Name: fmt.Sprintf("%s/versions/%s", imp.token.StoreToken(), version),
@@ -71,13 +73,13 @@ func (imp *GcpSecrets) Token() (string, error) {
 	result, err := imp.svc.AccessSecretVersion(ctx, input)
 
 	if err != nil {
-		log.Errorf(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
+		imp.logger.Error(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
 		return "", err
 	}
 	if result.Payload != nil {
 		return string(result.Payload.Data), nil
 	}
 
-	log.Errorf("value retrieved but empty for token: %v", imp.token)
+	imp.logger.Error("value retrieved but empty for token: %v", imp.token)
 	return "", nil
 }

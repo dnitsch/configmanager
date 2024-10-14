@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/testutils"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 func azTableStoreCommonChecker(t *testing.T, partitionKey, rowKey, expectedPartitionKey, expectedRowKey string) {
@@ -81,7 +83,7 @@ func Test_AzTableStore_Success(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
-			impl, err := NewAzTableStore(context.TODO(), token)
+			impl, err := NewAzTableStore(context.TODO(), token, log.New(io.Discard))
 			if err != nil {
 				t.Errorf("failed to init aztablestore")
 			}
@@ -103,6 +105,7 @@ func Test_AzTableStore_Success(t *testing.T) {
 }
 
 func Test_azstorage_with_value_property(t *testing.T) {
+	t.Parallel()
 	conf := config.NewConfig().WithKeySeparator("|").WithTokenSeparator("://")
 	ttests := map[string]struct {
 		token      string
@@ -163,7 +166,7 @@ func Test_azstorage_with_value_property(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
 
-			impl, err := NewAzTableStore(context.TODO(), token)
+			impl, err := NewAzTableStore(context.TODO(), token, log.New(io.Discard))
 			if err != nil {
 				t.Fatal("failed to init aztablestore")
 			}
@@ -183,6 +186,7 @@ func Test_azstorage_with_value_property(t *testing.T) {
 }
 
 func Test_AzTableStore_Error(t *testing.T) {
+	t.Parallel()
 
 	tests := map[string]struct {
 		token      string
@@ -224,7 +228,7 @@ func Test_AzTableStore_Error(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
 
-			impl, err := NewAzTableStore(context.TODO(), token)
+			impl, err := NewAzTableStore(context.TODO(), token, log.New(io.Discard))
 			if err != nil {
 				t.Fatal("failed to init aztablestore")
 			}
@@ -242,7 +246,7 @@ func Test_fail_AzTable_Client_init(t *testing.T) {
 	// as that is what the client uses under the hood
 	token, _ := config.NewParsedTokenConfig("AZTABLESTORE:///%25%65%6e%301-._~/</partitionKey/rowKey", *config.NewConfig())
 
-	_, err := NewAzTableStore(context.TODO(), token)
+	_, err := NewAzTableStore(context.TODO(), token, log.New(io.Discard))
 	if err == nil {
 		t.Fatal("expected err to not be <nil>")
 	}
@@ -252,6 +256,8 @@ func Test_fail_AzTable_Client_init(t *testing.T) {
 }
 
 func Test_azSplitTokenTableStore(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		token  string

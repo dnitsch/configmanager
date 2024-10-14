@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/testutils"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 // var (
@@ -42,6 +44,8 @@ func awsParamtStoreCommonGetChecker(t *testing.T, params *ssm.GetParameterInput)
 }
 
 func Test_GetParamStore(t *testing.T) {
+	t.Parallel()
+
 	var (
 		tsuccessParam = "someVal"
 		// tsuccessObj   map[string]string = map[string]string{"AWSPARAMSTR#/token/1": "someVal"}
@@ -103,7 +107,7 @@ func Test_GetParamStore(t *testing.T) {
 
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config.WithTokenSeparator(tt.tokenSeparator).WithKeySeparator(tt.keySeparator))
 
-			impl, err := NewParamStore(context.TODO())
+			impl, err := NewParamStore(context.TODO(), log.New(io.Discard))
 			if err != nil {
 				t.Errorf(testutils.TestPhrase, err.Error(), nil)
 			}

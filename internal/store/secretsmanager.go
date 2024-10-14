@@ -17,6 +17,7 @@ type secretsMgrApi interface {
 type SecretsMgr struct {
 	svc    secretsMgrApi
 	ctx    context.Context
+	logger log.ILogger
 	config *SecretsMgrConfig
 	token  *config.ParsedTokenConfig
 }
@@ -25,17 +26,18 @@ type SecretsMgrConfig struct {
 	Version string `json:"version"`
 }
 
-func NewSecretsMgr(ctx context.Context) (*SecretsMgr, error) {
+func NewSecretsMgr(ctx context.Context, logger log.ILogger) (*SecretsMgr, error) {
 	cfg, err := awsConf.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Errorf("unable to load SDK config, %v", err)
+		logger.Error("unable to load SDK config, %v\n%w", err, ErrClientInitialization)
 		return nil, err
 	}
 	c := secretsmanager.NewFromConfig(cfg)
 
 	return &SecretsMgr{
-		svc: c,
-		ctx: ctx,
+		svc:    c,
+		logger: logger,
+		ctx:    ctx,
 	}, nil
 
 }
@@ -48,15 +50,15 @@ func (imp *SecretsMgr) SetToken(token *config.ParsedTokenConfig) {
 }
 
 func (imp *SecretsMgr) Token() (string, error) {
-	log.Infof("Concrete implementation SecretsManager")
-	log.Infof("SecretsManager Token: %s", imp.token.String())
+	imp.logger.Info("Concrete implementation SecretsManager")
+	imp.logger.Info("SecretsManager Token: %s", imp.token.String())
 
 	version := "AWSCURRENT"
 	if imp.config.Version != "" {
 		version = imp.config.Version
 	}
 
-	log.Infof("Getting Secret: %s @version: %s", imp.token, version)
+	imp.logger.Info("Getting Secret: %s @version: %s", imp.token, version)
 
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId:     aws.String(imp.token.StoreToken()),
@@ -68,7 +70,7 @@ func (imp *SecretsMgr) Token() (string, error) {
 
 	result, err := imp.svc.GetSecretValue(ctx, input)
 	if err != nil {
-		log.Errorf(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
+		imp.logger.Error(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
 		return "", err
 	}
 
@@ -80,6 +82,6 @@ func (imp *SecretsMgr) Token() (string, error) {
 		return string(result.SecretBinary), nil
 	}
 
-	log.Errorf("value retrieved but empty for token: %v", imp.token)
+	imp.logger.Error("value retrieved but empty for token: %v", imp.token)
 	return "", nil
 }

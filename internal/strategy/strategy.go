@@ -7,6 +7,7 @@ import (
 
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/store"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 var ErrTokenInvalid = errors.New("invalid token - cannot get prefix")
@@ -17,28 +18,30 @@ type StrategyFunc func(ctx context.Context, token *config.ParsedTokenConfig) (st
 // StrategyFuncMap
 type StrategyFuncMap map[config.ImplementationPrefix]StrategyFunc
 
-var defaultStrategyFuncMap = map[config.ImplementationPrefix]StrategyFunc{
-	config.AzTableStorePrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
-		return store.NewAzTableStore(ctx, token)
-	},
-	config.AzAppConfigPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
-		return store.NewAzAppConf(ctx, token)
-	},
-	config.GcpSecretsPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
-		return store.NewGcpSecrets(ctx)
-	},
-	config.SecretMgrPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
-		return store.NewSecretsMgr(ctx)
-	},
-	config.ParamStorePrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
-		return store.NewParamStore(ctx)
-	},
-	config.AzKeyVaultSecretsPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
-		return store.NewKvScrtStore(ctx, token)
-	},
-	config.HashicorpVaultPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
-		return store.NewVaultStore(ctx, token)
-	},
+func defaultStrategyFuncMap(logger log.ILogger) map[config.ImplementationPrefix]StrategyFunc {
+	return map[config.ImplementationPrefix]StrategyFunc{
+		config.AzTableStorePrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+			return store.NewAzTableStore(ctx, token, logger)
+		},
+		config.AzAppConfigPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+			return store.NewAzAppConf(ctx, token, logger)
+		},
+		config.GcpSecretsPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+			return store.NewGcpSecrets(ctx, logger)
+		},
+		config.SecretMgrPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+			return store.NewSecretsMgr(ctx, logger)
+		},
+		config.ParamStorePrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+			return store.NewParamStore(ctx, logger)
+		},
+		config.AzKeyVaultSecretsPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+			return store.NewKvScrtStore(ctx, token, logger)
+		},
+		config.HashicorpVaultPrefix: func(ctx context.Context, token *config.ParsedTokenConfig) (store.Strategy, error) {
+			return store.NewVaultStore(ctx, token, logger)
+		},
+	}
 }
 
 type RetrieveStrategy struct {
@@ -49,14 +52,13 @@ type RetrieveStrategy struct {
 }
 
 // New
-func New(s store.Strategy, config config.GenVarsConfig) *RetrieveStrategy {
-	// make a copy of the map
-	// as it's a special type of a pointer
-	defaultFuncMapCopy := make(StrategyFuncMap)
-	for prefix, strateyFunc := range defaultStrategyFuncMap {
-		defaultFuncMapCopy[prefix] = strateyFunc
+func New(s store.Strategy, config config.GenVarsConfig, logger log.ILogger) *RetrieveStrategy {
+	rs := &RetrieveStrategy{
+		implementation:  s,
+		config:          config,
+		strategyFuncMap: defaultStrategyFuncMap(logger),
 	}
-	return &RetrieveStrategy{implementation: s, config: config, strategyFuncMap: defaultFuncMapCopy}
+	return rs
 }
 
 // WithStrategyFuncMap Adds custom implementations for prefix

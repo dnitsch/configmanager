@@ -1,58 +1,66 @@
 package log
 
 import (
-	"fmt"
-	"os"
-	"strings"
-
-	"github.com/rs/zerolog"
+	"io"
+	"log/slog"
 )
 
-var (
-	Logger zerolog.Logger
+type ILogger interface {
+	SetLevel(level Level)
+	Debug(msg string, args ...any)
+	Info(msg string, args ...any)
+	Error(msg string, args ...any)
+}
+
+type Opts func(*Logger)
+
+type Logger struct {
+	// ILogger
+	leveler *slog.LevelVar
+	w       *slog.Logger
+}
+
+func New(w io.Writer, opts ...Opts) *Logger {
+	leveler := &slog.LevelVar{}
+	leveler.Set(slog.LevelError)
+	l := &Logger{
+		leveler: leveler,
+		w:       slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{Level: leveler})),
+	}
+	return l
+}
+
+type Level string
+
+func (lvl Level) getSlogLevel() slog.Level {
+	switch lvl {
+	case "debug":
+		return slog.LevelDebug
+	case "error":
+		return slog.LevelError
+	case "info":
+		return slog.LevelInfo
+	}
+	return 8
+}
+
+const (
+	DebugLvl Level = "debug"
+	InfoLvl  Level = "info"
+	ErrorLvl Level = "error"
 )
 
-func Debugf(format string, args ...any) {
-	Debug(fmt.Sprintf(format, args...))
+func (l *Logger) SetLevel(level Level) {
+	l.leveler.Set(level.getSlogLevel())
 }
 
-func Debug(msg string) {
-	Logger.Debug().Msg(msg)
+func (l *Logger) Debug(msg string, args ...any) {
+	l.w.Debug(msg, args...)
 }
+func (l *Logger) Error(msg string, args ...any) {
+	l.w.Error(msg, args...)
 
-func Infof(format string, args ...any) {
-	Info(fmt.Sprintf(format, args...))
 }
-
-func Info(msg string) {
-	Logger.Info().Msg(msg)
-}
-
-func Warnf(format string, args ...any) {
-	Warn(fmt.Sprintf(format, args...))
-}
-
-func Warn(msg string) {
-	Logger.Warn().Msg(msg)
-}
-
-func Errorf(format string, args ...any) {
-	Error(fmt.Errorf(format, args...))
-}
-
-func Error(err error) {
-	Logger.Error().Err(err).Msg("")
-}
-
-func init() {
-	logLevel := "error"
-	// Set global log level
-	if level, found := os.LookupEnv("CONFIGMANAGER_LOG_LEVEL"); found {
-		logLevel = strings.ToLower(level)
-	}
-	lvl, err := zerolog.ParseLevel(logLevel)
-	if err != nil {
-		panic(fmt.Errorf("StartUpLoggerFailed: %v", err))
-	}
-	Logger = zerolog.New(os.Stderr).With().Timestamp().Logger().Level(lvl)
+func (l *Logger) Info(msg string, args ...any) {
+	l.w.Info(msg, args...)
 }

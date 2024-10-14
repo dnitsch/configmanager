@@ -3,12 +3,14 @@ package store
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/testutils"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 type mockSecretsApi func(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error)
@@ -32,6 +34,8 @@ func awsSecretsMgrGetChecker(t *testing.T, params *secretsmanager.GetSecretValue
 }
 
 func Test_GetSecretMgr(t *testing.T) {
+	t.Parallel()
+
 	tsuccessSecret := "dsgkbdsf"
 
 	tests := map[string]struct {
@@ -96,7 +100,7 @@ func Test_GetSecretMgr(t *testing.T) {
 
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config.WithTokenSeparator(tt.tokenSeparator).WithKeySeparator(tt.keySeparator))
 
-			impl, _ := NewSecretsMgr(context.TODO())
+			impl, _ := NewSecretsMgr(context.TODO(), log.New(io.Discard))
 			impl.svc = tt.mockClient(t)
 
 			impl.SetToken(token)

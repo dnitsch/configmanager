@@ -1,4 +1,4 @@
-// pacakge cmdutils
+// pacakge Cmdutils
 //
 // Wraps around the ConfigManager library
 // with additional postprocessing capabilities for
@@ -14,6 +14,7 @@ import (
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/dnitsch/configmanager/pkg/log"
+	"github.com/spf13/cobra"
 )
 
 type configManagerIface interface {
@@ -22,35 +23,23 @@ type configManagerIface interface {
 	GeneratorConfig() *config.GenVarsConfig
 }
 
-type writerIface interface {
-	Write(p []byte) (n int, err error)
-	Close() error
-}
-
 type CmdUtils struct {
-	configManager configManagerIface
-	writer        writerIface
+	logger           log.ILogger
+	configManager    configManagerIface
+	outputWriter     io.WriteCloser
+	tempOutputWriter io.WriteCloser
 }
 
-func New(confManager configManagerIface) *CmdUtils {
+func New(confManager configManagerIface, logger log.ILogger, writer io.WriteCloser) *CmdUtils {
 	return &CmdUtils{
+		logger:        logger,
 		configManager: confManager,
-		writer:        os.Stdout, // default writer
+		outputWriter:  writer,
 	}
-}
-
-func (cmd *CmdUtils) WithWriter(w writerIface) *CmdUtils {
-	cmd.writer = w
-	return cmd
 }
 
 // GenerateFromTokens is a helper cmd method to call from retrieve command
-func (c *CmdUtils) GenerateFromCmd(tokens []string, output string) error {
-	err := c.setWriter(output)
-	if err != nil {
-		return err
-	}
-	defer c.writer.Close()
+func (c *CmdUtils) GenerateFromCmd(tokens []string) error {
 	return c.generateFromToken(tokens)
 }
 
@@ -62,62 +51,38 @@ func (c *CmdUtils) generateFromToken(tokens []string) error {
 		if len(pm) < 1 {
 			return err
 		}
-		// else log error only
-		log.Errorf("%e", err)
+		c.logger.Error("%v", err)
 	}
 	// Conver to ExportVars and flush to file
 	pp := &PostProcessor{ProcessedMap: pm, Config: c.configManager.GeneratorConfig()}
 	pp.ConvertToExportVar()
-	return pp.FlushOutToFile(c.writer)
+	return pp.FlushOutToFile(c.outputWriter)
 }
 
 // Generate a replaced string from string input command
 //
 // returns a non empty string if move of temp file is required
-func (c *CmdUtils) GenerateStrOut(input, output string) error {
+func (c *CmdUtils) GenerateStrOut(input io.Reader, inputOutputIsSame bool) error {
 
 	// outputs and inputs match and are file paths
-	if input == output {
-		log.Debugf("overwrite mode on")
-
+	if inputOutputIsSame {
+		c.logger.Debug("overwrite mode on")
 		// create a temp file
 		tempfile, err := os.CreateTemp(os.TempDir(), "configmanager")
 		if err != nil {
 			return err
 		}
 		defer os.Remove(tempfile.Name())
-		log.Debugf("tmp file created: %s", tempfile.Name())
-		if err := c.setWriter(tempfile.Name()); err != nil {
-			return err
-		}
-		defer c.writer.Close()
+		c.logger.Debug("tmp file created: %s", tempfile.Name())
+		c.tempOutputWriter = tempfile
+		// if err := c.setWriter(tempfile.Name()); err != nil {
+		// 	return err
+		// }
+		defer c.tempOutputWriter.Close()
 		return c.generateFromStrOutOverwrite(input, tempfile.Name())
 	}
 
-	err := c.setWriter(output)
-	if err != nil {
-		return err
-	}
-
-	defer c.writer.Close()
-
-	return c.generateFromStrOut(input)
-}
-
-// generateFromStrOut
-func (c *CmdUtils) generateFromStrOut(input string) error {
-	f, err := os.Open(input)
-	if err != nil {
-		if perr, ok := err.(*os.PathError); ok {
-			log.Debugf("input is not a valid file path: %v, falling back on using the string directly", perr)
-			// is actual string parse and write out to location
-			return c.generateStrOutFromInput(strings.NewReader(input), c.writer)
-		}
-		return err
-	}
-	defer f.Close()
-
-	return c.generateStrOutFromInput(f, c.writer)
+	return c.generateStrOutFromInput(input, c.outputWriter)
 }
 
 // generateFromStrOutOverwrite uses the same file for input as output
@@ -125,15 +90,9 @@ func (c *CmdUtils) generateFromStrOut(input string) error {
 // and then write contents from temp to actual target
 // otherwise, two open file operations would be targeting same descriptor
 // will cause issues and inconsistent writes
-func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string) error {
+func (c *CmdUtils) generateFromStrOutOverwrite(input io.Reader, outtemp string) error {
 
-	f, err := os.Open(input)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if err := c.generateStrOutFromInput(f, c.writer); err != nil {
+	if err := c.generateStrOutFromInput(input, c.tempOutputWriter); err != nil {
 		return err
 	}
 	tr, err := os.ReadFile(outtemp)
@@ -141,11 +100,15 @@ func (c *CmdUtils) generateFromStrOutOverwrite(input, outtemp string) error {
 		return err
 	}
 	// move temp file to output path
-	return os.WriteFile(c.configManager.GeneratorConfig().OutputPath(), tr, 0644)
+	if _, err := c.outputWriter.Write(tr); err != nil {
+		return err
+	}
+	return nil
+	// return os.WriteFile(c.configManager.GeneratorConfig().OutputPath(), tr, 0644)
 }
 
 // generateStrOutFromInput takes a reader and writer as input
-func (c *CmdUtils) generateStrOutFromInput(input io.Reader, output io.Writer) error {
+func (c *CmdUtils) generateStrOutFromInput(input io.Reader, writer io.Writer) error {
 
 	b, err := io.ReadAll(input)
 	if err != nil {
@@ -157,19 +120,34 @@ func (c *CmdUtils) generateStrOutFromInput(input io.Reader, output io.Writer) er
 	}
 	pp := &PostProcessor{}
 
-	return pp.StrToFile(output, str)
+	return pp.StrToFile(writer, str)
 }
 
-func (c *CmdUtils) setWriter(outputpath string) error {
-	// empty output path means StdOut
-	if outputpath != "stdout" {
-		f, err := os.OpenFile(outputpath, os.O_WRONLY|os.O_CREATE, 0644)
-		if err != nil {
-			return err
-		}
-		c.writer = f
-	}
+type WriterCloserWrapper struct {
+	io.Writer
+}
+
+func (swc *WriterCloserWrapper) Close() error {
 	return nil
+}
+
+func GetWriter(outputpath string) (io.WriteCloser, error) {
+	outputWriter := &WriterCloserWrapper{os.Stdout}
+	if outputpath != "stdout" {
+		return os.Create(outputpath)
+	}
+	return outputWriter, nil
+}
+
+func GetReader(cmd *cobra.Command, inputpath string) (io.Reader, error) {
+	inputReader := cmd.InOrStdin()
+	if inputpath != "-" && inputpath != "" {
+		if _, err := os.Stat(inputpath); os.IsNotExist(err) {
+			return strings.NewReader(inputpath), nil
+		}
+		return os.Open(inputpath)
+	}
+	return inputReader, nil
 }
 
 // UploadTokensWithVals takes in a map of key/value pairs and uploads them
