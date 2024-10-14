@@ -17,7 +17,6 @@ require (
 	github.com/googleapis/gax-go/v2 v2.13.0
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/hashicorp/vault/api/auth/aws v0.8.0
-	github.com/rs/zerolog v1.33.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spyzhov/ajson v0.9.4
 	gopkg.in/yaml.v3 v3.0.1

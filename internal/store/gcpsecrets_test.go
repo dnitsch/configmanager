@@ -34,14 +34,20 @@ var TEST_GCP_CREDS = []byte(`{
 	"client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/bla"
   }`)
 
-func fixtureInitMockClient() struct {
+func fixtureInitMockClient(t *testing.T) struct {
 	name   string
 	close  func() error
 	delete func(name string) error
 } {
 
-	cf, _ := os.CreateTemp(".", "*")
-	cf.Write(TEST_GCP_CREDS)
+	cf, err := os.CreateTemp("", "gcp-creds*")
+	if err != nil {
+		t.Fatalf(testutils.TestPhraseWithContext, "unable to set up creds file", err.Error(), nil)
+	}
+	if _, err := cf.Write(TEST_GCP_CREDS); err != nil {
+		t.Fatalf(testutils.TestPhraseWithContext, "unable to write mock creds into file", err.Error(), nil)
+	}
+
 	resp := struct {
 		name   string
 		close  func() error
@@ -55,6 +61,7 @@ func fixtureInitMockClient() struct {
 }
 
 func gcpSecretsGetChecker(t *testing.T, req *gcpsecretspb.AccessSecretVersionRequest) {
+	t.Helper()
 	if req.Name == "" {
 		t.Fatal("expect name to not be nil")
 	}
@@ -67,7 +74,7 @@ func gcpSecretsGetChecker(t *testing.T, req *gcpsecretspb.AccessSecretVersionReq
 }
 
 func Test_GetGcpSecretVarHappy(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	tests := map[string]struct {
 		token      string
@@ -77,7 +84,6 @@ func Test_GetGcpSecretVarHappy(t *testing.T) {
 	}{
 		"success": {"GCPSECRETS#/token/1", "someValue", func(t *testing.T) gcpSecretsApi {
 			return mockGcpSecretsApi(func(ctx context.Context, req *gcpsecretspb.AccessSecretVersionRequest, opts ...gax.CallOption) (*gcpsecretspb.AccessSecretVersionResponse, error) {
-				t.Helper()
 				gcpSecretsGetChecker(t, req)
 				return &gcpsecretspb.AccessSecretVersionResponse{
 					Payload: &gcpsecretspb.SecretPayload{Data: []byte("someValue")},
@@ -87,7 +93,6 @@ func Test_GetGcpSecretVarHappy(t *testing.T) {
 		},
 		"success with version": {"GCPSECRETS#/token/1[version=123]", "someValue", func(t *testing.T) gcpSecretsApi {
 			return mockGcpSecretsApi(func(ctx context.Context, req *gcpsecretspb.AccessSecretVersionRequest, opts ...gax.CallOption) (*gcpsecretspb.AccessSecretVersionResponse, error) {
-				t.Helper()
 				gcpSecretsGetChecker(t, req)
 				return &gcpsecretspb.AccessSecretVersionResponse{
 					Payload: &gcpsecretspb.SecretPayload{Data: []byte("someValue")},
@@ -116,7 +121,7 @@ func Test_GetGcpSecretVarHappy(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			fixture := fixtureInitMockClient()
+			fixture := fixtureInitMockClient(t)
 			defer fixture.close()
 			defer fixture.delete(fixture.name)
 
@@ -124,6 +129,7 @@ func Test_GetGcpSecretVarHappy(t *testing.T) {
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
 
 			impl, err := NewGcpSecrets(context.TODO(), log.New(io.Discard))
+
 			if err != nil {
 				t.Errorf(testutils.TestPhrase, err.Error(), nil)
 			}

@@ -563,7 +563,7 @@ func Test_YamlRetrieveMarshalled_errored_in_marshal(t *testing.T) {
 	// type failingMarshaler struct{}
 	err := c.RetrieveMarshalledYaml(&struct {
 		A int
-		B map[string]int ",inline"
+		B map[string]int `yaml:",inline"`
 	}{1, map[string]int{"a": 2}})
 	if err != nil {
 	} else {

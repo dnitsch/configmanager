@@ -48,6 +48,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: install deps
         run: |
           apt-get update && apt-get install jq git -y
@@ -56,8 +63,8 @@ jobs:
           git config user.name ${{ github.actor }}
       - name: release library
         run: |
-          make GIT_TAG=${SEMVER} REVISION=$GITHUB_SHA tag
+          task tag GIT_TAG=${SEMVER} REVISION=$GITHUB_SHA
       - name: release binary
         run: |
-          make REVISION=$GITHUB_SHA GIT_TAG=${SEMVER} PAT=${{ secrets.GITHUB_TOKEN }} cross-build
-          make REVISION=$GITHUB_SHA GIT_TAG=${SEMVER} PAT=${{ secrets.GITHUB_TOKEN }} release
+          task bin REVISION=$GITHUB_SHA GIT_TAG=${SEMVER}
+          task release REVISION=$GITHUB_SHA GIT_TAG=${SEMVER} PAT=${{ secrets.GITHUB_TOKEN }}
