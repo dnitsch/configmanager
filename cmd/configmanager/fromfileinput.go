@@ -5,6 +5,8 @@ import (
 
 	"github.com/dnitsch/configmanager"
 	"github.com/dnitsch/configmanager/internal/cmdutils"
+	"github.com/dnitsch/configmanager/pkg/generator"
+	"github.com/dnitsch/configmanager/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +28,16 @@ func newFromStrCmd(rootCmd *Root) {
 			cm := configmanager.New(cmd.Context())
 			cm.Config.WithTokenSeparator(rootCmd.rootFlags.tokenSeparator).WithOutputPath(f.path).WithKeySeparator(rootCmd.rootFlags.keySeparator)
 			if f.path == "stdout" {
-				
+
 			}
-			return cmdutils.New(cm).GenerateStrOut(f.input, f.path)
+			gnrtr := generator.NewGenerator(cmd.Context(), func(gv *generator.GenVars) {
+				if rootCmd.rootFlags.verbose {
+					rootCmd.logger.SetLevel(log.DebugLvl)
+				}
+				gv.Logger = rootCmd.logger
+			}).WithConfig(cm.Config)
+			cm.WithGenerator(gnrtr)
+			return cmdutils.New(cm, rootCmd.logger).GenerateStrOut(f.input, f.path)
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(f.input) < 1 {

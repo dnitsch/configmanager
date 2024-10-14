@@ -1,6 +1,7 @@
 package generator_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/dnitsch/configmanager/internal/strategy"
 	"github.com/dnitsch/configmanager/internal/testutils"
 	"github.com/dnitsch/configmanager/pkg/generator"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 type mockGenerate struct {
@@ -31,7 +33,9 @@ func Test_Generate(t *testing.T) {
 			return m, nil
 		}
 
-		g := generator.NewGenerator()
+		g := generator.NewGenerator(context.TODO(), func(gv *generator.GenVars) {
+			gv.Logger = log.New(&bytes.Buffer{})
+		})
 		g.WithStrategyMap(strategy.StrategyFuncMap{config.UnknownPrefix: custFunc})
 		got, err := g.Generate([]string{"UNKNOWN://mountPath/token"})
 
@@ -49,7 +53,7 @@ func Test_Generate(t *testing.T) {
 			return m, nil
 		}
 
-		g := generator.NewGenerator()
+		g := generator.NewGenerator(context.TODO())
 		g.WithStrategyMap(strategy.StrategyFuncMap{config.UnknownPrefix: custFunc})
 		got, err := g.Generate([]string{"UNKNOWN://mountPath/token"})
 
@@ -67,7 +71,7 @@ func Test_Generate(t *testing.T) {
 			return m, nil
 		}
 
-		g := generator.NewGenerator()
+		g := generator.NewGenerator(context.TODO())
 		g.WithStrategyMap(strategy.StrategyFuncMap{config.UnknownPrefix: custFunc})
 		got, err := g.Generate([]string{"UNKNOWN://mountPath/token|key1.key2"})
 
@@ -124,7 +128,7 @@ func Test_generate_withKeys_lookup(t *testing.T) {
 	}
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
-			g := generator.NewGenerator()
+			g := generator.NewGenerator(context.TODO())
 			g.WithStrategyMap(strategy.StrategyFuncMap{config.UnknownPrefix: tt.custFunc})
 			got, err := g.Generate([]string{tt.token})
 

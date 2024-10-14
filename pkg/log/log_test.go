@@ -1,63 +1,74 @@
-package log
+package log_test
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/dnitsch/configmanager/internal/testutils"
-	"github.com/rs/zerolog"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 func Test_LogInfo(t *testing.T) {
-	tests := []struct {
-		name      string
-		level     zerolog.Level
-		logMethod func(msg string)
+	tests := map[string]struct {
+		level     log.Level
+		logMethod log.Level
 		message   string
 		expect    string
 	}{
-		{
-			name:      "info at debug",
-			level:     zerolog.DebugLevel,
-			logMethod: Info,
+		"info at debug": {
+			level:     log.DebugLvl,
+			logMethod: log.InfoLvl,
 			message:   "write me out...",
-			expect: `{"level":"info","message":"write me out..."}
-`,
+			expect:    `level=INFO msg="write me out..."`,
 		},
-		{
-			name:      "warn at debug",
-			level:     zerolog.DebugLevel,
-			logMethod: Warn,
+		"error at debug": {
+			level:     log.DebugLvl,
+			logMethod: log.ErrorLvl,
 			message:   "write me out...",
-			expect: `{"level":"warn","message":"write me out..."}
-`,
+			expect:    `level=ERROR msg="write me out..."`,
 		},
-		{
-			name:      "debug at debug",
-			level:     zerolog.DebugLevel,
-			logMethod: Debug,
+		"debug at debug": {
+			level:     log.DebugLvl,
+			logMethod: log.DebugLvl,
 			message:   "write me out...",
-			expect: `{"level":"debug","message":"write me out..."}
-`,
+			expect:    `level=DEBUG msg="write me out..."`,
 		},
-		{
-			name:      "debug at info",
-			level:     zerolog.InfoLevel,
-			logMethod: Debug,
+		"debug at info": {
+			level:     log.InfoLvl,
+			logMethod: log.DebugLvl,
+			message:   "write me out...",
+			expect:    ``,
+		},
+		"info at error": {
+			level:     log.ErrorLvl,
+			logMethod: log.InfoLvl,
 			message:   "write me out...",
 			expect:    ``,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			// overwrite writer for testing
-			var buf bytes.Buffer
+			buf := &bytes.Buffer{}
 			// overwrite logger for testing without timestamp
-			Logger = zerolog.New(&buf).With().Logger().Level(tt.level)
-			tt.logMethod(tt.message)
-			s := buf.String()
-			if s != tt.expect {
-				t.Errorf(testutils.TestPhrase, tt.expect, s)
+			logger := log.New(buf)
+			logger.SetLevel(tt.level)
+
+			switch tt.logMethod {
+			case "debug":
+				logger.Debug(tt.message)
+			case "info":
+				logger.Info(tt.message)
+			case "error":
+				logger.Error(tt.message)
+			}
+			got := buf.String()
+			if !strings.Contains(got, tt.expect) {
+				t.Errorf(testutils.TestPhrase, got, tt.expect)
+			}
+			if len(tt.expect) == 0 && len(got) > 0 {
+				t.Errorf(testutils.TestPhraseWithContext, "no output expected", got, tt.expect)
 			}
 		})
 	}

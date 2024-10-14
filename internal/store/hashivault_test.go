@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/testutils"
+	"github.com/dnitsch/configmanager/pkg/log"
 	vault "github.com/hashicorp/vault/api"
 )
 
@@ -266,7 +268,7 @@ func TestVaultScenarios(t *testing.T) {
 			defer tearDown()
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.conf)
 
-			impl, err := NewVaultStore(context.TODO(), token)
+			impl, err := NewVaultStore(context.TODO(), token, log.New(io.Discard))
 			if err != nil {
 				if err.Error() != tt.expect {
 					t.Fatalf("failed to init hashivault, %v", err.Error())
@@ -451,7 +453,7 @@ incorrect values supplied. failed to initialize the client`,
 			defer tearDown()
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.conf)
 
-			impl, err := NewVaultStore(context.TODO(), token)
+			impl, err := NewVaultStore(context.TODO(), token, log.New(io.Discard))
 			if err != nil {
 				// WHAT A CRAP way to do this...
 				if err.Error() != strings.Split(fmt.Sprintf(tt.expect, ts.URL), `%!`)[0] {

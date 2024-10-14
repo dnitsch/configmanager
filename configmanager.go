@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/dnitsch/configmanager/internal/config"
@@ -39,9 +39,8 @@ type ConfigManager struct {
 // Calling cm.Config.WithXXX() will overwrite the generator config
 func New(ctx context.Context) *ConfigManager {
 	cm := &ConfigManager{}
-	defaultConfig := config.NewConfig()
-	cm.Config = defaultConfig
-	cm.generator = generator.NewGenerator().WithConfig(cm.Config)
+	cm.Config = config.NewConfig()
+	cm.generator = generator.NewGenerator(ctx).WithConfig(cm.Config)
 	return cm
 }
 
@@ -104,22 +103,13 @@ func replaceString(inputMap generator.ParsedMap, inputString string) string {
 }
 
 func orderedKeysList(inputMap generator.ParsedMap) []string {
-	mkeys := make([]string, 0, len(inputMap))
-	for k := range inputMap {
-		mkeys = append(mkeys, k)
-	}
-
+	mkeys := inputMap.MapKeys()
 	// order map by keys length so that when passed to the
 	// replacer it will replace the longest first
 	// removing the possibility of partially overwriting
 	// another token with same prefix
-	sort.SliceStable(mkeys, func(i, j int) bool {
-		l1, l2 := len(mkeys[i]), len(mkeys[j])
-		if l1 != l2 {
-			return l1 > l2
-		}
-		return mkeys[i] > mkeys[j]
-	})
+	// the default sort is ascending
+	slices.Sort(mkeys)
 	return mkeys
 }
 

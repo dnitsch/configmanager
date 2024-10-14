@@ -12,6 +12,7 @@ import (
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/testutils"
 	"github.com/dnitsch/configmanager/pkg/generator"
+	log "github.com/dnitsch/configmanager/pkg/log"
 )
 
 type mockCfgMgr struct {
@@ -35,7 +36,7 @@ func (m mockCfgMgr) GeneratorConfig() *config.GenVarsConfig {
 
 func Test_UploadTokens_errors(t *testing.T) {
 	m := &mockCfgMgr{}
-	cmd := cmdutils.New(m)
+	cmd := cmdutils.New(m, log.New(&bytes.Buffer{}))
 	tokenMap := make(map[string]string)
 	if err := cmd.UploadTokensWithVals(tokenMap); err == nil {
 		t.Errorf(testutils.TestPhraseWithContext, "NOT YET IMPLEMENTED should fail", nil, "err")
@@ -81,7 +82,7 @@ func Test_GenerateFromCmd(t *testing.T) {
 				parsedMap: tt.mockMap,
 			}
 
-			cmd := cmdutils.New(m)
+			cmd := cmdutils.New(m, log.New(&bytes.Buffer{}))
 			err := cmd.GenerateFromCmd(tt.tokens, f.Name())
 			if err != nil {
 				t.Fatalf(testutils.TestPhraseWithContext, "generate from cmd tokens", err, nil)
@@ -119,7 +120,7 @@ func Test_GenerateStrOut(t *testing.T) {
 			config:       config.NewConfig(),
 			parsedString: mockParsedStr,
 		}
-		cmd := cmdutils.New(m)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}))
 		err := cmd.GenerateStrOut(inputStr, file)
 		if err != nil {
 			t.Fatalf(testutils.TestPhraseWithContext, "generate from string", err, nil)
@@ -133,7 +134,7 @@ func Test_GenerateStrOut(t *testing.T) {
 			config:       config.NewConfig(),
 			parsedString: mockParsedStr,
 		}
-		cmd := cmdutils.New(m)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}))
 		writer := bytes.NewBuffer([]byte{})
 		mw := &mockWriter{w: writer}
 		cmd.WithWriter(mw)
@@ -157,7 +158,7 @@ func Test_GenerateStrOut(t *testing.T) {
 			config:       config.NewConfig(),
 			parsedString: mockParsedStr,
 		}
-		cmd := cmdutils.New(m)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}))
 		err := cmd.GenerateStrOut(inputF.Name(), outputF.Name())
 		if err != nil {
 			t.Fatalf(testutils.TestPhraseWithContext, "generate from string", err, nil)
@@ -178,7 +179,7 @@ func Test_GenerateStrOut(t *testing.T) {
 			config:       config.NewConfig().WithOutputPath(inputF.Name()),
 			parsedString: mockParsedStr,
 		}
-		cmd := cmdutils.New(m)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}))
 		err := cmd.GenerateStrOut(inputF.Name(), inputF.Name())
 		if err != nil {
 			t.Fatalf(testutils.TestPhraseWithContext, "generate from string", err, nil)
@@ -195,7 +196,7 @@ func Test_CmdUtils_Errors_on(t *testing.T) {
 			parsedMap: generator.ParsedMap{"FOO://bar/qusx": "aksujg", "FOO://bar/lorem": "", "FOO://bar/ducks": "sdhbjk0293"},
 		}
 
-		cmd := cmdutils.New(m)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}))
 		if err := cmd.GenerateFromCmd([]string{"IMNP://foo"}, "xunknown/file"); err == nil {
 			t.Errorf(testutils.TestPhraseWithContext, "file does not exist unable to create a writer", "err", nil)
 		}
@@ -207,7 +208,7 @@ func Test_CmdUtils_Errors_on(t *testing.T) {
 			err:       fmt.Errorf("err in fetching tokens"),
 		}
 
-		cmd := cmdutils.New(m)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}))
 		writer := bytes.NewBuffer([]byte{})
 		mw := &mockWriter{w: writer}
 		cmd.WithWriter(mw)
@@ -223,7 +224,7 @@ func Test_CmdUtils_Errors_on(t *testing.T) {
 			err:       fmt.Errorf("err in fetching tokens"),
 		}
 
-		cmd := cmdutils.New(m)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}))
 		writer := bytes.NewBuffer([]byte{})
 		mw := &mockWriter{w: writer}
 		cmd.WithWriter(mw)
@@ -240,7 +241,7 @@ func Test_CmdUtils_Errors_on(t *testing.T) {
 			err:          fmt.Errorf("err in fetching tokens"),
 		}
 
-		cmd := cmdutils.New(m)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}))
 		writer := bytes.NewBuffer([]byte{})
 		mw := &mockWriter{w: writer}
 		cmd.WithWriter(mw)
@@ -263,7 +264,7 @@ func Test_CmdUtils_Errors_on(t *testing.T) {
 			err:          fmt.Errorf("err in fetching tokens"),
 		}
 
-		cmd := cmdutils.New(m)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}))
 		writer := bytes.NewBuffer([]byte{})
 		mw := &mockWriter{w: writer}
 		cmd.WithWriter(mw)

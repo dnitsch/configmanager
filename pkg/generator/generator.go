@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 	"sync"
 
@@ -13,11 +14,6 @@ import (
 	"github.com/dnitsch/configmanager/pkg/log"
 	"github.com/spyzhov/ajson"
 )
-
-type muRawMap struct {
-	mu       sync.RWMutex
-	tokenMap ParsedMap
-}
 
 type retrieveIface interface {
 	WithStrategyFuncMap(funcMap strategy.StrategyFuncMap) *strategy.RetrieveStrategy
@@ -32,38 +28,48 @@ type retrieveIface interface {
 // which wil be passed in a loop into a goroutine to perform the
 // relevant strategy network calls to the config store implementations
 type GenVars struct {
+	Logger   log.ILogger
 	strategy retrieveIface
 	ctx      context.Context
 	config   config.GenVarsConfig
 	// rawMap is the internal object that holds the values
 	// of original token => retrieved value - decrypted in plain text
 	// with a mutex RW locker
-	rawMap muRawMap //ParsedMap
+	rawMap tokenMapSafe //ParsedMap
 }
 
-// ParsedMap is the internal working object definition and
-// the return type if results are not flushed to file
-type ParsedMap map[string]any
+type Opts func(*GenVars)
 
 // NewGenerator returns a new instance of Generator
 // with a default strategy pattern wil be overwritten
 // during the first run of a found tokens map
-func NewGenerator() *GenVars {
+func NewGenerator(ctx context.Context, opts ...Opts) *GenVars {
 	// defaultStrategy := NewDefatultStrategy()
-	return newGenVars()
+	return newGenVars(ctx, opts...)
 }
 
-func newGenVars() *GenVars {
+func newGenVars(ctx context.Context, opts ...Opts) *GenVars {
 	m := make(ParsedMap)
 	conf := config.NewConfig()
-	return &GenVars{
-		rawMap: muRawMap{tokenMap: m},
-		ctx:    context.TODO(),
+	g := &GenVars{
+		Logger: log.New(io.Discard),
+		rawMap: tokenMapSafe{
+			tokenMap: m,
+			mu:       sync.RWMutex{},
+		},
+		ctx: ctx,
 		// return using default config
 		config: *conf,
-		// using a default Strategy
-		strategy: strategy.New(store.NewDefatultStrategy(), *conf),
 	}
+
+	for _, o := range opts {
+		o(g)
+	}
+
+	// using a default Strategy
+	g.strategy = strategy.New(store.NewDefatultStrategy(), *conf, g.Logger)
+	// now apply
+	return g
 }
 
 // WithStrategyMap
@@ -94,26 +100,35 @@ func (c *GenVars) Config() *config.GenVarsConfig {
 	return &c.config
 }
 
-func (c *GenVars) parsedMap() ParsedMap {
-	c.rawMap.mu.RLock()
-	defer c.rawMap.mu.RUnlock()
-	// make a copy of the map
-	// so it cannot be passed
-	// as a pointer to live data
-	m := make(ParsedMap)
-	for k, v := range c.rawMap.tokenMap {
-		m[k] = v
+// ParsedMap is the internal working object definition and
+// the return type if results are not flushed to file
+type ParsedMap map[string]any
+
+func (pm ParsedMap) MapKeys() (keys []string) {
+	for k := range pm {
+		keys = append(keys, k)
 	}
-	return m
+	return
 }
 
-func (c *GenVars) addRawMap(key *config.ParsedTokenConfig, val string) {
-	c.rawMap.mu.Lock()
-	defer c.rawMap.mu.Unlock()
+type tokenMapSafe struct {
+	mu       sync.RWMutex
+	tokenMap ParsedMap
+}
+
+func (tms *tokenMapSafe) getTokenMap() ParsedMap {
+	tms.mu.Lock()
+	defer tms.mu.Unlock()
+	return tms.tokenMap
+}
+
+func (tms *tokenMapSafe) addKeyVal(key *config.ParsedTokenConfig, val string) {
+	tms.mu.Lock()
+	defer tms.mu.Unlock()
 	// NOTE: still use the metadata in the key
 	// there could be different versions / labels for the same token and hence different values
 	// However the JSONpath look up
-	c.rawMap.tokenMap[key.String()] = c.keySeparatorLookup(key, val)
+	tms.tokenMap[key.String()] = keySeparatorLookup(key, val)
 }
 
 type rawTokenMap map[string]*config.ParsedTokenConfig
@@ -131,14 +146,14 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 			parsedTokenMap[token] = parsedToken
 			continue
 		}
-		log.Infof(err.Error())
+		c.Logger.Info(err.Error())
 	}
 	// pass in default initialised retrieveStrategy
 	// input should be
 	if err := c.generate(parsedTokenMap); err != nil {
 		return nil, err
 	}
-	return c.parsedMap(), nil
+	return c.rawMap.getTokenMap(), nil
 }
 
 // generate checks if any tokens found
@@ -147,7 +162,7 @@ func (c *GenVars) Generate(tokens []string) (ParsedMap, error) {
 // generates ParsedMap which includes
 func (c *GenVars) generate(rawMap rawTokenMap) error {
 	if len(rawMap) < 1 {
-		log.Debug("no replaceable tokens found in input strings")
+		c.Logger.Debug("no replaceable tokens found in input strings")
 		return nil
 	}
 
@@ -180,19 +195,19 @@ func (c *GenVars) generate(rawMap rawTokenMap) error {
 
 	for cro := range outCh {
 		cr := cro
-		log.Debugf("cro: %+v", cr)
+		c.Logger.Debug("cro: %+v", cr)
 		if cr.Err != nil {
-			log.Debugf("cr.err %v, for token: %s", cr.Err, cr.Key())
+			c.Logger.Debug("cr.err %v, for token: %s", cr.Err, cr.Key())
 			errors = append(errors, cr.Err)
 			// Skip adding not found key to the RawMap
 			continue
 		}
-		c.addRawMap(cr.Key(), cr.Value())
+		c.rawMap.addKeyVal(cr.Key(), cr.Value())
 	}
 
 	if len(errors) > 0 {
 		// crude ...
-		log.Debugf("found: %d errors", len(errors))
+		c.Logger.Debug("found: %d errors", len(errors))
 		// return outMap, fmt.Errorf("%v", errors)
 	}
 	return nil
@@ -204,28 +219,24 @@ func (c *GenVars) generate(rawMap rawTokenMap) error {
 // and any characters
 func IsParsed(v any, trm *ParsedMap) bool {
 	str := fmt.Sprint(v)
-	if err := json.Unmarshal([]byte(str), &trm); err != nil {
-		log.Info("unable to parse into a k/v map returning a string instead")
-		return false
-	}
-	log.Info("parsed into a k/v map")
-	return true
+	err := json.Unmarshal([]byte(str), &trm)
+	return err == nil
 }
 
 // keySeparatorLookup checks if the key contains
 // keySeparator character
 // If it does contain one then it tries to parse
-func (c *GenVars) keySeparatorLookup(key *config.ParsedTokenConfig, val string) string {
+func keySeparatorLookup(key *config.ParsedTokenConfig, val string) string {
 	// key has separator
 	k := key.LookupKeys()
 	if k == "" {
-		log.Infof("no keyseparator found")
+		// c.logger.Info("no keyseparator found")
 		return val
 	}
 
 	keys, err := ajson.JSONPath([]byte(val), fmt.Sprintf("$..%s", k))
 	if err != nil {
-		log.Debugf("unable to parse as json object %v", err.Error())
+		// c.logger.Debug("unable to parse as json object %v", err.Error())
 		return val
 	}
 
@@ -234,7 +245,7 @@ func (c *GenVars) keySeparatorLookup(key *config.ParsedTokenConfig, val string) 
 		if v.Type() == ajson.String {
 			str, err := strconv.Unquote(fmt.Sprintf("%v", v))
 			if err != nil {
-				log.Debugf("unable to unquote value: %v returning as is", v)
+				// c.logger.Debug("unable to unquote value: %v returning as is", v)
 				return fmt.Sprintf("%v", v)
 			}
 			return str
@@ -243,6 +254,6 @@ func (c *GenVars) keySeparatorLookup(key *config.ParsedTokenConfig, val string) 
 		return fmt.Sprintf("%v", v)
 	}
 
-	log.Infof("no value found in json using path expression")
+	// c.logger.Info("no value found in json using path expression")
 	return ""
 }

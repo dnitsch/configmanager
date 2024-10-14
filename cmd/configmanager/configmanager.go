@@ -3,9 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io"
 
 	"github.com/dnitsch/configmanager/internal/config"
+	"github.com/dnitsch/configmanager/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -21,13 +21,12 @@ type rootCmdFlags struct {
 }
 
 type Root struct {
-	Cmd        *cobra.Command
-	ChannelOut io.Writer
-	ChannelErr io.Writer
-	rootFlags  *rootCmdFlags
+	Cmd       *cobra.Command
+	logger    log.ILogger
+	rootFlags *rootCmdFlags
 }
 
-func NewRootCmd(channelOut, channelErr io.Writer) *Root {
+func NewRootCmd(logger log.ILogger) *Root { //channelOut, channelErr io.Writer
 	rc := &Root{
 		Cmd: &cobra.Command{
 			Use:   config.SELF_NAME,
@@ -36,9 +35,8 @@ func NewRootCmd(channelOut, channelErr io.Writer) *Root {
 			Using a specific tokens as an array item`, config.SELF_NAME),
 			Version: fmt.Sprintf("Version: %s\nRevision: %s\n", Version, Revision),
 		},
-		ChannelOut: channelOut,
-		ChannelErr: channelErr,
-		rootFlags:  &rootCmdFlags{},
+		logger:    logger,
+		rootFlags: &rootCmdFlags{},
 	}
 
 	rc.Cmd.PersistentFlags().BoolVarP(&rc.rootFlags.verbose, "verbose", "v", false, "Verbosity level")

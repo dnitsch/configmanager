@@ -3,11 +3,13 @@ package cmd_test
 import (
 	"bytes"
 	"context"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
 
 	cmd "github.com/dnitsch/configmanager/cmd/configmanager"
+	"github.com/dnitsch/configmanager/pkg/log"
 )
 
 type cmdTestInput struct {
@@ -15,15 +17,22 @@ type cmdTestInput struct {
 	errored     bool
 	exactOutput string
 	output      []string
+	logLevel    slog.Level // 8 for error -4 debug, 0 for info
 }
+type levelSetter int
 
+func (l levelSetter) Level() int {
+	return 8
+}
 func cmdRunTestHelper(t *testing.T, testInput *cmdTestInput) {
 	t.Helper()
 
-	logOut := &bytes.Buffer{}
-	logErr := &bytes.Buffer{}
+	leveler := &slog.LevelVar{}
+	leveler.Set(testInput.logLevel)
 
-	cmd := cmd.NewRootCmd(logOut, logErr)
+	logErr := &bytes.Buffer{}
+	logger := log.New(logErr) //slog.New(slog.NewTextHandler(logErr, &slog.HandlerOptions{Level: leveler}))
+	cmd := cmd.NewRootCmd(logger)
 	os.Args = append([]string{os.Args[0]}, testInput.args...)
 	errOut := &bytes.Buffer{}
 	stdOut := &bytes.Buffer{}
@@ -43,12 +52,12 @@ func cmdRunTestHelper(t *testing.T, testInput *cmdTestInput) {
 	}
 	if len(testInput.output) > 0 {
 		for _, v := range testInput.output {
-			if !strings.Contains(logOut.String(), v) {
-				t.Errorf("\ngot: %s\vnot found in: %v", logOut.String(), v)
+			if !strings.Contains(stdOut.String(), v) {
+				t.Errorf("\ngot: %s\vnot found in: %v", stdOut.String(), v)
 			}
 		}
 	}
-	if testInput.exactOutput != "" && logOut.String() != testInput.exactOutput {
-		t.Errorf("output mismatch\ngot: %s\n\nwanted: %s", logOut.String(), testInput.exactOutput)
+	if testInput.exactOutput != "" && stdOut.String() != testInput.exactOutput {
+		t.Errorf("output mismatch\ngot: %s\n\nwanted: %s", stdOut.String(), testInput.exactOutput)
 	}
 }

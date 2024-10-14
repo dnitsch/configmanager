@@ -27,6 +27,7 @@ type AzAppConf struct {
 	config        *AzAppConfConfig
 	token         *config.ParsedTokenConfig
 	strippedToken string
+	logger        log.ILogger
 }
 
 // AzAppConfConfig is the azure conf service specific config
@@ -38,26 +39,27 @@ type AzAppConfConfig struct {
 }
 
 // NewAzAppConf
-func NewAzAppConf(ctx context.Context, token *config.ParsedTokenConfig) (*AzAppConf, error) {
+func NewAzAppConf(ctx context.Context, token *config.ParsedTokenConfig, logger log.ILogger) (*AzAppConf, error) {
 	storeConf := &AzAppConfConfig{}
 	token.ParseMetadata(storeConf)
 	backingStore := &AzAppConf{
 		ctx:    ctx,
 		config: storeConf,
 		token:  token,
+		logger: logger,
 	}
 	srvInit := azServiceFromToken(token.StoreToken(), "https://%s.azconfig.io", 1)
 	backingStore.strippedToken = srvInit.token
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		log.Error(err)
+		logger.Error("failed to get credentials: %v", err)
 		return nil, err
 	}
 
 	c, err := azappconfig.NewClient(srvInit.serviceUri, cred, nil)
 	if err != nil {
-		log.Error(err)
+		logger.Error("failed to init the client: %v", err)
 		return nil, fmt.Errorf("%v\n%w", err, ErrClientInitialization)
 	}
 
@@ -74,8 +76,8 @@ func (implmt *AzAppConf) SetToken(token *config.ParsedTokenConfig) {}
 // From this point then normal rules of configmanager apply,
 // including keySeperator and lookup.
 func (imp *AzAppConf) Token() (string, error) {
-	log.Info("Concrete implementation AzAppConf")
-	log.Infof("AzAppConf Token: %s", imp.token.String())
+	imp.logger.Info("Concrete implementation AzAppConf")
+	imp.logger.Info("AzAppConf Token: %s", imp.token.String())
 
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
@@ -92,12 +94,12 @@ func (imp *AzAppConf) Token() (string, error) {
 
 	s, err := imp.svc.GetSetting(ctx, imp.strippedToken, opts)
 	if err != nil {
-		log.Errorf(implementationNetworkErr, config.AzAppConfigPrefix, err, imp.strippedToken)
+		imp.logger.Error(implementationNetworkErr, config.AzAppConfigPrefix, err, imp.strippedToken)
 		return "", fmt.Errorf("token: %s, error: %v. %w", imp.strippedToken, err, ErrRetrieveFailed)
 	}
 	if s.Value != nil {
 		return *s.Value, nil
 	}
-	log.Errorf("token: %v, %w", imp.token.String(), ErrEmptyResponse)
+	imp.logger.Error("token: %v, %w", imp.token.String(), ErrEmptyResponse)
 	return "", nil
 }

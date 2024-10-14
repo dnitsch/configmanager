@@ -29,6 +29,7 @@ type hashiVaultApi interface {
 type VaultStore struct {
 	svc           hashiVaultApi
 	ctx           context.Context
+	logger        log.ILogger
 	config        *VaultConfig
 	token         *config.ParsedTokenConfig
 	strippedToken string
@@ -40,7 +41,7 @@ type VaultConfig struct {
 	Role    string `json:"iam_role"`
 }
 
-func NewVaultStore(ctx context.Context, token *config.ParsedTokenConfig) (*VaultStore, error) {
+func NewVaultStore(ctx context.Context, token *config.ParsedTokenConfig, logger log.ILogger) (*VaultStore, error) {
 	storeConf := &VaultConfig{}
 	token.ParseMetadata(storeConf)
 	imp := &VaultStore{
@@ -54,7 +55,7 @@ func NewVaultStore(ctx context.Context, token *config.ParsedTokenConfig) (*Vault
 	imp.strippedToken = vt.token
 	client, err := vault.NewClient(config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to initialize Vault client: %v", err)
+		return nil, fmt.Errorf("%v\n%w", err, ErrClientInitialization)
 	}
 
 	if strings.HasPrefix(os.Getenv("VAULT_TOKEN"), "aws_iam") {
@@ -106,29 +107,29 @@ func (imp *VaultStore) SetToken(token *config.ParsedTokenConfig) {}
 // token retrieval and returns a stringified version
 // of the secret
 func (imp *VaultStore) Token() (string, error) {
-	log.Infof("%s", "Concrete implementation HashiVault")
-	log.Infof("Getting Secret: %s", imp.token)
+	imp.logger.Info("%s", "Concrete implementation HashiVault")
+	imp.logger.Info("Getting Secret: %s", imp.token)
 
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
 
 	secret, err := imp.getSecret(ctx, imp.strippedToken, imp.config.Version)
 	if err != nil {
-		log.Errorf(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
+		imp.logger.Error(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
 		return "", err
 	}
 
 	if secret.Data != nil {
 		resp, err := marshall(secret.Data)
 		if err != nil {
-			log.Errorf("marshalling error: %s", err.Error())
+			imp.logger.Error("marshalling error: %s", err.Error())
 			return "", err
 		}
-		log.Debugf("marhalled kvv2: %s", resp)
+		imp.logger.Debug("marhalled kvv2: %s", resp)
 		return resp, nil
 	}
 
-	log.Errorf("value retrieved but empty for token: %v", imp.token)
+	imp.logger.Error("value retrieved but empty for token: %v", imp.token)
 	return "", nil
 }
 

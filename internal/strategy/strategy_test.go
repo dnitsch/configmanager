@@ -3,6 +3,7 @@ package strategy_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/dnitsch/configmanager/internal/store"
 	"github.com/dnitsch/configmanager/internal/strategy"
 	"github.com/dnitsch/configmanager/internal/testutils"
+	log "github.com/dnitsch/configmanager/pkg/log"
 	"github.com/go-test/deep"
 )
 
@@ -66,7 +68,7 @@ func Test_Strategy_Retrieve_succeeds(t *testing.T) {
 	}
 	for name, tt := range ttests {
 		t.Run(name, func(t *testing.T) {
-			rs := strategy.New(store.NewDefatultStrategy(), *tt.config)
+			rs := strategy.New(store.NewDefatultStrategy(), *tt.config, log.New(io.Discard))
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
 			got := rs.RetrieveByToken(context.TODO(), tt.impl(t), token)
 			if got.Err != nil {
@@ -99,7 +101,7 @@ func Test_CustomStrategyFuncMap_add_own(t *testing.T) {
 				return m, nil
 			}
 
-			s := strategy.New(store.NewDefatultStrategy(), *genVarsConf)
+			s := strategy.New(store.NewDefatultStrategy(), *genVarsConf, log.New(io.Discard))
 			s.WithStrategyFuncMap(strategy.StrategyFuncMap{config.AzTableStorePrefix: custFunc})
 
 			store, _ := s.SelectImplementation(context.TODO(), token)
@@ -142,7 +144,7 @@ func Test_SelectImpl_With(t *testing.T) {
 			config.NewConfig().WithTokenSeparator("#"),
 			func() store.Strategy {
 				token, _ := config.NewParsedTokenConfig("AZTABLESTORE#foo/bar1", *config.NewConfig().WithTokenSeparator("#"))
-				s, _ := store.NewAzTableStore(context.TODO(), token)
+				s, _ := store.NewAzTableStore(context.TODO(), token, log.New(io.Discard))
 				return s
 			},
 			nil,
@@ -158,7 +160,7 @@ func Test_SelectImpl_With(t *testing.T) {
 			"AWSPARAMSTR#foo/bar1",
 			config.NewConfig().WithTokenSeparator("#"),
 			func() store.Strategy {
-				s, _ := store.NewParamStore(context.TODO())
+				s, _ := store.NewParamStore(context.TODO(), log.New(io.Discard))
 				return s
 			},
 			nil,
@@ -174,7 +176,7 @@ func Test_SelectImpl_With(t *testing.T) {
 			"AWSSECRETS#foo/bar1",
 			config.NewConfig().WithTokenSeparator("#"),
 			func() store.Strategy {
-				s, _ := store.NewSecretsMgr(context.TODO())
+				s, _ := store.NewSecretsMgr(context.TODO(), log.New(io.Discard))
 				return s
 			},
 			nil,
@@ -191,7 +193,7 @@ func Test_SelectImpl_With(t *testing.T) {
 			config.NewConfig().WithTokenSeparator("#"),
 			func() store.Strategy {
 				token, _ := config.NewParsedTokenConfig("AZKVSECRET#foo/bar1", *config.NewConfig().WithTokenSeparator("#"))
-				s, _ := store.NewKvScrtStore(context.TODO(), token)
+				s, _ := store.NewKvScrtStore(context.TODO(), token, log.New(io.Discard))
 				return s
 			},
 			nil,
@@ -206,7 +208,7 @@ func Test_SelectImpl_With(t *testing.T) {
 			config.NewConfig().WithTokenSeparator("#"),
 			func() store.Strategy {
 				token, _ := config.NewParsedTokenConfig("AZAPPCONF#foo/bar1", *config.NewConfig().WithTokenSeparator("#"))
-				s, _ := store.NewAzAppConf(context.TODO(), token)
+				s, _ := store.NewAzAppConf(context.TODO(), token, log.New(io.Discard))
 				return s
 			},
 			nil,
@@ -222,7 +224,7 @@ func Test_SelectImpl_With(t *testing.T) {
 			config.NewConfig().WithTokenSeparator("#"),
 			func() store.Strategy {
 				token, _ := config.NewParsedTokenConfig("VAULT#foo/bar1", *config.NewConfig().WithTokenSeparator("#"))
-				s, _ := store.NewVaultStore(context.TODO(), token)
+				s, _ := store.NewVaultStore(context.TODO(), token, log.New(io.Discard))
 				return s
 			},
 			nil,
@@ -240,7 +242,7 @@ func Test_SelectImpl_With(t *testing.T) {
 			"GCPSECRETS#foo/bar1",
 			config.NewConfig().WithTokenSeparator("#"),
 			func() store.Strategy {
-				s, _ := store.NewGcpSecrets(context.TODO())
+				s, _ := store.NewGcpSecrets(context.TODO(), log.New(io.Discard))
 				return s
 			},
 			nil,
@@ -269,7 +271,7 @@ func Test_SelectImpl_With(t *testing.T) {
 			tearDown := tt.setUpTearDown()
 			defer tearDown()
 			want := tt.expect()
-			rs := strategy.New(store.NewDefatultStrategy(), *tt.config)
+			rs := strategy.New(store.NewDefatultStrategy(), *tt.config, log.New(io.Discard))
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
 			got, err := rs.SelectImplementation(context.TODO(), token)
 

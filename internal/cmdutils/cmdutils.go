@@ -1,4 +1,4 @@
-// pacakge cmdutils
+// pacakge Cmdutils
 //
 // Wraps around the ConfigManager library
 // with additional postprocessing capabilities for
@@ -23,12 +23,14 @@ type configManagerIface interface {
 }
 
 type CmdUtils struct {
+	logger        log.ILogger
 	configManager configManagerIface
 	writer        io.Writer
 }
 
-func New(confManager configManagerIface) *CmdUtils {
+func New(confManager configManagerIface, logger log.ILogger) *CmdUtils {
 	return &CmdUtils{
+		logger:        logger,
 		configManager: confManager,
 		writer:        os.Stdout, // default writer
 	}
@@ -58,7 +60,7 @@ func (c *CmdUtils) generateFromToken(tokens []string) error {
 			return err
 		}
 		// else log error only
-		log.Errorf("%e", err)
+		c.logger.Error("%e", err)
 	}
 	// Conver to ExportVars and flush to file
 	pp := &PostProcessor{ProcessedMap: pm, Config: c.configManager.GeneratorConfig()}
@@ -73,7 +75,7 @@ func (c *CmdUtils) GenerateStrOut(input, output string) error {
 
 	// outputs and inputs match and are file paths
 	if input == output {
-		log.Debugf("overwrite mode on")
+		c.logger.Debug("overwrite mode on")
 
 		// create a temp file
 		tempfile, err := os.CreateTemp(os.TempDir(), "configmanager")
@@ -81,7 +83,7 @@ func (c *CmdUtils) GenerateStrOut(input, output string) error {
 			return err
 		}
 		defer os.Remove(tempfile.Name())
-		log.Debugf("tmp file created: %s", tempfile.Name())
+		c.logger.Debug("tmp file created: %s", tempfile.Name())
 		if err := c.setWriter(tempfile.Name()); err != nil {
 			return err
 		}
@@ -104,7 +106,7 @@ func (c *CmdUtils) generateFromStrOut(input string) error {
 	f, err := os.Open(input)
 	if err != nil {
 		if perr, ok := err.(*os.PathError); ok {
-			log.Debugf("input is not a valid file path: %v, falling back on using the string directly", perr)
+			c.logger.Debug("input is not a valid file path: %v, falling back on using the string directly", perr)
 			// is actual string parse and write out to location
 			return c.generateStrOutFromInput(strings.NewReader(input), c.writer)
 		}

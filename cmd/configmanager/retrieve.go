@@ -5,6 +5,8 @@ import (
 
 	"github.com/dnitsch/configmanager"
 	"github.com/dnitsch/configmanager/internal/cmdutils"
+	"github.com/dnitsch/configmanager/pkg/generator"
+	"github.com/dnitsch/configmanager/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +26,14 @@ func newRetrieveCmd(rootCmd *Root) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cm := configmanager.New(cmd.Context())
 			cm.Config.WithTokenSeparator(rootCmd.rootFlags.tokenSeparator).WithOutputPath(f.path).WithKeySeparator(rootCmd.rootFlags.keySeparator)
-			return cmdutils.New(cm).GenerateFromCmd(f.tokens, f.path)
+			gnrtr := generator.NewGenerator(cmd.Context(), func(gv *generator.GenVars) {
+				if rootCmd.rootFlags.verbose {
+					rootCmd.logger.SetLevel(log.DebugLvl)
+				}
+				gv.Logger = rootCmd.logger
+			}).WithConfig(cm.Config)
+			cm.WithGenerator(gnrtr)
+			return cmdutils.New(cm, rootCmd.logger).GenerateFromCmd(f.tokens, f.path)
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(f.tokens) < 1 {

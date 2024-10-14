@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	gcpsecretspb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/testutils"
+	"github.com/dnitsch/configmanager/pkg/log"
 	"github.com/googleapis/gax-go/v2"
 )
 
@@ -119,7 +121,7 @@ func Test_GetGcpSecretVarHappy(t *testing.T) {
 			os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", fixture.name)
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
 
-			impl, err := NewGcpSecrets(context.TODO())
+			impl, err := NewGcpSecrets(context.TODO(), log.New(io.Discard))
 			if err != nil {
 				t.Errorf(testutils.TestPhrase, err.Error(), nil)
 			}

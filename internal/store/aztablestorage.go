@@ -27,6 +27,7 @@ type tableStoreApi interface {
 type AzTableStore struct {
 	svc    tableStoreApi
 	ctx    context.Context
+	logger log.ILogger
 	config *AzTableStrgConfig
 	token  *config.ParsedTokenConfig
 	// token only without table indicators
@@ -39,13 +40,14 @@ type AzTableStrgConfig struct {
 }
 
 // NewAzTableStore
-func NewAzTableStore(ctx context.Context, token *config.ParsedTokenConfig) (*AzTableStore, error) {
+func NewAzTableStore(ctx context.Context, token *config.ParsedTokenConfig, logger log.ILogger) (*AzTableStore, error) {
 
 	storeConf := &AzTableStrgConfig{}
 	token.ParseMetadata(storeConf)
 	// initialToken := config.ParseMetadata(token, storeConf)
 	backingStore := &AzTableStore{
 		ctx:    ctx,
+		logger: logger,
 		config: storeConf,
 		token:  token,
 	}
@@ -55,13 +57,13 @@ func NewAzTableStore(ctx context.Context, token *config.ParsedTokenConfig) (*AzT
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		log.Error(err)
+		logger.Error("failed to get credentials: %v", err)
 		return nil, err
 	}
 
 	c, err := aztables.NewClient(srvInit.serviceUri, cred, nil)
 	if err != nil {
-		log.Error(err)
+		logger.Error("failed to init the client: %v", err)
 		return nil, fmt.Errorf("%v\n%w", err, ErrClientInitialization)
 	}
 
@@ -78,8 +80,8 @@ func (implmt *AzTableStore) SetToken(token *config.ParsedTokenConfig) {}
 // From this point then normal rules of configmanager apply,
 // including keySeperator and lookup.
 func (imp *AzTableStore) Token() (string, error) {
-	log.Info("Concrete implementation AzTableSTore")
-	log.Infof("AzTableSTore Token: %s", imp.token.String())
+	imp.logger.Info("AzTableSTore Token: %s", imp.token.String())
+	imp.logger.Info("Concrete implementation AzTableSTore")
 
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
@@ -92,7 +94,7 @@ func (imp *AzTableStore) Token() (string, error) {
 
 	s, err := imp.svc.GetEntity(ctx, pKey, rKey, &aztables.GetEntityOptions{})
 	if err != nil {
-		log.Errorf(implementationNetworkErr, config.AzTableStorePrefix, err, imp.strippedToken)
+		imp.logger.Error(implementationNetworkErr, config.AzTableStorePrefix, err, imp.strippedToken)
 		return "", fmt.Errorf(implementationNetworkErr+" %w", config.AzTableStorePrefix, err, imp.token.StoreToken(), ErrRetrieveFailed)
 	}
 	if len(s.Value) > 0 {
@@ -104,7 +106,7 @@ func (imp *AzTableStore) Token() (string, error) {
 		}
 		return string(s.Value), nil
 	}
-	log.Errorf("value retrieved but empty for token: %v", imp.token)
+	imp.logger.Error("value retrieved but empty for token: %v", imp.token)
 	return "", nil
 }
 

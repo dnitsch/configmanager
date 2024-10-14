@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/data/azappconfig"
 	"github.com/dnitsch/configmanager/internal/config"
 	"github.com/dnitsch/configmanager/internal/testutils"
+	logger "github.com/dnitsch/configmanager/pkg/log"
 )
 
 func azAppConfCommonChecker(t *testing.T, key string, expectedKey string, expectLabel string, opts *azappconfig.GetSettingOptions) {
@@ -35,6 +37,8 @@ func (m mockAzAppConfApi) GetSetting(ctx context.Context, key string, options *a
 
 func Test_AzAppConf_Success(t *testing.T) {
 	tsuccessParam := "somecvla"
+
+	logr := logger.New(&bytes.Buffer{})
 	tests := map[string]struct {
 		token      string
 		expect     string
@@ -102,7 +106,7 @@ func Test_AzAppConf_Success(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
 
-			impl, err := NewAzAppConf(context.TODO(), token)
+			impl, err := NewAzAppConf(context.TODO(), token, logr)
 			if err != nil {
 				t.Errorf("failed to init AZAPPCONF")
 			}
@@ -124,6 +128,7 @@ func Test_AzAppConf_Success(t *testing.T) {
 }
 
 func Test_AzAppConf_Error(t *testing.T) {
+	logr := logger.New(&bytes.Buffer{})
 
 	tests := map[string]struct {
 		token      string
@@ -148,7 +153,7 @@ func Test_AzAppConf_Error(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			token, _ := config.NewParsedTokenConfig(tt.token, *tt.config)
-			impl, err := NewAzAppConf(context.TODO(), token)
+			impl, err := NewAzAppConf(context.TODO(), token, logr)
 			if err != nil {
 				t.Fatal("failed to init AZAPPCONF")
 			}
@@ -161,11 +166,13 @@ func Test_AzAppConf_Error(t *testing.T) {
 }
 
 func Test_fail_AzAppConf_Client_init(t *testing.T) {
+	logr := logger.New(&bytes.Buffer{})
+
 	// this is basically a wrap around test for the url.Parse method in the stdlib
 	// as that is what the client uses under the hood
 	token, _ := config.NewParsedTokenConfig("AZAPPCONF:///%25%65%6e%301-._~/</partitionKey/rowKey", *config.NewConfig())
 
-	_, err := NewAzAppConf(context.TODO(), token)
+	_, err := NewAzAppConf(context.TODO(), token, logr)
 	if err == nil {
 		t.Fatal("expected err to not be <nil>")
 	}

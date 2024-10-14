@@ -19,6 +19,7 @@ type kvApi interface {
 type KvScrtStore struct {
 	svc           kvApi
 	ctx           context.Context
+	logger        log.ILogger
 	token         *config.ParsedTokenConfig
 	config        *AzKvConfig
 	strippedToken string
@@ -32,13 +33,14 @@ type AzKvConfig struct {
 
 // NewKvScrtStore returns a KvScrtStore
 // requires `AZURE_SUBSCRIPTION_ID` environment variable to be present to successfully work
-func NewKvScrtStore(ctx context.Context, token *config.ParsedTokenConfig) (*KvScrtStore, error) {
+func NewKvScrtStore(ctx context.Context, token *config.ParsedTokenConfig, logger log.ILogger) (*KvScrtStore, error) {
 
 	storeConf := &AzKvConfig{}
 	token.ParseMetadata(storeConf)
 
 	backingStore := &KvScrtStore{
 		ctx:    ctx,
+		logger: logger,
 		config: storeConf,
 		token:  token,
 	}
@@ -48,13 +50,13 @@ func NewKvScrtStore(ctx context.Context, token *config.ParsedTokenConfig) (*KvSc
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		log.Error(err)
+		logger.Error("failed to get credentials: %v", err)
 		return nil, err
 	}
 
 	c, err := azsecrets.NewClient(srvInit.serviceUri, cred, nil)
 	if err != nil {
-		log.Error(err)
+		logger.Error("%v\n%w", err, ErrClientInitialization)
 		return nil, err
 	}
 
@@ -67,8 +69,8 @@ func NewKvScrtStore(ctx context.Context, token *config.ParsedTokenConfig) (*KvSc
 func (implmt *KvScrtStore) SetToken(token *config.ParsedTokenConfig) {}
 
 func (imp *KvScrtStore) Token() (string, error) {
-	log.Info("Concrete implementation AzKeyVault Secret")
-	log.Infof("AzKeyVault Token: %s", imp.token.String())
+	imp.logger.Info("Concrete implementation AzKeyVault Secret")
+	imp.logger.Info("AzKeyVault Token: %s", imp.token.String())
 
 	ctx, cancel := context.WithCancel(imp.ctx)
 	defer cancel()
@@ -77,12 +79,12 @@ func (imp *KvScrtStore) Token() (string, error) {
 	// imp.config.Version will default `""` if not specified
 	s, err := imp.svc.GetSecret(ctx, imp.strippedToken, imp.config.Version, nil)
 	if err != nil {
-		log.Errorf(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
+		imp.logger.Error(implementationNetworkErr, imp.token.Prefix(), err, imp.token.String())
 		return "", err
 	}
 	if s.Value != nil {
 		return *s.Value, nil
 	}
-	log.Errorf("value retrieved but empty for token: %v", imp.token)
+	imp.logger.Error("value retrieved but empty for token: %v", imp.token)
 	return "", nil
 }
