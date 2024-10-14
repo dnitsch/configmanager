@@ -3,10 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/dnitsch/configmanager"
 	"github.com/dnitsch/configmanager/internal/cmdutils"
-	"github.com/dnitsch/configmanager/pkg/generator"
-	"github.com/dnitsch/configmanager/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -23,29 +20,19 @@ func newFromStrCmd(rootCmd *Root) {
 		Use:     "string-input",
 		Aliases: []string{"fromstr", "getfromstr"},
 		Short:   `Retrieves all found token values in a specified string input`,
-		Long:    `Retrieves all found token values in a specified string input and optionally writes to a file or to stdout in a bash compliant`,
+		Long:    `Retrieves all found token values in a specified string input, can be a file, stdin, or string. Writes the output to a specified output`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inputReader, err := cmdutils.GetReader(cmd, f.input)
 			if err != nil {
 				return err
 			}
-			outputWriter, err := cmdutils.GetWriter(f.path)
+			cu, outputWriter, err := cmdutilsInit(rootCmd, cmd, f.path)
 			if err != nil {
 				return err
 			}
 			defer outputWriter.Close()
 
-			cm := configmanager.New(cmd.Context())
-			cm.Config.WithTokenSeparator(rootCmd.rootFlags.tokenSeparator).WithOutputPath(f.path).WithKeySeparator(rootCmd.rootFlags.keySeparator)
-			gnrtr := generator.NewGenerator(cmd.Context(), func(gv *generator.GenVars) {
-				if rootCmd.rootFlags.verbose {
-					rootCmd.logger.SetLevel(log.DebugLvl)
-				}
-				gv.Logger = rootCmd.logger
-			}).WithConfig(cm.Config)
-			cm.WithGenerator(gnrtr)
-
-			return cmdutils.New(cm, rootCmd.logger, outputWriter).GenerateStrOut(inputReader, f.input == f.path)
+			return cu.GenerateStrOut(inputReader, f.input == f.path)
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(f.input) < 1 {

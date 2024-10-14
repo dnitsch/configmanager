@@ -3,8 +3,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 
+	"github.com/dnitsch/configmanager"
+	"github.com/dnitsch/configmanager/internal/cmdutils"
 	"github.com/dnitsch/configmanager/internal/config"
+	"github.com/dnitsch/configmanager/pkg/generator"
 	"github.com/dnitsch/configmanager/pkg/log"
 	"github.com/spf13/cobra"
 )
@@ -56,4 +60,23 @@ func addSubCmds(rootCmd *Root) {
 
 func (rc *Root) Execute(ctx context.Context) error {
 	return rc.Cmd.ExecuteContext(ctx)
+}
+
+func cmdutilsInit(rootCmd *Root, cmd *cobra.Command, path string) (*cmdutils.CmdUtils, io.WriteCloser, error) {
+
+	outputWriter, err := cmdutils.GetWriter(path)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cm := configmanager.New(cmd.Context())
+	cm.Config.WithTokenSeparator(rootCmd.rootFlags.tokenSeparator).WithOutputPath(path).WithKeySeparator(rootCmd.rootFlags.keySeparator)
+	gnrtr := generator.NewGenerator(cmd.Context(), func(gv *generator.GenVars) {
+		if rootCmd.rootFlags.verbose {
+			rootCmd.logger.SetLevel(log.DebugLvl)
+		}
+		gv.Logger = rootCmd.logger
+	}).WithConfig(cm.Config)
+	cm.WithGenerator(gnrtr)
+	return cmdutils.New(cm, rootCmd.logger, outputWriter), outputWriter, nil
 }
