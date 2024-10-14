@@ -14,6 +14,6 @@ func main() {
 	logger := log.New(os.Stderr)
 	cmd := cfgmgr.NewRootCmd(logger)
 	if err := cmd.Execute(context.Background()); err != nil {
-		logger.Error("cli error: %v", err)
+		os.Exit(1)
 	}
 }

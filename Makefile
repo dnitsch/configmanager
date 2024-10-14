@@ -12,7 +12,8 @@ LDFLAGS := -ldflags="-s -w -X \"github.com/$(OWNER)/$(NAME)/cmd/configmanager.Ve
 test: test_prereq
 	go test ./... -v -buildvcs=false -mod=readonly -race -coverprofile=.coverage/out > .coverage/unit ; \
 	cat .coverage/unit | go-junit-report > .coverage/report-junit.xml && \
-	gocov convert .coverage/out | gocov-xml > .coverage/report-cobertura.xml
+	gocov convert .coverage/out | gocov-xml > .coverage/report-cobertura.xml \
+	cat .coverage/unit
 
 test_ci:
 	go test ./... -mod=readonly

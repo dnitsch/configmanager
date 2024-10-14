@@ -24,6 +24,10 @@ func newRetrieveCmd(rootCmd *Root) {
 		Short:   `Retrieves a value for token(s) specified`,
 		Long:    `Retrieves a value for token(s) specified and optionally writes to a file or to stdout in a bash compliant export KEY=VAL syntax`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			outputWriter, err := cmdutils.GetWriter(f.path)
+			if err != nil {
+				return err
+			}
 			cm := configmanager.New(cmd.Context())
 			cm.Config.WithTokenSeparator(rootCmd.rootFlags.tokenSeparator).WithOutputPath(f.path).WithKeySeparator(rootCmd.rootFlags.keySeparator)
 			gnrtr := generator.NewGenerator(cmd.Context(), func(gv *generator.GenVars) {
@@ -33,7 +37,7 @@ func newRetrieveCmd(rootCmd *Root) {
 				gv.Logger = rootCmd.logger
 			}).WithConfig(cm.Config)
 			cm.WithGenerator(gnrtr)
-			return cmdutils.New(cm, rootCmd.logger).GenerateFromCmd(f.tokens, f.path)
+			return cmdutils.New(cm, rootCmd.logger, outputWriter).GenerateFromCmd(f.tokens)
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(f.tokens) < 1 {

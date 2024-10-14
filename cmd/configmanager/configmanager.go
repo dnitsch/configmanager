@@ -33,7 +33,8 @@ func NewRootCmd(logger log.ILogger) *Root { //channelOut, channelErr io.Writer
 			Short: fmt.Sprintf("%s CLI for retrieving and inserting config or secret variables", config.SELF_NAME),
 			Long: fmt.Sprintf(`%s CLI for retrieving config or secret variables.
 			Using a specific tokens as an array item`, config.SELF_NAME),
-			Version: fmt.Sprintf("Version: %s\nRevision: %s\n", Version, Revision),
+			SilenceUsage: true,
+			Version:      fmt.Sprintf("%s-%s", Version, Revision),
 		},
 		logger:    logger,
 		rootFlags: &rootCmdFlags{},
