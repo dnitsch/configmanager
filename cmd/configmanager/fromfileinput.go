@@ -33,6 +33,8 @@ func newFromStrCmd(rootCmd *Root) {
 			if err != nil {
 				return err
 			}
+			defer outputWriter.Close()
+
 			cm := configmanager.New(cmd.Context())
 			cm.Config.WithTokenSeparator(rootCmd.rootFlags.tokenSeparator).WithOutputPath(f.path).WithKeySeparator(rootCmd.rootFlags.keySeparator)
 			gnrtr := generator.NewGenerator(cmd.Context(), func(gv *generator.GenVars) {

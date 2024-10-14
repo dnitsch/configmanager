@@ -46,6 +46,7 @@ func NewVaultStore(ctx context.Context, token *config.ParsedTokenConfig, logger 
 	token.ParseMetadata(storeConf)
 	imp := &VaultStore{
 		ctx:    ctx,
+		logger: logger,
 		config: storeConf,
 		token:  token,
 	}

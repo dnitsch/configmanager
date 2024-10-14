@@ -241,17 +241,22 @@ func TestVaultScenarios(t *testing.T) {
 				}
 			},
 		},
-		"vault rate limit incorrect": {"VAULT://secret___/some/other/foo2", config.NewConfig(), "unable to initialize Vault client: error encountered setting up default configuration: VAULT_RATE_LIMIT was provided but incorrectly formatted", func(t *testing.T) hashiVaultApi {
-			mv := mockVaultApi{}
-			mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
-				t.Helper()
-				if secretPath != "some/other/foo2" {
-					t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
+		"vault rate limit incorrect": {
+			"VAULT://secret___/some/other/foo2",
+			config.NewConfig(),
+			`error encountered setting up default configuration: VAULT_RATE_LIMIT was provided but incorrectly formatted
+failed to initialize the client`,
+			func(t *testing.T) hashiVaultApi {
+				mv := mockVaultApi{}
+				mv.g = func(ctx context.Context, secretPath string) (*vault.KVSecret, error) {
+					t.Helper()
+					if secretPath != "some/other/foo2" {
+						t.Errorf(testutils.TestPhrase, secretPath, `some/other/foo2`)
+					}
+					return &vault.KVSecret{Data: nil}, nil
 				}
-				return &vault.KVSecret{Data: nil}, nil
-			}
-			return mv
-		},
+				return mv
+			},
 			func() func() {
 				os.Setenv("VAULT_TOKEN", "")
 				os.Setenv("VAULT_RATE_LIMIT", "wrong")

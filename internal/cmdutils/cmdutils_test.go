@@ -37,7 +37,7 @@ func (m mockCfgMgr) GeneratorConfig() *config.GenVarsConfig {
 
 func Test_UploadTokens_errors(t *testing.T) {
 	m := &mockCfgMgr{}
-	cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), io.Discard)
+	cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), &cmdutils.WriterCloserWrapper{io.Discard})
 	tokenMap := make(map[string]string)
 	if err := cmd.UploadTokensWithVals(tokenMap); err == nil {
 		t.Errorf(testutils.TestPhraseWithContext, "NOT YET IMPLEMENTED should fail", nil, "err")
@@ -89,7 +89,7 @@ func Test_GenerateFromCmd(t *testing.T) {
 				t.Fatalf(testutils.TestPhraseWithContext, "generate from cmd tokens", err, nil)
 			}
 
-			got, err := io.ReadAll(f)
+			got, err := os.ReadFile(f.Name())
 			cmdTestHelper(t, err, got, tt.expect)
 		})
 	}
@@ -110,9 +110,10 @@ func Test_GenerateStrOut(t *testing.T) {
 	expect := []string{"aksujg", "fooLorem", "Mighty"}
 
 	t.Run("succeeds with input from string and output different", func(t *testing.T) {
-		tearDown, reader, file := func(t *testing.T) (func(), io.Reader, string) {
+		tearDown, writer, fileName := func(t *testing.T) (func(), io.WriteCloser, string) {
 			f, _ := os.CreateTemp(os.TempDir(), "gen-conf-frrom-string*")
 			return func() {
+				f.Close()
 				os.Remove(f.Name())
 			}, f, f.Name()
 		}(t)
@@ -123,14 +124,14 @@ func Test_GenerateStrOut(t *testing.T) {
 			parsedString: mockParsedStr,
 		}
 		inputReader, _ := cmdutils.GetReader(&cobra.Command{}, inputStr)
-		outputWriter, _ := cmdutils.GetWriter(file)
+		// outputWriter, _ := cmdutils.GetWriter(file)
 
-		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), outputWriter)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), writer)
 		err := cmd.GenerateStrOut(inputReader, false)
 		if err != nil {
 			t.Fatalf(testutils.TestPhraseWithContext, "generate from string", err, nil)
 		}
-		got, err := io.ReadAll(reader)
+		got, err := os.ReadFile(fileName)
 		cmdTestHelper(t, err, got, expect)
 	})
 
@@ -140,17 +141,15 @@ func Test_GenerateStrOut(t *testing.T) {
 			parsedString: mockParsedStr,
 		}
 		inputReader, _ := cmdutils.GetReader(&cobra.Command{}, inputStr)
-		outputWriter, _ := cmdutils.GetWriter("stdout")
+		outputWriter := &bytes.Buffer{}
 		mw := &mockWriter{w: outputWriter}
 
-		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), mw)
-		writer := bytes.NewBuffer([]byte{})
-
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), &cmdutils.WriterCloserWrapper{mw})
 		err := cmd.GenerateStrOut(inputReader, false)
 		if err != nil {
 			t.Fatalf(testutils.TestPhraseWithContext, "generate from string", err, nil)
 		}
-		got, err := io.ReadAll(writer)
+		got, err := io.ReadAll(outputWriter)
 		cmdTestHelper(t, err, got, expect)
 	})
 	t.Run("succeeds input and output are set to file names", func(t *testing.T) {
@@ -176,7 +175,7 @@ func Test_GenerateStrOut(t *testing.T) {
 		if err != nil {
 			t.Fatalf(testutils.TestPhraseWithContext, "generate from string", err, nil)
 		}
-		got, err := io.ReadAll(outputF)
+		got, err := os.ReadFile(outputF.Name())
 		cmdTestHelper(t, err, got, expect)
 	})
 
@@ -228,7 +227,7 @@ func Test_CmdUtils_Errors_on(t *testing.T) {
 
 		writer := bytes.NewBuffer([]byte{})
 		mw := &mockWriter{w: writer}
-		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), mw)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), &cmdutils.WriterCloserWrapper{mw})
 		if err := cmd.GenerateFromCmd([]string{"IMNP://foo"}); err == nil {
 			t.Errorf(testutils.TestPhraseWithContext, "NOT fetching ANY tokens should error", "err", nil)
 		}
@@ -242,7 +241,7 @@ func Test_CmdUtils_Errors_on(t *testing.T) {
 		}
 
 		writer := bytes.NewBuffer([]byte{})
-		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), &mockWriter{w: writer})
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), &cmdutils.WriterCloserWrapper{&mockWriter{w: writer}})
 		if err := cmd.GenerateFromCmd([]string{"IMNP://foo", "IMNP://foo2"}); err != nil {
 			t.Errorf(testutils.TestPhraseWithContext, "fetching tokens some erroring should only be logged out", "err", nil)
 		}
@@ -260,7 +259,7 @@ func Test_CmdUtils_Errors_on(t *testing.T) {
 
 		writer := bytes.NewBuffer([]byte{})
 		mw := &mockWriter{w: writer}
-		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), mw)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), &cmdutils.WriterCloserWrapper{mw})
 		if err := cmd.GenerateStrOut(inputReader, false); err == nil {
 			t.Errorf(testutils.TestPhraseWithContext, "fetching tokens some erroring should only be logged out", nil, "err")
 		}
@@ -282,7 +281,7 @@ func Test_CmdUtils_Errors_on(t *testing.T) {
 
 		writer := bytes.NewBuffer([]byte{})
 		mw := &mockWriter{w: writer}
-		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), mw)
+		cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), &cmdutils.WriterCloserWrapper{mw})
 		if err := cmd.GenerateStrOut(inputF, true); err == nil {
 			t.Errorf(testutils.TestPhraseWithContext, "fetching tokens some erroring should only be logged out", nil, "err")
 		}

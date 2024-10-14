@@ -6,10 +6,8 @@
 package cmdutils
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"strings"
 
@@ -28,11 +26,11 @@ type configManagerIface interface {
 type CmdUtils struct {
 	logger           log.ILogger
 	configManager    configManagerIface
-	outputWriter     io.Writer
-	tempOutputWriter io.Writer
+	outputWriter     io.WriteCloser
+	tempOutputWriter io.WriteCloser
 }
 
-func New(confManager configManagerIface, logger log.ILogger, writer io.Writer) *CmdUtils {
+func New(confManager configManagerIface, logger log.ILogger, writer io.WriteCloser) *CmdUtils {
 	return &CmdUtils{
 		logger:        logger,
 		configManager: confManager,
@@ -80,7 +78,7 @@ func (c *CmdUtils) GenerateStrOut(input io.Reader, inputOutputIsSame bool) error
 		// if err := c.setWriter(tempfile.Name()); err != nil {
 		// 	return err
 		// }
-		// defer c.writer.Close()
+		defer c.tempOutputWriter.Close()
 		return c.generateFromStrOutOverwrite(input, tempfile.Name())
 	}
 
@@ -125,10 +123,18 @@ func (c *CmdUtils) generateStrOutFromInput(input io.Reader, writer io.Writer) er
 	return pp.StrToFile(writer, str)
 }
 
-func GetWriter(outputpath string) (io.Writer, error) {
-	outputWriter := os.Stdout
+type WriterCloserWrapper struct {
+	io.Writer
+}
+
+func (swc *WriterCloserWrapper) Close() error {
+	return nil
+}
+
+func GetWriter(outputpath string) (io.WriteCloser, error) {
+	outputWriter := &WriterCloserWrapper{os.Stdout}
 	if outputpath != "stdout" {
-		return os.Open(outputpath)
+		return os.Create(outputpath)
 	}
 	return outputWriter, nil
 }
@@ -136,15 +142,10 @@ func GetWriter(outputpath string) (io.Writer, error) {
 func GetReader(cmd *cobra.Command, inputpath string) (io.Reader, error) {
 	inputReader := cmd.InOrStdin()
 	if inputpath != "-" && inputpath != "" {
-		f, err := os.Open(inputpath)
-		if err != nil {
-			perr := &fs.PathError{}
-			if errors.Is(err, perr) {
-				return strings.NewReader(inputpath), nil
-			}
-			return nil, err
+		if _, err := os.Stat(inputpath); os.IsNotExist(err) {
+			return strings.NewReader(inputpath), nil
 		}
-		return f, nil
+		return os.Open(inputpath)
 	}
 	return inputReader, nil
 }
