@@ -67,6 +67,8 @@ func gcpSecretsGetChecker(t *testing.T, req *gcpsecretspb.AccessSecretVersionReq
 }
 
 func Test_GetGcpSecretVarHappy(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		token      string
 		expect     string

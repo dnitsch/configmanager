@@ -93,6 +93,8 @@ func (m mockAzKvSecretApi) GetSecret(ctx context.Context, name string, version s
 }
 
 func TestAzKeyVault(t *testing.T) {
+	t.Parallel()
+
 	tsuccessParam := "dssdfdweiuyh"
 	tests := map[string]struct {
 		token      string

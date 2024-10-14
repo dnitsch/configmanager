@@ -105,6 +105,7 @@ func Test_AzTableStore_Success(t *testing.T) {
 }
 
 func Test_azstorage_with_value_property(t *testing.T) {
+	t.Parallel()
 	conf := config.NewConfig().WithKeySeparator("|").WithTokenSeparator("://")
 	ttests := map[string]struct {
 		token      string
@@ -185,6 +186,7 @@ func Test_azstorage_with_value_property(t *testing.T) {
 }
 
 func Test_AzTableStore_Error(t *testing.T) {
+	t.Parallel()
 
 	tests := map[string]struct {
 		token      string
@@ -254,6 +256,8 @@ func Test_fail_AzTable_Client_init(t *testing.T) {
 }
 
 func Test_azSplitTokenTableStore(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		token  string

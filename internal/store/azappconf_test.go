@@ -36,6 +36,7 @@ func (m mockAzAppConfApi) GetSetting(ctx context.Context, key string, options *a
 }
 
 func Test_AzAppConf_Success(t *testing.T) {
+	t.Parallel()
 	tsuccessParam := "somecvla"
 
 	logr := logger.New(&bytes.Buffer{})
@@ -128,6 +129,8 @@ func Test_AzAppConf_Success(t *testing.T) {
 }
 
 func Test_AzAppConf_Error(t *testing.T) {
+	t.Parallel()
+
 	logr := logger.New(&bytes.Buffer{})
 
 	tests := map[string]struct {
@@ -166,6 +169,8 @@ func Test_AzAppConf_Error(t *testing.T) {
 }
 
 func Test_fail_AzAppConf_Client_init(t *testing.T) {
+	t.Parallel()
+
 	logr := logger.New(&bytes.Buffer{})
 
 	// this is basically a wrap around test for the url.Parse method in the stdlib

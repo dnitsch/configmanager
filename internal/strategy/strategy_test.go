@@ -41,7 +41,7 @@ var TEST_GCP_CREDS = []byte(`{
   }`)
 
 func Test_Strategy_Retrieve_succeeds(t *testing.T) {
-
+	t.Parallel()
 	ttests := map[string]struct {
 		impl   func(t *testing.T) store.Strategy
 		config *config.GenVarsConfig
@@ -85,6 +85,8 @@ func Test_Strategy_Retrieve_succeeds(t *testing.T) {
 }
 
 func Test_CustomStrategyFuncMap_add_own(t *testing.T) {
+	t.Parallel()
+
 	ttests := map[string]struct {
 	}{
 		"default": {},

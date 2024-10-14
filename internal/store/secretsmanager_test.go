@@ -34,6 +34,8 @@ func awsSecretsMgrGetChecker(t *testing.T, params *secretsmanager.GetSecretValue
 }
 
 func Test_GetSecretMgr(t *testing.T) {
+	t.Parallel()
+
 	tsuccessSecret := "dsgkbdsf"
 
 	tests := map[string]struct {

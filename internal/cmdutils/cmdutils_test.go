@@ -61,6 +61,8 @@ func cmdTestHelper(t *testing.T, err error, got []byte, expect []string) {
 }
 
 func Test_GenerateFromCmd(t *testing.T) {
+	t.Parallel()
+
 	ttests := map[string]struct {
 		mockMap generator.ParsedMap
 		tokens  []string
@@ -104,6 +106,7 @@ func (m *mockWriter) Write(in []byte) (int, error) {
 }
 
 func Test_GenerateStrOut(t *testing.T) {
+	t.Parallel()
 
 	inputStr := `FOO://bar/qusx FOO://bar/lorem FOO://bar/ducks`
 	mockParsedStr := `aksujg fooLorem Mighty`

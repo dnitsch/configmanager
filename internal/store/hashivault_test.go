@@ -54,6 +54,8 @@ func (m mockVaultApi) GetVersion(ctx context.Context, secretPath string, version
 }
 
 func TestVaultScenarios(t *testing.T) {
+	t.Parallel()
+
 	ttests := map[string]struct {
 		token      string
 		conf       *config.GenVarsConfig

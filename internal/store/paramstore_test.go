@@ -44,6 +44,8 @@ func awsParamtStoreCommonGetChecker(t *testing.T, params *ssm.GetParameterInput)
 }
 
 func Test_GetParamStore(t *testing.T) {
+	t.Parallel()
+
 	var (
 		tsuccessParam = "someVal"
 		// tsuccessObj   map[string]string = map[string]string{"AWSPARAMSTR#/token/1": "someVal"}
