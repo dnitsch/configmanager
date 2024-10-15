@@ -165,9 +165,6 @@ func Test_GenerateStrOut(t *testing.T) {
 			os.Remove(outputF.Name())
 		}()
 
-		// inputReader, _ := cmdutils.GetReader(&cobra.Command{}, inputStr)
-		// outputWriter, _ := cmdutils.GetWriter("stdout")
-
 		m := &mockCfgMgr{
 			config:       config.NewConfig(),
 			parsedString: mockParsedStr,
@@ -185,7 +182,6 @@ func Test_GenerateStrOut(t *testing.T) {
 	t.Run("succeeds input and output are set to the same file", func(t *testing.T) {
 		inputF, _ := os.CreateTemp(os.TempDir(), "gen-conf-frrom-string*")
 		inputF.Write([]byte(inputStr))
-		// outputF, _ := os.CreateTemp(os.TempDir(), "gen-conf-frrom-string*")
 		defer func() {
 			os.Remove(inputF.Name())
 		}()
@@ -206,20 +202,10 @@ func Test_GenerateStrOut(t *testing.T) {
 
 func Test_CmdUtils_Errors_on(t *testing.T) {
 	t.Run("outputFile wrong", func(t *testing.T) {
-		// m := &mockCfgMgr{
-		// 	config:    config.NewConfig(),
-		// 	parsedMap: generator.ParsedMap{"FOO://bar/qusx": "aksujg", "FOO://bar/lorem": "", "FOO://bar/ducks": "sdhbjk0293"},
-		// }
-
-		// inputReader, _ := cmdutils.GetReader(&cobra.Command{}, inputStr)
 		_, err := cmdutils.GetWriter("xunknown/file")
 		if err == nil {
 			t.Fatal("error not caught")
 		}
-		// cmd := cmdutils.New(m, log.New(&bytes.Buffer{}), outputWriter)
-		// if err := cmd.GenerateFromCmd([]string{"IMNP://foo"}, "xunknown/file"); err == nil {
-		// 	t.Errorf(testutils.TestPhraseWithContext, "file does not exist unable to create a writer", "err", nil)
-		// }
 	})
 	t.Run("REtrieve from tokens in fetching ANY of the tokens", func(t *testing.T) {
 		m := &mockCfgMgr{
@@ -271,7 +257,6 @@ func Test_CmdUtils_Errors_on(t *testing.T) {
 	t.Run("REtrieve from string in fetching SOME of the tokens with input/output the same", func(t *testing.T) {
 		inputF, _ := os.CreateTemp(os.TempDir(), "gen-conf-frrom-string*")
 		inputF.Write([]byte(`"IMNP://foo", "IMNP://foo2"`))
-		// outputF, _ := os.CreateTemp(os.TempDir(), "gen-conf-frrom-string*")
 		defer func() {
 			os.Remove(inputF.Name())
 		}()

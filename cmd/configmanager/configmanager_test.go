@@ -31,7 +31,7 @@ func cmdRunTestHelper(t *testing.T, testInput *cmdTestInput) {
 	leveler.Set(testInput.logLevel)
 
 	logErr := &bytes.Buffer{}
-	logger := log.New(logErr) //slog.New(slog.NewTextHandler(logErr, &slog.HandlerOptions{Level: leveler}))
+	logger := log.New(logErr)
 	cmd := cmd.NewRootCmd(logger)
 	os.Args = append([]string{os.Args[0]}, testInput.args...)
 	errOut := &bytes.Buffer{}

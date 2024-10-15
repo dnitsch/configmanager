@@ -14,20 +14,9 @@ import (
 	"github.com/go-test/deep"
 )
 
-// type mockConfigManageriface interface {
-// 	Retrieve(tokens []string, config generator.GenVarsConfig) (generator.ParsedMap, error)
-// 	RetrieveWithInputReplaced(input string, config generator.GenVarsConfig) (string, error)
-// 	Insert(force bool) error
-// }
-
 type mockGenerator struct {
 	generate func(tokens []string) (generator.ParsedMap, error)
 }
-
-// var (
-// 	testKey = "FOO#/test"
-// 	testVal = "val1"
-// )
 
 func (m *mockGenerator) Generate(tokens []string) (generator.ParsedMap, error) {
 	if m.generate != nil {
@@ -40,14 +29,10 @@ func (m *mockGenerator) Generate(tokens []string) (generator.ParsedMap, error) {
 	return pm, nil
 }
 
-type mockGenIface interface {
-	Generate(tokens []string) (generator.ParsedMap, error)
-}
-
 func Test_Retrieve_from_token_list(t *testing.T) {
 	tests := map[string]struct {
 		tokens    []string
-		genvar    mockGenIface
+		genvar    *mockGenerator
 		expectKey string
 		expectVal string
 	}{
@@ -81,7 +66,7 @@ func Test_retrieveWithInputReplaced(t *testing.T) {
 	tests := map[string]struct {
 		name   string
 		input  string
-		genvar mockGenIface
+		genvar *mockGenerator
 		expect string
 	}{
 		"strYaml": {
@@ -183,44 +168,6 @@ foo23 = val1
 		})
 	}
 }
-
-// func Test_replaceString(t *testing.T) {
-// 	tests := []struct {
-// 		name      string
-// 		parsedMap generator.ParsedMap
-// 		inputStr  string
-// 		expectStr string
-// 	}{
-// 		{
-// 			name: "ordered correctly",
-// 			parsedMap: generator.ParsedMap{
-// 				"AZKVSECRET#/test-vault/db-config|user": "foo",
-// 				"AZKVSECRET#/test-vault/db-config|pass": "bar",
-// 				"AZKVSECRET#/test-vault/db-config":      fmt.Sprintf("%v", "{\"user\": \"foo\", \"pass\": \"bar\"}"),
-// 			},
-// 			inputStr: `app: foo
-// db2: AZKVSECRET#/test-vault/db-config
-// db:
-// 	user: AZKVSECRET#/test-vault/db-config|user
-// 	pass: AZKVSECRET#/test-vault/db-config|pass
-// `,
-// 			expectStr: `app: foo
-// db2: {"user": "foo", "pass": "bar"}
-// db:
-// 	user: foo
-// 	pass: bar
-// `,
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			got := replaceString(tt.parsedMap, tt.inputStr)
-// 			if got != tt.expectStr {
-// 				t.Errorf(testutils.TestPhrase, got, tt.expectStr)
-// 			}
-// 		})
-// 	}
-// }
 
 type testSimpleStruct struct {
 	Foo string `json:"foo" yaml:"foo"`
@@ -558,9 +505,6 @@ func Test_YamlRetrieveMarshalled_errored_in_marshal(t *testing.T) {
 	c := configmanager.New(context.TODO())
 	c.Config.WithTokenSeparator("://")
 	c.WithGenerator(m)
-	// input := &testNestedStruct{}
-	// var errYaml = func() {}
-	// type failingMarshaler struct{}
 	err := c.RetrieveMarshalledYaml(&struct {
 		A int
 		B map[string]int `yaml:",inline"`
@@ -644,116 +588,3 @@ func Test_Generator_Config_(t *testing.T) {
 		})
 	}
 }
-
-// func Test_KubeControllerSpecHelper(t *testing.T) {
-// 	tests := []struct {
-// 		name     string
-// 		testType testSimpleStruct
-// 		expect   testSimpleStruct
-// 		cfmgr    func(t *testing.T) mockConfigManageriface
-// 	}{
-// 		{
-// 			name: "happy path simple struct",
-// 			testType: testSimpleStruct{
-// 				Foo: testTokenAWS,
-// 				Bar: "quz",
-// 			},
-// 			expect: testSimpleStruct{
-// 				Foo: "baz",
-// 				Bar: "quz",
-// 			},
-// 			cfmgr: func(t *testing.T) mockConfigManageriface {
-// 				mcm := &MockCfgMgr{}
-// 				mcm.retrieveInput = func(input string, config generator.GenVarsConfig) (string, error) {
-// 					return `{"foo":"baz","bar":"quz"}`, nil
-// 				}
-// 				return mcm
-// 			},
-// 		},
-// 		{
-// 			name: "happy path simple struct2",
-// 			testType: testSimpleStruct{
-// 				Foo: "AWSSECRETS:///bar/foo2",
-// 				Bar: "quz",
-// 			},
-// 			expect: testSimpleStruct{
-// 				Foo: "baz2",
-// 				Bar: "quz",
-// 			},
-// 			cfmgr: func(t *testing.T) mockConfigManageriface {
-// 				mcm := &MockCfgMgr{}
-// 				mcm.retrieveInput = func(input string, config generator.GenVarsConfig) (string, error) {
-// 					return `{"foo":"baz2","bar":"quz"}`, nil
-// 				}
-// 				return mcm
-// 			},
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-
-// 			config := generator.NewConfig()
-// 			resp, err := KubeControllerSpecHelper(tt.testType, tt.cfmgr(t), *config)
-// 			if err != nil {
-// 				t.Errorf(testutils.TestPhrase, err.Error(), nil)
-// 			}
-// 			if !reflect.DeepEqual(resp, &tt.expect) {
-// 				t.Error("")
-// 			}
-// 		})
-// 	}
-// }
-
-// func Test_KubeControllerComplex(t *testing.T) {
-// 	tests := []struct {
-// 		name     string
-// 		testType testNestedStruct
-// 		expect   testNestedStruct
-// 		cfmgr    func(t *testing.T) mockConfigManageriface
-// 	}{
-// 		{
-// 			name: "happy path complex struct",
-// 			testType: testNestedStruct{
-// 				Foo: testTokenAWS,
-// 				Bar: "quz",
-// 				Lol: testLol{
-// 					Bla: "booo",
-// 					Another: testAnotherNEst{
-// 						Number: 1235,
-// 						Float:  123.09,
-// 					},
-// 				},
-// 			},
-// 			expect: testNestedStruct{
-// 				Foo: "baz",
-// 				Bar: "quz",
-// 				Lol: testLol{
-// 					Bla: "booo",
-// 					Another: testAnotherNEst{
-// 						Number: 1235,
-// 						Float:  123.09,
-// 					},
-// 				},
-// 			},
-// 			cfmgr: func(t *testing.T) mockConfigManageriface {
-// 				mcm := &MockCfgMgr{}
-// 				mcm.retrieveInput = func(input string, config generator.GenVarsConfig) (string, error) {
-// 					return `{"foo":"baz","bar":"quz", "lol":{"bla":"booo","another":{"number": 1235, "float": 123.09}}}`, nil
-// 				}
-// 				return mcm
-// 			},
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			config := generator.NewConfig().WithTokenSeparator("://")
-// 			got, err := KubeControllerSpecHelper(tt.testType, tt.cfmgr(t), *config)
-// 			if err != nil {
-// 				t.Errorf(testutils.TestPhrase, err.Error(), nil)
-// 			}
-// 			if !reflect.DeepEqual(got, &tt.expect) {
-// 				t.Errorf(testutils.TestPhraseWithContext, "returned types do not deep equal", got, tt.expect)
-// 			}
-// 		})
-// 	}
-// }

@@ -50,7 +50,5 @@ func newFromStrCmd(rootCmd *Root) {
 	fromstrCmd.PersistentFlags().StringVarP(&f.path, "path", "p", "./app.env", `Path where to write out the 
 	replaced a config/secret variables. Special value of stdout can be used to return the output to stdout e.g. -p stdout, 
 	unix style output only`)
-	// 	retrieveFromStrInput.PersistentFlags().BoolVarP(&overwriteinputfile, "overwrite", "o", false, `Writes the outputs of the templated file
-	// to a the same location as the input file path`)
 	rootCmd.Cmd.AddCommand(fromstrCmd)
 }
