@@ -75,9 +75,6 @@ func (c *CmdUtils) GenerateStrOut(input io.Reader, inputOutputIsSame bool) error
 		defer os.Remove(tempfile.Name())
 		c.logger.Debug("tmp file created: %s", tempfile.Name())
 		c.tempOutputWriter = tempfile
-		// if err := c.setWriter(tempfile.Name()); err != nil {
-		// 	return err
-		// }
 		defer c.tempOutputWriter.Close()
 		return c.generateFromStrOutOverwrite(input, tempfile.Name())
 	}
@@ -104,7 +101,6 @@ func (c *CmdUtils) generateFromStrOutOverwrite(input io.Reader, outtemp string) 
 		return err
 	}
 	return nil
-	// return os.WriteFile(c.configManager.GeneratorConfig().OutputPath(), tr, 0644)
 }
 
 // generateStrOutFromInput takes a reader and writer as input
@@ -114,6 +110,7 @@ func (c *CmdUtils) generateStrOutFromInput(input io.Reader, writer io.Writer) er
 	if err != nil {
 		return err
 	}
+
 	str, err := c.configManager.RetrieveWithInputReplaced(string(b))
 	if err != nil {
 		return err

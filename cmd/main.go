@@ -9,8 +9,6 @@ import (
 )
 
 func main() {
-	// leveler := &slog.LevelVar{}
-	// logger := log.slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: leveler}))
 	logger := log.New(os.Stderr)
 	cmd := cfgmgr.NewRootCmd(logger)
 	if err := cmd.Execute(context.Background()); err != nil {
